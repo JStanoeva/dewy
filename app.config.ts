@@ -17,6 +17,7 @@ const config: ExpoConfig = {
     },
     predictiveBackGestureEnabled: false,
   },
+  plugins: [['expo-splash-screen', { backgroundColor: '#FFF5EF' }]],
 };
 
 export default config;
