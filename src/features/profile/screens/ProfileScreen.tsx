@@ -1,7 +1,6 @@
 import Feather from '@expo/vector-icons/Feather';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ErrorState } from '@/components/ErrorState';
 import { LoadingState } from '@/components/LoadingState';
@@ -14,7 +13,6 @@ import { fonts, fontSizes, minTouchTarget, radii, spacing } from '@/theme/tokens
 
 export function ProfileScreen() {
   const { palette, paletteName } = useDewyTheme();
-  const insets = useSafeAreaInsets();
   const profile = useProfile();
   const [isSigningOut, setIsSigningOut] = useState(false);
 
@@ -33,10 +31,7 @@ export function ProfileScreen() {
 
   return (
     <Screen edges={['left', 'right']}>
-      <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.screen }]}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View
           style={[
             styles.circle,
@@ -112,6 +107,7 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
     paddingTop: 56,
     paddingHorizontal: spacing.screen,
+    paddingBottom: spacing.screen,
   },
   circle: {
     position: 'absolute',

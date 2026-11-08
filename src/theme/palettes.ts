@@ -38,6 +38,7 @@ const morning = {
   orbitDashed: 'rgba(181, 131, 141, 0.4)',
   onAccent: '#3B3541',
   avatarShadow: '0 8px 20px rgba(109, 104, 117, 0.18)',
+  tabBarShadow: '0 -6px 24px rgba(109, 104, 117, 0.1)',
 };
 
 export type Palette = typeof morning;
@@ -82,6 +83,7 @@ const evening: Palette = {
   orbitDashed: 'rgba(181, 131, 141, 0.4)',
   onAccent: '#3B3541',
   avatarShadow: 'none',
+  tabBarShadow: 'none',
 };
 
 export const palettes = { morning, evening };

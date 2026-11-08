@@ -47,6 +47,7 @@ export const fontSizes = {
 
 export const letterSpacings = {
   wordmark: -1.04,
+  title: -0.3,
   kicker: 1.4,
   label: 0.9,
 } as const;
