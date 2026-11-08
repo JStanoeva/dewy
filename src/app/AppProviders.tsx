@@ -1,3 +1,4 @@
+import Feather from '@expo/vector-icons/Feather';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
@@ -11,7 +12,7 @@ import { fontAssets } from '@/theme/tokens';
 SplashScreen.preventAutoHideAsync();
 
 export function AppProviders({ children }: { children: ReactNode }) {
-  const [fontsLoaded, fontError] = useFonts(fontAssets);
+  const [fontsLoaded, fontError] = useFonts({ ...fontAssets, ...Feather.font });
   const ready = fontsLoaded || fontError !== null;
 
   useEffect(() => {

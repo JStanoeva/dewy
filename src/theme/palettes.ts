@@ -31,6 +31,11 @@ const morning = {
   onPlum: '#FFF5EF',
   bannerBg: '#ffcdb2',
   bannerText: '#3B3541',
+  cardShadow: '0 6px 18px rgba(109, 104, 117, 0.08)',
+  ctaShadow: '0 12px 28px rgba(109, 104, 117, 0.3)',
+  focusRing: '0 0 0 3px rgba(229, 152, 155, 0.55)',
+  orbitLine: 'rgba(181, 131, 141, 0.55)',
+  orbitDashed: 'rgba(181, 131, 141, 0.4)',
 };
 
 export type Palette = typeof morning;
@@ -68,6 +73,11 @@ const evening: Palette = {
   onPlum: '#FFF5EF',
   bannerBg: 'rgba(229,152,155,0.16)',
   bannerText: '#FFE3D6',
+  cardShadow: 'none',
+  ctaShadow: 'none',
+  focusRing: '0 0 0 3px rgba(229, 152, 155, 0.55)',
+  orbitLine: 'rgba(181, 131, 141, 0.55)',
+  orbitDashed: 'rgba(181, 131, 141, 0.4)',
 };
 
 export const palettes = { morning, evening };

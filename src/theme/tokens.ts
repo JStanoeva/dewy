@@ -57,7 +57,9 @@ export const radii = {
 } as const;
 
 export const spacing = {
+  hairline: 2,
   xxs: 4,
+  snug: 6,
   xs: 8,
   sm: 10,
   md: 12,

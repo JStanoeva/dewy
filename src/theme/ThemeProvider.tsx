@@ -28,6 +28,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   return <ThemeContext value={value}>{children}</ThemeContext>;
 }
 
+const morningTheme: ThemeValue = { palette: palettes.morning, paletteName: 'morning' };
+
+// Auth and Onboarding are designed only in Morning colours, whatever the clock says.
+export function MorningTheme({ children }: { children: ReactNode }) {
+  return <ThemeContext value={morningTheme}>{children}</ThemeContext>;
+}
+
 export function useDewyTheme() {
   const value = useContext(ThemeContext);
   if (!value) {

@@ -1,15 +1,20 @@
 import { StatusBar } from 'expo-status-bar';
 import type { ReactNode } from 'react';
 import { StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
 import { useDewyTheme } from '@/theme/ThemeProvider';
 
-export function Screen({ children }: { children: ReactNode }) {
+type ScreenProps = {
+  children: ReactNode;
+  edges?: readonly Edge[];
+};
+
+export function Screen({ children, edges }: ScreenProps) {
   const { palette, paletteName } = useDewyTheme();
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: palette.background }]}>
+    <SafeAreaView edges={edges} style={[styles.container, { backgroundColor: palette.background }]}>
       <StatusBar style={paletteName === 'morning' ? 'dark' : 'light'} />
       {children}
     </SafeAreaView>
