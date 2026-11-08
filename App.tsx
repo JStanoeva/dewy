@@ -2,13 +2,15 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { AppProviders } from '@/app/AppProviders';
 import { Screen } from '@/components/Screen';
+import { ConfigErrorScreen } from '@/config/ConfigErrorScreen';
+import { envProblems } from '@/config/env';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import { fonts, fontSizes, letterSpacings } from '@/theme/tokens';
 
 export default function App() {
   return (
     <AppProviders>
-      <WordmarkScreen />
+      {envProblems.length > 0 ? <ConfigErrorScreen problems={envProblems} /> : <WordmarkScreen />}
     </AppProviders>
   );
 }

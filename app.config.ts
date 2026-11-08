@@ -17,7 +17,7 @@ const config: ExpoConfig = {
     },
     predictiveBackGestureEnabled: false,
   },
-  plugins: [['expo-splash-screen', { backgroundColor: '#FFF5EF' }]],
+  plugins: [['expo-splash-screen', { backgroundColor: '#FFF5EF' }], 'expo-secure-store'],
 };
 
 export default config;
