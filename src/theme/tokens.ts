@@ -2,12 +2,14 @@ import { DMSans_400Regular } from '@expo-google-fonts/dm-sans/400Regular';
 import { DMSans_500Medium } from '@expo-google-fonts/dm-sans/500Medium';
 import { DMSans_600SemiBold } from '@expo-google-fonts/dm-sans/600SemiBold';
 import { DMSans_700Bold } from '@expo-google-fonts/dm-sans/700Bold';
+import { Fraunces_400Regular_Italic } from '@expo-google-fonts/fraunces/400Regular_Italic';
 import { Fraunces_500Medium } from '@expo-google-fonts/fraunces/500Medium';
 import { Fraunces_500Medium_Italic } from '@expo-google-fonts/fraunces/500Medium_Italic';
 
 export const fonts = {
   display: 'Fraunces_500Medium',
   displayItalic: 'Fraunces_500Medium_Italic',
+  displayItalicRegular: 'Fraunces_400Regular_Italic',
   body: 'DMSans_400Regular',
   bodyMedium: 'DMSans_500Medium',
   bodySemiBold: 'DMSans_600SemiBold',
@@ -17,6 +19,7 @@ export const fonts = {
 export const fontAssets = {
   [fonts.display]: Fraunces_500Medium,
   [fonts.displayItalic]: Fraunces_500Medium_Italic,
+  [fonts.displayItalicRegular]: Fraunces_400Regular_Italic,
   [fonts.body]: DMSans_400Regular,
   [fonts.bodyMedium]: DMSans_500Medium,
   [fonts.bodySemiBold]: DMSans_600SemiBold,
@@ -28,6 +31,8 @@ export const fontSizes = {
   titleLarge: 34,
   title: 32,
   formTitle: 30,
+  avatarInitial: 30,
+  profileName: 28,
   authTitle: 26,
   section: 22,
   subSection: 20,
@@ -65,6 +70,7 @@ export const spacing = {
   md: 12,
   lg: 14,
   xl: 16,
+  xxl: 20,
   screen: 24,
 } as const;
 

@@ -36,6 +36,8 @@ const morning = {
   focusRing: '0 0 0 3px rgba(229, 152, 155, 0.55)',
   orbitLine: 'rgba(181, 131, 141, 0.55)',
   orbitDashed: 'rgba(181, 131, 141, 0.4)',
+  onAccent: '#3B3541',
+  avatarShadow: '0 8px 20px rgba(109, 104, 117, 0.18)',
 };
 
 export type Palette = typeof morning;
@@ -78,6 +80,8 @@ const evening: Palette = {
   focusRing: '0 0 0 3px rgba(229, 152, 155, 0.55)',
   orbitLine: 'rgba(181, 131, 141, 0.55)',
   orbitDashed: 'rgba(181, 131, 141, 0.4)',
+  onAccent: '#3B3541',
+  avatarShadow: 'none',
 };
 
 export const palettes = { morning, evening };

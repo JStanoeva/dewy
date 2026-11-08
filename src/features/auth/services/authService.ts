@@ -25,6 +25,11 @@ export async function signIn({ email, password }: Credentials) {
   }
 }
 
+// 'local' removes this device's session before calling the server, so a returned error only means the revoke failed.
+export async function signOut() {
+  await supabase.auth.signOut({ scope: 'local' });
+}
+
 type AuthErrorFeedback = {
   field: 'email' | 'password' | 'root';
   message: string;

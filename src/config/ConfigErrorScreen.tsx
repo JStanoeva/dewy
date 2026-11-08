@@ -1,3 +1,5 @@
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect } from 'react';
 import { ScrollView, StyleSheet, Text } from 'react-native';
 
 import { Screen } from '@/components/Screen';
@@ -6,6 +8,10 @@ import { fonts, fontSizes, letterSpacings, spacing } from '@/theme/tokens';
 
 export function ConfigErrorScreen({ problems }: { problems: string[] }) {
   const { palette } = useDewyTheme();
+
+  useEffect(() => {
+    SplashScreen.hideAsync();
+  }, []);
 
   return (
     <Screen>

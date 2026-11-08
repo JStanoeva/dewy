@@ -3,7 +3,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
-  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Pressable,
@@ -81,14 +80,13 @@ export function AuthScreen() {
     setMode(nextMode);
   }
 
+  // On success the new session switches RootNavigator to the signed-in screens.
   async function onSubmit(values: AuthFormValues) {
     try {
       if (isSignUp) {
         await signUp(values);
-        Alert.alert('Welcome to Dewy', 'Your account is ready.');
       } else {
         await signIn(values);
-        Alert.alert('Welcome back', "You're logged in.");
       }
     } catch (error) {
       const { field, message } = getAuthErrorFeedback(error);
