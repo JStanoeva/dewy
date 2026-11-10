@@ -4,7 +4,7 @@ import { useDewyTheme } from '@/theme/ThemeProvider';
 import { fonts, fontSizes, radii, spacing } from '@/theme/tokens';
 
 type SegmentedControlProps<T extends string> = {
-  options: readonly { value: T; label: string }[];
+  options: readonly { value: T; label: string; count?: number }[];
   value: T;
   onChange: (value: T) => void;
 };
@@ -37,6 +37,16 @@ export function SegmentedControl<T extends string>({
             >
               {option.label}
             </Text>
+            {option.count === undefined ? null : (
+              <View
+                style={[
+                  styles.badge,
+                  { backgroundColor: selected ? palette.badgeActive : palette.chipSoft },
+                ]}
+              >
+                <Text style={[styles.badgeLabel, { color: palette.text }]}>{option.count}</Text>
+              </View>
+            )}
           </Pressable>
         );
       })}
@@ -53,6 +63,8 @@ const styles = StyleSheet.create({
   },
   item: {
     flex: 1,
+    flexDirection: 'row',
+    gap: spacing.xs,
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
@@ -61,5 +73,17 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSizes.secondary,
+  },
+  badge: {
+    minWidth: 22,
+    alignItems: 'center',
+    paddingHorizontal: 7,
+    paddingVertical: 1,
+    borderRadius: radii.pill,
+  },
+  badgeLabel: {
+    fontFamily: fonts.bodyBold,
+    fontSize: fontSizes.kicker,
+    lineHeight: 16,
   },
 });

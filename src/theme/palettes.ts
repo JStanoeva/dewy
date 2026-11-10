@@ -39,6 +39,11 @@ const morning = {
   onAccent: '#3B3541',
   avatarShadow: '0 8px 20px rgba(109, 104, 117, 0.18)',
   tabBarShadow: '0 -6px 24px rgba(109, 104, 117, 0.1)',
+  badgeActive: '#ffcdb2',
+  chipShadow: '0 4px 12px rgba(109, 104, 117, 0.06)',
+  productCardShadow: '0 8px 22px rgba(109, 104, 117, 0.1)',
+  tileTag: 'rgba(255, 255, 255, 0.85)',
+  tileGroundShadow: 'rgba(59, 53, 65, 0.16)',
 };
 
 export type Palette = typeof morning;
@@ -66,7 +71,7 @@ const evening: Palette = {
   mauve: '#b5838d',
   border: '#4F4958',
   track: '#4F4958',
-  chipSoft: '#433D4B',
+  chipSoft: '#4F4958',
   divider: '#4F4958',
   switchOff: '#4F4958',
   warning: '#FFB4A2',
@@ -84,6 +89,11 @@ const evening: Palette = {
   onAccent: '#3B3541',
   avatarShadow: 'none',
   tabBarShadow: 'none',
+  badgeActive: '#6d6875',
+  chipShadow: 'none',
+  productCardShadow: 'none',
+  tileTag: 'rgba(255, 255, 255, 0.85)',
+  tileGroundShadow: 'rgba(59, 53, 65, 0.16)',
 };
 
 export const palettes = { morning, evening };

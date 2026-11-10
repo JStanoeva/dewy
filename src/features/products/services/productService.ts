@@ -1,0 +1,57 @@
+import { z } from 'zod';
+
+import { categories, productStatuses } from '@/features/products/constants';
+import type { Product } from '@/features/products/types';
+import { supabase } from '@/lib/supabase';
+
+const productColumns =
+  'id, status, name, brand, category, barcode, photo_path, opened_on, pao_months, ingredients, notes, is_favorite, created_at, updated_at';
+
+// The generated types only say "string" for status and category, so rows are parsed before use.
+const productRowSchema = z.object({
+  id: z.string(),
+  status: z.enum(productStatuses),
+  name: z.string(),
+  brand: z.string().nullable(),
+  category: z.enum(categories),
+  barcode: z.string().nullable(),
+  photo_path: z.string().nullable(),
+  opened_on: z.string().nullable(),
+  pao_months: z.number().nullable(),
+  ingredients: z.array(z.string()),
+  notes: z.string().nullable(),
+  is_favorite: z.boolean(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+function toProduct(row: z.infer<typeof productRowSchema>): Product {
+  return {
+    id: row.id,
+    status: row.status,
+    name: row.name,
+    brand: row.brand,
+    category: row.category,
+    barcode: row.barcode,
+    photoPath: row.photo_path,
+    openedOn: row.opened_on,
+    paoMonths: row.pao_months,
+    ingredients: row.ingredients,
+    notes: row.notes,
+    isFavorite: row.is_favorite,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export async function listProducts(): Promise<Product[]> {
+  const { data, error } = await supabase
+    .from('products')
+    .select(productColumns)
+    .order('created_at', { ascending: false })
+    .order('id');
+  if (error) {
+    throw error;
+  }
+  return z.array(productRowSchema).parse(data).map(toProduct);
+}

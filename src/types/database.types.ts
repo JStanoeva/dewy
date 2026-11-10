@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      products: {
+        Row: {
+          barcode: string | null
+          brand: string | null
+          category: string
+          created_at: string
+          id: string
+          ingredients: string[]
+          is_favorite: boolean
+          name: string
+          notes: string | null
+          opened_on: string | null
+          pao_months: number | null
+          photo_path: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          barcode?: string | null
+          brand?: string | null
+          category: string
+          created_at?: string
+          id?: string
+          ingredients?: string[]
+          is_favorite?: boolean
+          name: string
+          notes?: string | null
+          opened_on?: string | null
+          pao_months?: number | null
+          photo_path?: string | null
+          status: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          barcode?: string | null
+          brand?: string | null
+          category?: string
+          created_at?: string
+          id?: string
+          ingredients?: string[]
+          is_favorite?: boolean
+          name?: string
+          notes?: string | null
+          opened_on?: string | null
+          pao_months?: number | null
+          photo_path?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           concerns: string[]
