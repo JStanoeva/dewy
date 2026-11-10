@@ -1,8 +1,12 @@
 import type { NavigatorScreenParams } from '@react-navigation/native';
 
+import type { Category } from '@/features/products/constants';
+import type { ProductStatus } from '@/features/products/types';
+
 export type RootStackParamList = {
   Auth: undefined;
   Main: NavigatorScreenParams<MainTabParamList>;
+  ProductForm: { status?: ProductStatus; category?: Category } | undefined;
 };
 
 export type MainTabParamList = {

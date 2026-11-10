@@ -6,6 +6,8 @@ export const categories = ['cleanser', 'toner', 'serum', 'moisturizer', 'spf', '
 
 export type Category = (typeof categories)[number];
 
+export const paoMonthsOptions = [3, 6, 12, 24] as const;
+
 type CategoryDetails = {
   label: string;
   stepKind: string;

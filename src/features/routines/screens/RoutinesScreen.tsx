@@ -1,3 +1,4 @@
+import { useNavigation } from '@react-navigation/native';
 import { ScrollView, StyleSheet, Text } from 'react-native';
 
 import { EmptyState } from '@/components/EmptyState';
@@ -7,6 +8,7 @@ import { fonts, fontSizes, letterSpacings, spacing } from '@/theme/tokens';
 
 export function RoutinesScreen() {
   const { palette } = useDewyTheme();
+  const navigation = useNavigation();
 
   return (
     <Screen edges={['left', 'right']}>
@@ -17,6 +19,10 @@ export function RoutinesScreen() {
         <EmptyState
           title="Add a product first"
           message="Routine steps use products you own, so start with your shelf."
+          action={{
+            label: 'Add a product',
+            onPress: () => navigation.navigate('ProductForm', { status: 'owned' }),
+          }}
         />
       </ScrollView>
     </Screen>

@@ -1,3 +1,4 @@
+import { useNavigation } from '@react-navigation/native';
 import { useState } from 'react';
 import {
   FlatList,
@@ -13,7 +14,11 @@ import { ErrorState } from '@/components/ErrorState';
 import { LoadingState } from '@/components/LoadingState';
 import { Screen } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
-import { CategoryChips, type CategoryFilter } from '@/features/products/components/CategoryChips';
+import {
+  CategoryChips,
+  categoryFilterOptions,
+  type CategoryFilter,
+} from '@/features/products/components/CategoryChips';
 import { ProductCard } from '@/features/products/components/ProductCard';
 import { useProducts } from '@/features/products/hooks/useProducts';
 import type { ProductStatus } from '@/features/products/types';
@@ -29,6 +34,7 @@ function countLabel(count: number) {
 export function ShelfScreen() {
   const { palette } = useDewyTheme();
   const { width } = useWindowDimensions();
+  const navigation = useNavigation();
   const products = useProducts();
   const [status, setStatus] = useState<ProductStatus>('owned');
   const [category, setCategory] = useState<CategoryFilter>('all');
@@ -85,7 +91,12 @@ export function ShelfScreen() {
       </View>
       {products.data ? (
         <View style={styles.chips}>
-          <CategoryChips key={status} value={category} onChange={setCategory} />
+          <CategoryChips
+            key={status}
+            options={categoryFilterOptions}
+            value={category}
+            onChange={setCategory}
+          />
         </View>
       ) : null}
     </View>
@@ -105,6 +116,10 @@ export function ShelfScreen() {
               <EmptyState
                 title="Nothing here yet"
                 message="Add a product and it will show up on this shelf."
+                action={{
+                  label: 'Add a product',
+                  onPress: () => navigation.navigate('ProductForm', { status }),
+                }}
               />
             ) : products.isError ? (
               <ErrorState

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { categories, productStatuses } from '@/features/products/constants';
+import type { ProductInput } from '@/features/products/schemas/productSchema';
 import type { Product } from '@/features/products/types';
 import { supabase } from '@/lib/supabase';
 
@@ -42,6 +43,28 @@ function toProduct(row: z.infer<typeof productRowSchema>): Product {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+// The database fills in id, user_id and the timestamps; clients aren't allowed to send them.
+export async function createProduct(input: ProductInput): Promise<Product> {
+  const { data, error } = await supabase
+    .from('products')
+    .insert({
+      status: input.status,
+      name: input.name,
+      brand: input.brand,
+      category: input.category,
+      opened_on: input.openedOn,
+      pao_months: input.paoMonths,
+      ingredients: input.ingredients,
+      notes: input.notes,
+    })
+    .select(productColumns)
+    .single();
+  if (error) {
+    throw error;
+  }
+  return toProduct(productRowSchema.parse(data));
 }
 
 export async function listProducts(): Promise<Product[]> {

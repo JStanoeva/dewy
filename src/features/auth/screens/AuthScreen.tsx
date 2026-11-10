@@ -2,20 +2,11 @@ import Feather from '@expo/vector-icons/Feather';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import {
-  Keyboard,
-  KeyboardAvoidingView,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  type ScrollViewInstance,
-} from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton } from '@/components/AppButton';
+import { FormScrollView, type FormScrollViewHandle } from '@/components/FormScrollView';
 import { Screen } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { TextField } from '@/components/TextField';
@@ -31,33 +22,16 @@ const modeOptions = [
   { value: 'login', label: 'Log in' },
 ] as const;
 
-// Space kept under the focused text line: the rest of its box, a two-line error, and a little air.
-const FIELD_REVEAL_OFFSET = 64;
-
 export function AuthScreen() {
   const { palette } = useDewyTheme();
   const insets = useSafeAreaInsets();
-  const scrollRef = useRef<ScrollViewInstance>(null);
+  const formRef = useRef<FormScrollViewHandle>(null);
   const [mode, setMode] = useState<AuthMode>('signup');
   const [showPassword, setShowPassword] = useState(false);
   const isSignUp = mode === 'signup';
 
-  // Android's own scroll-to-input is unreliable (text line only, or nothing on smaller phones), so do it here.
   function revealFocusedField() {
-    const input = TextInput.State.currentlyFocusedInput();
-    if (input && Keyboard.isVisible()) {
-      scrollRef.current?.scrollResponderScrollNativeHandleToKeyboard(
-        input,
-        FIELD_REVEAL_OFFSET,
-        true,
-      );
-    }
-  }
-
-  function handleKeyboardResize() {
-    revealFocusedField();
-    // A second pass lands after Android's own smooth scroll, which can finish last when animations are shortened.
-    setTimeout(revealFocusedField, 300);
+    formRef.current?.revealFocusedField();
   }
 
   const {
@@ -102,166 +76,157 @@ export function AuthScreen() {
 
   return (
     <Screen edges={['left', 'right']}>
-      <KeyboardAvoidingView behavior="padding" style={styles.flex}>
-        <ScrollView
-          ref={scrollRef}
-          onLayout={handleKeyboardResize}
-          onContentSizeChange={revealFocusedField}
-          contentContainerStyle={[styles.scrollContent, { backgroundColor: palette.peach }]}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.hero}>
-            <View style={[styles.orbitLine, { borderColor: palette.orbitLine }]} />
-            <View style={[styles.orbitDashed, { borderColor: palette.orbitDashed }]} />
-            <View style={[styles.orbitCore, { backgroundColor: palette.salmon }]} />
-            <View style={[styles.orbitDot, { backgroundColor: palette.plum }]} />
-            <View
-              style={[
-                styles.orbitRing,
-                { borderColor: palette.plum, backgroundColor: palette.peach },
-              ]}
-            />
-            <View style={styles.header}>
-              <Text style={[styles.wordmark, { color: palette.text }]}>Dewy</Text>
-              <Text style={[styles.tagline, { color: palette.textSoft }]}>
-                Your skincare ritual, beautifully kept.
-              </Text>
-            </View>
-          </View>
-
+      <FormScrollView
+        ref={formRef}
+        contentContainerStyle={[styles.scrollContent, { backgroundColor: palette.peach }]}
+      >
+        <View style={styles.hero}>
+          <View style={[styles.orbitLine, { borderColor: palette.orbitLine }]} />
+          <View style={[styles.orbitDashed, { borderColor: palette.orbitDashed }]} />
+          <View style={[styles.orbitCore, { backgroundColor: palette.salmon }]} />
+          <View style={[styles.orbitDot, { backgroundColor: palette.plum }]} />
           <View
             style={[
-              styles.sheet,
-              {
-                backgroundColor: palette.background,
-                paddingBottom: insets.bottom + spacing.screen,
-              },
+              styles.orbitRing,
+              { borderColor: palette.plum, backgroundColor: palette.peach },
             ]}
-          >
-            <Text accessibilityRole="header" style={[styles.heading, { color: palette.text }]}>
-              {isSignUp ? 'Begin your ritual' : 'Welcome back'}
+          />
+          <View style={styles.header}>
+            <Text style={[styles.wordmark, { color: palette.text }]}>Dewy</Text>
+            <Text style={[styles.tagline, { color: palette.textSoft }]}>
+              Your skincare ritual, beautifully kept.
             </Text>
+          </View>
+        </View>
 
-            <SegmentedControl options={modeOptions} value={mode} onChange={changeMode} />
+        <View
+          style={[
+            styles.sheet,
+            {
+              backgroundColor: palette.background,
+              paddingBottom: insets.bottom + spacing.screen,
+            },
+          ]}
+        >
+          <Text accessibilityRole="header" style={[styles.heading, { color: palette.text }]}>
+            {isSignUp ? 'Begin your ritual' : 'Welcome back'}
+          </Text>
 
-            <View style={styles.fields}>
-              {isSignUp ? (
-                <Controller
-                  control={control}
-                  name="name"
-                  render={({ field, fieldState }) => (
-                    <TextField
-                      ref={field.ref}
-                      label="Your name"
-                      placeholder="What should we call you?"
-                      autoCapitalize="words"
-                      autoComplete="given-name"
-                      returnKeyType="next"
-                      submitBehavior="submit"
-                      value={field.value}
-                      onChangeText={field.onChange}
-                      onBlur={field.onBlur}
-                      onFocus={revealFocusedField}
-                      onSubmitEditing={() => setFocus('email')}
-                      error={fieldState.error?.message}
-                    />
-                  )}
-                />
-              ) : null}
+          <SegmentedControl options={modeOptions} value={mode} onChange={changeMode} />
 
+          <View style={styles.fields}>
+            {isSignUp ? (
               <Controller
                 control={control}
-                name="email"
+                name="name"
                 render={({ field, fieldState }) => (
                   <TextField
                     ref={field.ref}
-                    label="Email"
-                    placeholder="you@example.com"
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    autoCorrect={false}
-                    keyboardType="email-address"
+                    label="Your name"
+                    placeholder="What should we call you?"
+                    autoCapitalize="words"
+                    autoComplete="given-name"
                     returnKeyType="next"
                     submitBehavior="submit"
                     value={field.value}
                     onChangeText={field.onChange}
                     onBlur={field.onBlur}
                     onFocus={revealFocusedField}
-                    onSubmitEditing={() => setFocus('password')}
+                    onSubmitEditing={() => setFocus('email')}
                     error={fieldState.error?.message}
                   />
                 )}
               />
-
-              <Controller
-                control={control}
-                name="password"
-                render={({ field, fieldState }) => (
-                  <TextField
-                    ref={field.ref}
-                    label="Password"
-                    placeholder={isSignUp ? 'At least 8 characters' : 'Your password'}
-                    autoCapitalize="none"
-                    autoComplete={isSignUp ? 'new-password' : 'current-password'}
-                    autoCorrect={false}
-                    secureTextEntry={!showPassword}
-                    keyboardType={showPassword ? 'visible-password' : 'default'}
-                    returnKeyType="go"
-                    value={field.value}
-                    onChangeText={field.onChange}
-                    onBlur={field.onBlur}
-                    onFocus={revealFocusedField}
-                    onSubmitEditing={submit}
-                    error={fieldState.error?.message}
-                    trailing={
-                      <Pressable
-                        accessibilityRole="togglebutton"
-                        accessibilityLabel="Show password"
-                        accessibilityState={{ checked: showPassword }}
-                        onPress={() => setShowPassword((shown) => !shown)}
-                        style={({ pressed }) => [styles.eyeButton, pressed && styles.pressed]}
-                      >
-                        <Feather
-                          name={showPassword ? 'eye-off' : 'eye'}
-                          size={20}
-                          color={palette.textMuted}
-                        />
-                      </Pressable>
-                    }
-                  />
-                )}
-              />
-            </View>
-
-            {errors.root?.server ? (
-              <Text
-                accessibilityRole="alert"
-                accessibilityLiveRegion="polite"
-                style={[styles.formError, { color: palette.warning }]}
-              >
-                {errors.root.server.message}
-              </Text>
             ) : null}
 
-            <View style={styles.cta}>
-              <AppButton
-                title={isSignUp ? 'Create account' : 'Log in'}
-                loading={isSubmitting}
-                onPress={submit}
-              />
-            </View>
+            <Controller
+              control={control}
+              name="email"
+              render={({ field, fieldState }) => (
+                <TextField
+                  ref={field.ref}
+                  label="Email"
+                  placeholder="you@example.com"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  autoCorrect={false}
+                  keyboardType="email-address"
+                  returnKeyType="next"
+                  submitBehavior="submit"
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  onBlur={field.onBlur}
+                  onFocus={revealFocusedField}
+                  onSubmitEditing={() => setFocus('password')}
+                  error={fieldState.error?.message}
+                />
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="password"
+              render={({ field, fieldState }) => (
+                <TextField
+                  ref={field.ref}
+                  label="Password"
+                  placeholder={isSignUp ? 'At least 8 characters' : 'Your password'}
+                  autoCapitalize="none"
+                  autoComplete={isSignUp ? 'new-password' : 'current-password'}
+                  autoCorrect={false}
+                  secureTextEntry={!showPassword}
+                  keyboardType={showPassword ? 'visible-password' : 'default'}
+                  returnKeyType="go"
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  onBlur={field.onBlur}
+                  onFocus={revealFocusedField}
+                  onSubmitEditing={submit}
+                  error={fieldState.error?.message}
+                  trailing={
+                    <Pressable
+                      accessibilityRole="togglebutton"
+                      accessibilityLabel="Show password"
+                      accessibilityState={{ checked: showPassword }}
+                      onPress={() => setShowPassword((shown) => !shown)}
+                      style={({ pressed }) => [styles.eyeButton, pressed && styles.pressed]}
+                    >
+                      <Feather
+                        name={showPassword ? 'eye-off' : 'eye'}
+                        size={20}
+                        color={palette.textMuted}
+                      />
+                    </Pressable>
+                  }
+                />
+              )}
+            />
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+
+          {errors.root?.server ? (
+            <Text
+              accessibilityRole="alert"
+              accessibilityLiveRegion="polite"
+              style={[styles.formError, { color: palette.warning }]}
+            >
+              {errors.root.server.message}
+            </Text>
+          ) : null}
+
+          <View style={styles.cta}>
+            <AppButton
+              title={isSignUp ? 'Create account' : 'Log in'}
+              loading={isSubmitting}
+              onPress={submit}
+            />
+          </View>
+        </View>
+      </FormScrollView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
   scrollContent: {
     flexGrow: 1,
   },

@@ -4,6 +4,7 @@ import * as SplashScreen from 'expo-splash-screen';
 
 import { useAuth } from '@/features/auth/providers/AuthProvider';
 import { AuthScreen } from '@/features/auth/screens/AuthScreen';
+import { ProductFormScreen } from '@/features/products/screens/ProductFormScreen';
 import { MainTabs } from '@/navigation/MainTabs';
 import type { RootStackParamList } from '@/navigation/types';
 import { MorningTheme, useDewyTheme } from '@/theme/ThemeProvider';
@@ -30,6 +31,11 @@ export function RootNavigator() {
         {session ? (
           <Stack.Group navigationKey={session.user.id}>
             <Stack.Screen name="Main" component={MainTabs} />
+            <Stack.Screen
+              name="ProductForm"
+              component={ProductFormScreen}
+              options={{ presentation: 'modal' }}
+            />
           </Stack.Group>
         ) : (
           <Stack.Group screenLayout={MorningTheme}>

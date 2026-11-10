@@ -44,6 +44,9 @@ const morning = {
   productCardShadow: '0 8px 22px rgba(109, 104, 117, 0.1)',
   tileTag: 'rgba(255, 255, 255, 0.85)',
   tileGroundShadow: 'rgba(59, 53, 65, 0.16)',
+  fabShadow: '0 10px 24px rgba(109, 104, 117, 0.35)',
+  iconButtonShadow: '0 6px 18px rgba(109, 104, 117, 0.1)',
+  pinnedCtaShadow: '0 12px 28px rgba(109, 104, 117, 0.35)',
 };
 
 export type Palette = typeof morning;
@@ -94,6 +97,9 @@ const evening: Palette = {
   productCardShadow: 'none',
   tileTag: 'rgba(255, 255, 255, 0.85)',
   tileGroundShadow: 'rgba(59, 53, 65, 0.16)',
+  fabShadow: '0 10px 24px rgba(0, 0, 0, 0.3)',
+  iconButtonShadow: 'none',
+  pinnedCtaShadow: 'none',
 };
 
 export const palettes = { morning, evening };

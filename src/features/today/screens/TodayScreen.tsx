@@ -1,3 +1,4 @@
+import { useNavigation } from '@react-navigation/native';
 import { useEffect, useState } from 'react';
 import { AppState, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -17,6 +18,7 @@ function formatToday() {
 
 export function TodayScreen() {
   const { palette, paletteName } = useDewyTheme();
+  const navigation = useNavigation();
   const profile = useProfile();
   const isMorning = paletteName === 'morning';
   const name = profile.data?.displayName;
@@ -70,6 +72,7 @@ export function TodayScreen() {
           <EmptyState
             title="Add your first product"
             message="Your ritual is built from the products on your shelf."
+            action={{ label: 'Add a product', onPress: () => navigation.navigate('ProductForm') }}
           />
         )}
       </ScrollView>

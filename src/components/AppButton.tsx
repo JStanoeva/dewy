@@ -7,9 +7,11 @@ type AppButtonProps = {
   title: string;
   onPress: () => void;
   loading?: boolean;
+  // A button pinned to the bottom of the screen casts the artboards' stronger shadow.
+  pinned?: boolean;
 };
 
-export function AppButton({ title, onPress, loading = false }: AppButtonProps) {
+export function AppButton({ title, onPress, loading = false, pinned = false }: AppButtonProps) {
   const { palette } = useDewyTheme();
 
   return (
@@ -23,7 +25,7 @@ export function AppButton({ title, onPress, loading = false }: AppButtonProps) {
         styles.button,
         {
           backgroundColor: palette.primary,
-          boxShadow: palette.ctaShadow,
+          boxShadow: pinned ? palette.pinnedCtaShadow : palette.ctaShadow,
           opacity: pressed ? 0.9 : 1,
         },
       ]}

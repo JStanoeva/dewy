@@ -6,27 +6,43 @@ import { fonts, fontSizes, minTouchTarget, radii, spacing } from '@/theme/tokens
 
 export type CategoryFilter = Category | 'all';
 
-const options: { value: CategoryFilter; label: string }[] = [
+type ChipOption<T extends string> = { value: T; label: string };
+
+export const categoryOptions: ChipOption<Category>[] = categories.map((category) => ({
+  value: category,
+  label: categoryDetails[category].label,
+}));
+
+export const categoryFilterOptions: ChipOption<CategoryFilter>[] = [
   { value: 'all', label: 'All' },
-  ...categories.map((category) => ({ value: category, label: categoryDetails[category].label })),
+  ...categoryOptions,
 ];
 
 // Room inside the scroll view for the chip shadow, which Android would otherwise clip.
 const shadowTop = 8;
 const shadowBottom = 16;
 
-type CategoryChipsProps = {
-  value: CategoryFilter;
-  onChange: (value: CategoryFilter) => void;
+type CategoryChipsProps<T extends string> = {
+  options: readonly ChipOption<T>[];
+  value: T | undefined;
+  onChange: (value: T) => void;
+  // The Shelf filter chips cast a shadow; the product form's Type chips are drawn flat.
+  shadow?: boolean;
 };
 
-export function CategoryChips({ value, onChange }: CategoryChipsProps) {
+export function CategoryChips<T extends string>({
+  options,
+  value,
+  onChange,
+  shadow = true,
+}: CategoryChipsProps<T>) {
   const { palette } = useDewyTheme();
 
   return (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
       style={styles.scroll}
       contentContainerStyle={styles.content}
     >
@@ -42,7 +58,7 @@ export function CategoryChips({ value, onChange }: CategoryChipsProps) {
               styles.chip,
               {
                 backgroundColor: selected ? palette.ink : palette.surface,
-                boxShadow: palette.chipShadow,
+                boxShadow: shadow ? palette.chipShadow : undefined,
               },
             ]}
           >
