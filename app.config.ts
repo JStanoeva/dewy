@@ -12,7 +12,7 @@ const config: ExpoConfig = {
     package: 'com.jstanoeva.dewy',
     adaptiveIcon: {
       foregroundImage: './assets/android-icon-foreground.png',
-      backgroundImage: './assets/android-icon-background.png',
+      backgroundColor: '#ffcdb2',
       monochromeImage: './assets/android-icon-monochrome.png',
     },
     predictiveBackGestureEnabled: false,
