@@ -21,6 +21,7 @@ import { FormTextField } from '@/components/FormTextField';
 import { Screen } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { CategoryChips, categoryOptions } from '@/features/products/components/CategoryChips';
+import { IngredientChips } from '@/features/products/components/IngredientChips';
 import { paoMonthsOptions } from '@/features/products/constants';
 import { useCreateProduct } from '@/features/products/hooks/useProductMutations';
 import {
@@ -355,21 +356,7 @@ export function ProductFormScreen({ navigation, route }: ProductFormScreenProps)
             )}
           />
           {ingredientPreview.length > 0 ? (
-            <View style={styles.ingredientChips}>
-              {ingredientPreview.map((ingredient) => (
-                <View
-                  key={ingredient}
-                  style={[styles.ingredientChip, { backgroundColor: palette.peach }]}
-                >
-                  <Text
-                    numberOfLines={1}
-                    style={[styles.ingredientLabel, { color: palette.onAccent }]}
-                  >
-                    {ingredient}
-                  </Text>
-                </View>
-              ))}
-            </View>
+            <IngredientChips ingredients={ingredientPreview} />
           ) : null}
         </View>
 
@@ -546,23 +533,6 @@ const styles = StyleSheet.create({
     minHeight: 18,
     justifyContent: 'center',
     marginTop: spacing.xs,
-  },
-  ingredientChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-  },
-  ingredientChip: {
-    maxWidth: '100%',
-    height: 32,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.pill,
-  },
-  ingredientLabel: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: fontSizes.meta,
   },
   footer: {
     gap: spacing.xs,

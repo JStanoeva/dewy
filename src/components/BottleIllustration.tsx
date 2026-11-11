@@ -1,6 +1,8 @@
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import type { BottleColors } from '@/theme/bottleColors';
+import { useDewyTheme } from '@/theme/ThemeProvider';
+import { fonts } from '@/theme/tokens';
 
 export type BottleShape = 'dropper' | 'pump' | 'jar' | 'tube';
 
@@ -35,13 +37,23 @@ const shapes: Record<BottleShape, readonly Part[]> = {
   ],
 };
 
+// The card bottle (Shelf) and the large hero bottle (Product details), as drawn in the artboards.
+const sizes = {
+  card: { scale: 0.9, labelRadius: 3 },
+  hero: { scale: 2.4, labelRadius: 6 },
+} as const;
+
 type BottleIllustrationProps = {
   shape: BottleShape;
   colors: BottleColors;
-  scale: number;
+  size: keyof typeof sizes;
+  monogram?: string;
 };
 
-export function BottleIllustration({ shape, colors, scale }: BottleIllustrationProps) {
+export function BottleIllustration({ shape, colors, size, monogram }: BottleIllustrationProps) {
+  const { palette } = useDewyTheme();
+  const { scale, labelRadius } = sizes[size];
+
   return (
     <View style={styles.stack}>
       {shapes[shape].map((part, index) => (
@@ -67,10 +79,21 @@ export function BottleIllustration({ shape, colors, scale }: BottleIllustrationP
                 {
                   width: part.width * scale * 0.62,
                   height: part.height * scale * 0.34,
-                  backgroundColor: colors.label,
+                  borderRadius: labelRadius,
+                  backgroundColor: size === 'hero' ? colors.heroLabel : colors.label,
                 },
               ]}
-            />
+            >
+              {monogram ? (
+                <Text
+                  allowFontScaling={false}
+                  numberOfLines={1}
+                  style={[styles.monogram, { color: palette.plum }]}
+                >
+                  {monogram}
+                </Text>
+              ) : null}
+            </View>
           ) : null}
         </View>
       ))}
@@ -87,6 +110,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   label: {
-    borderRadius: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  monogram: {
+    overflow: 'visible',
+    fontFamily: fonts.displayItalicRegular,
+    fontSize: 15,
   },
 });

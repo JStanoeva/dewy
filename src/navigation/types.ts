@@ -6,6 +6,7 @@ import type { ProductStatus } from '@/features/products/types';
 export type RootStackParamList = {
   Auth: undefined;
   Main: NavigatorScreenParams<MainTabParamList>;
+  ProductDetails: { productId: string };
   ProductForm: { status?: ProductStatus; category?: Category } | undefined;
 };
 

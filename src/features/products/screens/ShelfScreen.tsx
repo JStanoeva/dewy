@@ -22,6 +22,8 @@ import {
 import { ProductCard } from '@/features/products/components/ProductCard';
 import { useProducts } from '@/features/products/hooks/useProducts';
 import type { ProductStatus } from '@/features/products/types';
+import { getShelfLife } from '@/features/products/utils/shelfLife';
+import { useLocalToday } from '@/hooks/useLocalToday';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import { fonts, fontSizes, letterSpacings, spacing } from '@/theme/tokens';
 
@@ -40,8 +42,13 @@ export function ShelfScreen() {
   const [category, setCategory] = useState<CategoryFilter>('all');
   const [refreshing, setRefreshing] = useState(false);
 
-  const ownedCount = products.data?.filter((product) => product.status === 'owned').length ?? 0;
+  const today = useLocalToday();
+  const owned = products.data?.filter((product) => product.status === 'owned') ?? [];
+  const ownedCount = owned.length;
   const wishlistCount = (products.data?.length ?? 0) - ownedCount;
+  const expiringCount = owned.filter(
+    (product) => getShelfLife(product.openedOn, product.paoMonths, today)?.isExpiringSoon,
+  ).length;
   const visible = (products.data ?? []).filter(
     (product) => product.status === status && (category === 'all' || product.category === category),
   );
@@ -72,9 +79,11 @@ export function ShelfScreen() {
         {products.data ? (
           <>
             <Text style={[styles.summary, { color: palette.textMuted }]}>
-              {status === 'owned'
-                ? countLabel(ownedCount)
-                : `${countLabel(wishlistCount)} you have your eye on`}
+              {status === 'wishlist'
+                ? `${countLabel(wishlistCount)} you have your eye on`
+                : expiringCount > 0
+                  ? `${countLabel(ownedCount)} · ${expiringCount} expiring soon`
+                  : countLabel(ownedCount)}
             </Text>
             <View style={styles.segmented}>
               <SegmentedControl
@@ -108,7 +117,15 @@ export function ShelfScreen() {
         data={visible}
         keyExtractor={(product) => product.id}
         numColumns={2}
-        renderItem={({ item }) => <ProductCard product={item} width={cardWidth} />}
+        renderItem={({ item }) => (
+          <ProductCard
+            product={item}
+            width={cardWidth}
+            today={today}
+            onPress={() => navigation.navigate('ProductDetails', { productId: item.id })}
+          />
+        )}
+        extraData={today}
         ListHeaderComponent={header}
         ListEmptyComponent={
           <View style={styles.inset}>

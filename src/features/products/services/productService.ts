@@ -67,6 +67,19 @@ export async function createProduct(input: ProductInput): Promise<Product> {
   return toProduct(productRowSchema.parse(data));
 }
 
+// Null when the product is gone or belongs to someone else (RLS hides it), so the screen can say so.
+export async function getProduct(id: string): Promise<Product | null> {
+  const { data, error } = await supabase
+    .from('products')
+    .select(productColumns)
+    .eq('id', id)
+    .maybeSingle();
+  if (error) {
+    throw error;
+  }
+  return data ? toProduct(productRowSchema.parse(data)) : null;
+}
+
 export async function listProducts(): Promise<Product[]> {
   const { data, error } = await supabase
     .from('products')

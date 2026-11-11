@@ -50,6 +50,7 @@ export const letterSpacings = {
   title: -0.3,
   kicker: 1.4,
   label: 0.9,
+  section: 0.78,
 } as const;
 
 export const radii = {
@@ -58,6 +59,7 @@ export const radii = {
   tabBar: 28,
   productCard: 24,
   card: 22,
+  detailCard: 20,
   input: 16,
   tile: 14,
 } as const;
