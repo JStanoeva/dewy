@@ -22,6 +22,9 @@ type FormTextFieldProps = Omit<TextInputProps, 'style'> & {
   ref?: Ref<TextFieldHandle>;
 };
 
+// Android scrolls a prefilled value to its end; show its beginning until the field is first used.
+const textStart = { start: 0 };
+
 // The forms' external-label field: a sentence-case label above a 50-high box (taller when multiline).
 export function FormTextField({
   label,
@@ -36,8 +39,18 @@ export function FormTextField({
   const { palette } = useDewyTheme();
   const inputRef = useRef<TextInputInstance>(null);
   const [focused, setFocused] = useState(false);
+  const [used, setUsed] = useState(false);
 
-  useImperativeHandle(ref, () => ({ focus: () => inputRef.current?.focus() }), []);
+  // Focus from code (Next, the box edge) keeps the caret where it was, so move it past a prefilled value.
+  function focusInput() {
+    inputRef.current?.focus();
+    if (!used) {
+      const length = inputProps.value?.length ?? 0;
+      inputRef.current?.setSelection(length, length);
+    }
+  }
+
+  useImperativeHandle(ref, () => ({ focus: focusInput }));
 
   return (
     <View style={[styles.container, style]}>
@@ -45,7 +58,7 @@ export function FormTextField({
       <Pressable
         accessible={false}
         focusable={false}
-        onPress={() => inputRef.current?.focus()}
+        onPress={focusInput}
         style={[
           styles.box,
           multiline ? styles.boxMultiline : styles.boxSingleLine,
@@ -63,9 +76,11 @@ export function FormTextField({
           selectionColor={palette.rose}
           multiline={multiline}
           textAlignVertical={multiline ? 'top' : 'center'}
+          selection={used ? undefined : textStart}
           style={[styles.input, multiline && styles.inputMultiline, { color: palette.text }]}
           onFocus={(event) => {
             setFocused(true);
+            setUsed(true);
             onFocus?.(event);
           }}
           onBlur={(event) => {

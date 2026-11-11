@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { Product } from '@/features/products/types';
 import { getShelfLife } from '@/features/products/utils/shelfLife';
@@ -38,9 +38,12 @@ export function ShelfLifeBar({ progress, isExpiringSoon, height }: ShelfLifeBarP
 type ShelfLifeCardProps = {
   product: Product;
   today: LocalDate;
+  onAddOpenedDate?: () => void;
 };
 
-export function ShelfLifeCard({ product, today }: ShelfLifeCardProps) {
+const addDateSlop = { top: spacing.sm, bottom: spacing.xl, left: spacing.xl, right: spacing.xl };
+
+export function ShelfLifeCard({ product, today, onAddOpenedDate }: ShelfLifeCardProps) {
   const { palette } = useDewyTheme();
   const shelfLife = getShelfLife(product.openedOn, product.paoMonths, today);
 
@@ -62,43 +65,62 @@ export function ShelfLifeCard({ product, today }: ShelfLifeCardProps) {
 
   return (
     <View
-      accessible
-      accessibilityLabel={[`${label}, ${value}`, ...footer].join('. ')}
       style={[styles.card, { backgroundColor: palette.surface, boxShadow: palette.cardShadow }]}
     >
-      <View style={styles.header}>
-        <Text style={[styles.label, { color: palette.textMuted }]}>{label}</Text>
-        <Text
-          style={[
-            styles.value,
-            { color: shelfLife?.isExpiringSoon ? palette.warning : palette.text },
-          ]}
-        >
-          {value}
-        </Text>
-      </View>
-      {shelfLife ? (
-        <ShelfLifeBar
-          progress={shelfLife.progress}
-          isExpiringSoon={shelfLife.isExpiringSoon}
-          height={8}
-        />
-      ) : null}
-      {footer.length > 0 ? (
-        <View style={styles.footer}>
-          {footer.map((line, index) => (
-            <Text
-              key={line}
-              style={[
-                styles.footerText,
-                index > 0 && styles.footerTextEnd,
-                { color: palette.textMuted },
-              ]}
-            >
-              {line}
-            </Text>
-          ))}
+      {/* The link sits outside this TalkBack group, so it can be reached on its own. */}
+      <View
+        accessible
+        accessibilityLabel={[`${label}, ${value}`, ...footer].join('. ')}
+        style={styles.details}
+      >
+        <View style={styles.header}>
+          <Text style={[styles.label, { color: palette.textMuted }]}>{label}</Text>
+          <Text
+            style={[
+              styles.value,
+              { color: shelfLife?.isExpiringSoon ? palette.warning : palette.text },
+            ]}
+          >
+            {value}
+          </Text>
         </View>
+        {shelfLife ? (
+          <ShelfLifeBar
+            progress={shelfLife.progress}
+            isExpiringSoon={shelfLife.isExpiringSoon}
+            height={8}
+          />
+        ) : null}
+        {footer.length > 0 ? (
+          <View style={styles.footer}>
+            {footer.map((line, index) => (
+              <Text
+                key={line}
+                style={[
+                  styles.footerText,
+                  index > 0 && styles.footerTextEnd,
+                  { color: palette.textMuted },
+                ]}
+              >
+                {line}
+              </Text>
+            ))}
+          </View>
+        ) : null}
+      </View>
+      {onAddOpenedDate ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityHint="Opens Edit product"
+          hitSlop={addDateSlop}
+          onPress={onAddOpenedDate}
+          style={({ pressed }) => [styles.addDate, { opacity: pressed ? 0.7 : 1 }]}
+        >
+          <Text style={[styles.addDateText, { color: palette.textMuted }]}>
+            Opened it?{' '}
+            <Text style={[styles.addDateLink, { color: palette.text }]}>Add the date</Text>
+          </Text>
+        </Pressable>
       ) : null}
     </View>
   );
@@ -117,6 +139,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.xl,
     borderRadius: radii.detailCard,
+  },
+  details: {
+    gap: spacing.sm,
   },
   header: {
     flexDirection: 'row',
@@ -149,5 +174,20 @@ const styles = StyleSheet.create({
   },
   footerTextEnd: {
     textAlign: 'right',
+  },
+  // 18 tall plus the slop makes a 44 target that stays inside the gap above and the card's padding.
+  addDate: {
+    alignSelf: 'flex-start',
+    minHeight: 18,
+    justifyContent: 'center',
+  },
+  addDateText: {
+    fontFamily: fonts.body,
+    fontSize: fontSizes.meta,
+    lineHeight: 18,
+  },
+  addDateLink: {
+    fontFamily: fonts.bodySemiBold,
+    textDecorationLine: 'underline',
   },
 });

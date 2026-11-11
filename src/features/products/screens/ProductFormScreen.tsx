@@ -16,21 +16,27 @@ import Svg, { Path } from 'react-native-svg';
 
 import { AppButton } from '@/components/AppButton';
 import { DateField } from '@/components/DateField';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 import { FormScrollView, type FormScrollViewHandle } from '@/components/FormScrollView';
 import { FormTextField } from '@/components/FormTextField';
+import { LoadingState } from '@/components/LoadingState';
 import { Screen } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { CategoryChips, categoryOptions } from '@/features/products/components/CategoryChips';
 import { IngredientChips } from '@/features/products/components/IngredientChips';
-import { paoMonthsOptions } from '@/features/products/constants';
-import { useCreateProduct } from '@/features/products/hooks/useProductMutations';
+import { paoMonthsOptions, type Category } from '@/features/products/constants';
+import { useCreateProduct, useUpdateProduct } from '@/features/products/hooks/useProductMutations';
+import { useProduct } from '@/features/products/hooks/useProducts';
 import {
   earliestOpenedOn,
   parseIngredients,
   productFormSchema,
+  toProductFormValues,
   type ProductFormValues,
   type ProductInput,
 } from '@/features/products/schemas/productSchema';
+import type { Product, ProductStatus } from '@/features/products/types';
 import type { RootStackParamList } from '@/navigation/types';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import { fonts, fontSizes, letterSpacings, minTouchTarget, radii, spacing } from '@/theme/tokens';
@@ -67,10 +73,69 @@ const paoTileSlop = { left: spacing.snug / 2, right: spacing.snug / 2 };
 const notOpenedSlop = { top: spacing.xs, bottom: 18, left: spacing.lg, right: spacing.lg };
 
 export function ProductFormScreen({ navigation, route }: ProductFormScreenProps) {
+  const productId = route.params?.productId;
+  if (productId) {
+    return <EditProduct productId={productId} navigation={navigation} />;
+  }
+  return (
+    <ProductForm
+      navigation={navigation}
+      status={route.params?.status}
+      category={route.params?.category}
+    />
+  );
+}
+
+type EditProductProps = {
+  productId: string;
+  navigation: ProductFormScreenProps['navigation'];
+};
+
+// The form reads its starting values once, so it mounts only after the product has loaded.
+function EditProduct({ productId, navigation }: EditProductProps) {
+  const product = useProduct(productId);
+
+  if (product.data) {
+    return <ProductForm navigation={navigation} product={product.data} />;
+  }
+
+  return (
+    <Screen edges={['left', 'right']}>
+      <FormHeader title="Edit product" onClose={() => navigation.goBack()} />
+      <View style={styles.inset}>
+        {product.data === null ? (
+          <EmptyState
+            title="This product is no longer on your shelf"
+            message="It may have been deleted."
+            action={{ label: 'Close', onPress: () => navigation.goBack() }}
+          />
+        ) : product.isError ? (
+          <ErrorState
+            message="We couldn't load this product. Check your connection and try again."
+            onRetry={() => product.refetch()}
+            retrying={product.isFetching}
+          />
+        ) : (
+          <LoadingState />
+        )}
+      </View>
+    </Screen>
+  );
+}
+
+type ProductFormProps = {
+  navigation: ProductFormScreenProps['navigation'];
+  product?: Product;
+  status?: ProductStatus;
+  category?: Category;
+};
+
+function ProductForm({ navigation, product, status: initialStatus, category }: ProductFormProps) {
   const { palette } = useDewyTheme();
   const insets = useSafeAreaInsets();
   const formRef = useRef<FormScrollViewHandle>(null);
   const createProduct = useCreateProduct();
+  const updateProduct = useUpdateProduct();
 
   const {
     control,
@@ -82,24 +147,26 @@ export function ProductFormScreen({ navigation, route }: ProductFormScreenProps)
     formState: { errors, isSubmitting },
   } = useForm<ProductFormValues, unknown, ProductInput>({
     resolver: zodResolver(productFormSchema),
-    defaultValues: {
-      status: route.params?.status ?? 'owned',
-      name: '',
-      brand: '',
-      category: route.params?.category,
-      openedOn: todayLocalDate(),
-      paoMonths: null,
-      ingredients: '',
-      notes: '',
-    },
+    defaultValues: product
+      ? toProductFormValues(product)
+      : {
+          status: initialStatus ?? 'owned',
+          name: '',
+          brand: '',
+          category,
+          openedOn: todayLocalDate(),
+          paoMonths: null,
+          ingredients: '',
+          notes: '',
+        },
     shouldFocusError: false,
   });
   const status = useWatch({ control, name: 'status' });
   const openedOn = useWatch({ control, name: 'openedOn' });
   const ingredientPreview = parseIngredients(useWatch({ control, name: 'ingredients' }));
   const isOwned = status === 'owned';
-  // Stays busy after a successful save too, so a tap during the closing animation can't insert twice.
-  const saving = isSubmitting || createProduct.isSuccess;
+  // Stays busy after a successful save too, so a tap during the closing animation can't save twice.
+  const saving = isSubmitting || createProduct.isSuccess || updateProduct.isSuccess;
 
   function revealFocusedField() {
     formRef.current?.revealFocusedField();
@@ -107,7 +174,11 @@ export function ProductFormScreen({ navigation, route }: ProductFormScreenProps)
 
   async function onSubmit(values: ProductInput) {
     try {
-      await createProduct.mutateAsync(values);
+      if (product) {
+        await updateProduct.mutateAsync({ id: product.id, input: values });
+      } else {
+        await createProduct.mutateAsync(values);
+      }
       if (navigation.isFocused()) {
         navigation.goBack();
       }
@@ -143,25 +214,10 @@ export function ProductFormScreen({ navigation, route }: ProductFormScreenProps)
 
   return (
     <Screen edges={['left', 'right']}>
-      <View style={styles.header}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-          onPress={() => navigation.goBack()}
-          style={({ pressed }) => [
-            styles.iconButton,
-            {
-              backgroundColor: palette.surface,
-              boxShadow: palette.iconButtonShadow,
-              opacity: pressed ? 0.7 : 1,
-            },
-          ]}
-        >
-          <CloseIcon color={palette.text} />
-        </Pressable>
-        <Text style={[styles.headerTitle, { color: palette.text }]}>New product</Text>
-        <View style={styles.iconButton} />
-      </View>
+      <FormHeader
+        title={product ? 'Edit product' : 'New product'}
+        onClose={() => navigation.goBack()}
+      />
 
       <FormScrollView
         ref={formRef}
@@ -176,19 +232,22 @@ export function ProductFormScreen({ navigation, route }: ProductFormScreenProps)
           <Text style={[styles.titleItalic, { color: palette.emphasis }]}>shelf?</Text>
         </Text>
 
-        <View style={styles.inset}>
-          <Controller
-            control={control}
-            name="status"
-            render={({ field }) => (
-              <SegmentedControl
-                options={statusOptions}
-                value={field.value}
-                onChange={field.onChange}
-              />
-            )}
-          />
-        </View>
+        {/* Editing never changes the status; only Move to shelf does. */}
+        {product ? null : (
+          <View style={styles.inset}>
+            <Controller
+              control={control}
+              name="status"
+              render={({ field }) => (
+                <SegmentedControl
+                  options={statusOptions}
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+          </View>
+        )}
 
         <View style={[styles.inset, styles.nameRow]}>
           <Controller
@@ -398,7 +457,7 @@ export function ProductFormScreen({ navigation, route }: ProductFormScreenProps)
         ) : null}
         <AppButton
           pinned
-          title={isOwned ? 'Save to shelf' : 'Save to wishlist'}
+          title={product ? 'Save changes' : isOwned ? 'Save to shelf' : 'Save to wishlist'}
           loading={saving}
           onPress={submit}
         />
@@ -422,6 +481,31 @@ function FieldError({
     >
       {children}
     </Text>
+  );
+}
+
+function FormHeader({ title, onClose }: { title: string; onClose: () => void }) {
+  const { palette } = useDewyTheme();
+  return (
+    <View style={styles.header}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Close"
+        onPress={onClose}
+        style={({ pressed }) => [
+          styles.iconButton,
+          {
+            backgroundColor: palette.surface,
+            boxShadow: palette.iconButtonShadow,
+            opacity: pressed ? 0.7 : 1,
+          },
+        ]}
+      >
+        <CloseIcon color={palette.text} />
+      </Pressable>
+      <Text style={[styles.headerTitle, { color: palette.text }]}>{title}</Text>
+      <View style={styles.iconButton} />
+    </View>
   );
 }
 

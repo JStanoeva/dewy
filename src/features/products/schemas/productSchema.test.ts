@@ -1,8 +1,10 @@
 import {
   parseIngredients,
   productFormSchema,
+  toProductFormValues,
   type ProductFormValues,
 } from '@/features/products/schemas/productSchema';
+import type { Product } from '@/features/products/types';
 import { toLocalDate, todayLocalDate } from '@/utils/localDate';
 
 const valid: ProductFormValues = {
@@ -151,5 +153,68 @@ describe('parseIngredients', () => {
   it('splits on commas and new lines, trims, and drops blanks and repeats', () => {
     expect(parseIngredients(' Retinal ,\nSqualane,, retinal ')).toEqual(['Retinal', 'Squalane']);
     expect(parseIngredients('')).toEqual([]);
+  });
+});
+
+describe('toProductFormValues', () => {
+  const stored: Product = {
+    id: 'cc12e8d4-19a2-413a-9fd2-fc0797c0df95',
+    status: 'owned',
+    name: 'Retinal 0.1% Serum',
+    brand: 'Nightjar',
+    category: 'serum',
+    barcode: null,
+    photoPath: null,
+    openedOn: '2026-05-25',
+    paoMonths: 6,
+    ingredients: ['Retinal', 'Squalane'],
+    notes: 'Evenings only\nFollow with SPF',
+    isFavorite: true,
+    createdAt: '2026-11-07T09:00:00Z',
+    updatedAt: '2026-11-07T09:00:00Z',
+  };
+
+  function roundTrip(product: Product) {
+    return productFormSchema.parse(toProductFormValues(product));
+  }
+
+  it('gives back every stored field of an opened product', () => {
+    expect(roundTrip(stored)).toEqual({
+      status: 'owned',
+      name: 'Retinal 0.1% Serum',
+      brand: 'Nightjar',
+      category: 'serum',
+      openedOn: '2026-05-25',
+      paoMonths: 6,
+      ingredients: ['Retinal', 'Squalane'],
+      notes: 'Evenings only\nFollow with SPF',
+    });
+  });
+
+  it('keeps an unopened product unopened instead of using today', () => {
+    const unopened = { ...stored, openedOn: null, paoMonths: null };
+    expect(toProductFormValues(unopened).openedOn).toBeNull();
+    expect(roundTrip(unopened)).toMatchObject({ openedOn: null, paoMonths: null });
+  });
+
+  it('keeps a wishlist product without dates', () => {
+    expect(
+      roundTrip({ ...stored, status: 'wishlist', openedOn: null, paoMonths: null }),
+    ).toMatchObject({ status: 'wishlist', openedOn: null, paoMonths: null });
+  });
+
+  it('turns a missing brand and notes into empty fields and back into null', () => {
+    const plain = { ...stored, brand: null, notes: null };
+    expect(toProductFormValues(plain)).toMatchObject({ brand: '', notes: '' });
+    expect(roundTrip(plain)).toMatchObject({ brand: null, notes: null });
+  });
+
+  it('keeps 20 ingredients in order', () => {
+    const ingredients = Array.from({ length: 20 }, (_, i) => `Ingredient ${i + 1}`);
+    expect(roundTrip({ ...stored, ingredients }).ingredients).toEqual(ingredients);
+  });
+
+  it('drops a use-within value the form does not offer', () => {
+    expect(toProductFormValues({ ...stored, paoMonths: 9 }).paoMonths).toBeNull();
   });
 });

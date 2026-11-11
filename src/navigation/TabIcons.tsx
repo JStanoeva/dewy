@@ -41,11 +41,11 @@ export function MoonIcon({ color }: IconProps) {
   );
 }
 
-export function BottleIcon({ color }: IconProps) {
+export function BottleIcon({ color, size = SIZE }: IconProps & { size?: number }) {
   return (
     <Svg
-      width={SIZE}
-      height={SIZE}
+      width={size}
+      height={size}
       viewBox="0 0 24 24"
       fill="none"
       stroke={color}

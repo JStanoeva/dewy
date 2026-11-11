@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { categories, paoMonthsOptions, productStatuses } from '@/features/products/constants';
+import type { Product } from '@/features/products/types';
 import { isValidLocalDate, todayLocalDate } from '@/utils/localDate';
 
 export const earliestOpenedOn = '2000-01-01';
@@ -93,3 +94,17 @@ export const productFormSchema = z
 
 export type ProductFormValues = z.input<typeof productFormSchema>;
 export type ProductInput = z.output<typeof productFormSchema>;
+
+// The edit form starts from the stored product; an unopened product stays unopened.
+export function toProductFormValues(product: Product): ProductFormValues {
+  return {
+    status: product.status,
+    name: product.name,
+    brand: product.brand ?? '',
+    category: product.category,
+    openedOn: product.openedOn,
+    paoMonths: paoMonthsOptions.find((months) => months === product.paoMonths) ?? null,
+    ingredients: product.ingredients.join(', '),
+    notes: product.notes ?? '',
+  };
+}

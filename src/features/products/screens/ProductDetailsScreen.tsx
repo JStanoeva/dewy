@@ -1,6 +1,7 @@
 import Feather from '@expo/vector-icons/Feather';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Ellipse, Path } from 'react-native-svg';
 
@@ -10,8 +11,14 @@ import { ErrorState } from '@/components/ErrorState';
 import { LoadingState } from '@/components/LoadingState';
 import { Screen } from '@/components/Screen';
 import { IngredientChips } from '@/features/products/components/IngredientChips';
+import { ProductActionsSheet } from '@/features/products/components/ProductActionsSheet';
 import { ShelfLifeCard } from '@/features/products/components/ShelfLifeCard';
 import { categoryDetails } from '@/features/products/constants';
+import {
+  useDeleteProduct,
+  useMoveToShelf,
+  useSetFavorite,
+} from '@/features/products/hooks/useProductMutations';
 import { useProduct } from '@/features/products/hooks/useProducts';
 import type { Product } from '@/features/products/types';
 import { noteLines, productInitials, splitLastWord } from '@/features/products/utils/productLabels';
@@ -37,13 +44,7 @@ export function ProductDetailsScreen({ navigation, route }: ProductDetailsScreen
   const today = useLocalToday();
 
   if (product.data) {
-    return (
-      <ProductDetailsContent
-        product={product.data}
-        today={today}
-        onBack={() => navigation.goBack()}
-      />
-    );
+    return <ProductDetailsContent product={product.data} today={today} navigation={navigation} />;
   }
 
   return (
@@ -80,16 +81,86 @@ export function ProductDetailsScreen({ navigation, route }: ProductDetailsScreen
 type ProductDetailsContentProps = {
   product: Product;
   today: LocalDate;
-  onBack: () => void;
+  navigation: ProductDetailsScreenProps['navigation'];
 };
 
-function ProductDetailsContent({ product, today, onBack }: ProductDetailsContentProps) {
+function ProductDetailsContent({ product, today, navigation }: ProductDetailsContentProps) {
   const { palette } = useDewyTheme();
   const insets = useSafeAreaInsets();
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const setFavorite = useSetFavorite();
+  const moveToShelf = useMoveToShelf();
+  const deleteProduct = useDeleteProduct();
   const colors = bottleColorsFor(product.id);
   const category = categoryDetails[product.category];
   const title = splitLastWord(product.name);
   const notes = noteLines(product.notes);
+
+  const deleting = deleteProduct.isPending || deleteProduct.isSuccess;
+
+  function toggleFavorite() {
+    if (setFavorite.isPending || deleting) {
+      return;
+    }
+    setFavorite.mutate(
+      { id: product.id, isFavorite: !product.isFavorite },
+      {
+        onError: () =>
+          Alert.alert("Couldn't save your favourite", 'Check your connection and try again.'),
+      },
+    );
+  }
+
+  // Only old errors are cleared: resetting a running mutation would drop its result.
+  function openSheet() {
+    if (moveToShelf.isError) {
+      moveToShelf.reset();
+    }
+    if (deleteProduct.isError) {
+      deleteProduct.reset();
+    }
+    setSheetOpen(true);
+  }
+
+  function openEdit() {
+    if (deleting) {
+      return;
+    }
+    setSheetOpen(false);
+    navigation.navigate('ProductForm', { productId: product.id });
+  }
+
+  // A failure reopens the sheet, so its error shows even if the sheet was closed while saving.
+  function moveProductToShelf() {
+    if (moveToShelf.isPending) {
+      return;
+    }
+    if (deleteProduct.isError) {
+      deleteProduct.reset();
+    }
+    moveToShelf.mutate(product.id, {
+      onSuccess: () => setSheetOpen(false),
+      onError: () => setSheetOpen(true),
+    });
+  }
+
+  function deleteForGood() {
+    if (deleting) {
+      return;
+    }
+    if (moveToShelf.isError) {
+      moveToShelf.reset();
+    }
+    deleteProduct.mutate(product.id, {
+      onSuccess: () => {
+        setSheetOpen(false);
+        if (navigation.isFocused()) {
+          navigation.goBack();
+        }
+      },
+      onError: () => setSheetOpen(true),
+    });
+  }
 
   return (
     <Screen edges={['left', 'right']} statusBarStyle={colors.statusBar}>
@@ -145,7 +216,13 @@ function ProductDetailsContent({ product, today, onBack }: ProductDetailsContent
               </View>
             </View>
 
-            <ShelfLifeCard product={product} today={today} />
+            <ShelfLifeCard
+              product={product}
+              today={today}
+              onAddOpenedDate={
+                product.status === 'owned' && !product.openedOn && !deleting ? openEdit : undefined
+              }
+            />
 
             {product.ingredients.length > 0 ? (
               <View>
@@ -195,12 +272,91 @@ function ProductDetailsContent({ product, today, onBack }: ProductDetailsContent
 
       <View style={styles.topRow}>
         <BackButton
-          onPress={onBack}
+          onPress={() => navigation.goBack()}
           backgroundColor={palette.heroButton}
           color={palette.onAccent}
         />
+        <View style={styles.topActions}>
+          <HeroButton label="Favourite" selected={product.isFavorite} onPress={toggleFavorite}>
+            <HeartIcon color={palette.berry} filled={product.isFavorite} />
+          </HeroButton>
+          <HeroButton label="More options" onPress={openSheet}>
+            <MoreIcon color={palette.onAccent} />
+          </HeroButton>
+        </View>
       </View>
+
+      {sheetOpen ? (
+        <ProductActionsSheet
+          product={product}
+          moving={moveToShelf.isPending}
+          deleting={deleting}
+          moveFailed={moveToShelf.isError}
+          deleteFailed={deleteProduct.isError}
+          onClose={() => setSheetOpen(false)}
+          onEdit={openEdit}
+          onMoveToShelf={moveProductToShelf}
+          onDelete={deleteForGood}
+        />
+      ) : null}
     </Screen>
+  );
+}
+
+type HeroButtonProps = {
+  label: string;
+  selected?: boolean;
+  onPress: () => void;
+  children: ReactNode;
+};
+
+function HeroButton({ label, selected, onPress, children }: HeroButtonProps) {
+  const { palette } = useDewyTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={selected === undefined ? undefined : { selected }}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.roundButton,
+        { backgroundColor: palette.heroButton, opacity: pressed ? 0.7 : 1 },
+      ]}
+    >
+      {children}
+    </Pressable>
+  );
+}
+
+function HeartIcon({ color, filled }: { color: string; filled: boolean }) {
+  return (
+    <Svg
+      width={20}
+      height={20}
+      viewBox="0 0 24 24"
+      fill={filled ? color : 'none'}
+      stroke={color}
+      strokeWidth={1.9}
+      strokeLinejoin="round"
+    >
+      <Path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" />
+    </Svg>
+  );
+}
+
+function MoreIcon({ color }: { color: string }) {
+  return (
+    <Svg
+      width={20}
+      height={20}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={3}
+      strokeLinecap="round"
+    >
+      <Path d="M5 12h.01M12 12h.01M19 12h.01" />
+    </Svg>
   );
 }
 
@@ -218,7 +374,7 @@ function BackButton({ onPress, backgroundColor, color, boxShadow }: BackButtonPr
       accessibilityLabel="Back"
       onPress={onPress}
       style={({ pressed }) => [
-        styles.backButton,
+        styles.roundButton,
         { backgroundColor, boxShadow, opacity: pressed ? 0.7 : 1 },
       ]}
     >
@@ -284,7 +440,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  backButton: {
+  topActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  roundButton: {
     width: minTouchTarget,
     height: minTouchTarget,
     alignItems: 'center',

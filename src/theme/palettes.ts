@@ -48,6 +48,8 @@ const morning = {
   iconButtonShadow: '0 6px 18px rgba(109, 104, 117, 0.1)',
   pinnedCtaShadow: '0 12px 28px rgba(109, 104, 117, 0.35)',
   heroButton: 'rgba(255, 245, 239, 0.8)',
+  berry: '#A2545F',
+  scrim: 'rgba(59, 53, 65, 0.4)',
 };
 
 export type Palette = typeof morning;
@@ -102,6 +104,8 @@ const evening: Palette = {
   iconButtonShadow: 'none',
   pinnedCtaShadow: 'none',
   heroButton: 'rgba(255, 245, 239, 0.8)',
+  berry: '#A2545F',
+  scrim: 'rgba(0, 0, 0, 0.5)',
 };
 
 export const palettes = { morning, evening };

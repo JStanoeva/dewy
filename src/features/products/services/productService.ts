@@ -67,6 +67,64 @@ export async function createProduct(input: ProductInput): Promise<Product> {
   return toProduct(productRowSchema.parse(data));
 }
 
+// Status, barcode, photo and favourite never change here; a wishlist edit leaves the opened date alone.
+export async function updateProduct(id: string, input: ProductInput): Promise<Product> {
+  const { data, error } = await supabase
+    .from('products')
+    .update({
+      name: input.name,
+      brand: input.brand,
+      category: input.category,
+      ingredients: input.ingredients,
+      notes: input.notes,
+      ...(input.status === 'owned'
+        ? { opened_on: input.openedOn, pao_months: input.paoMonths }
+        : {}),
+    })
+    .eq('id', id)
+    .select(productColumns)
+    .single();
+  if (error) {
+    throw error;
+  }
+  return toProduct(productRowSchema.parse(data));
+}
+
+// Products only ever move wishlist → owned, and arrive unopened.
+export async function moveProductToShelf(id: string): Promise<Product> {
+  const { data, error } = await supabase
+    .from('products')
+    .update({ status: 'owned' })
+    .eq('id', id)
+    .select(productColumns)
+    .single();
+  if (error) {
+    throw error;
+  }
+  return toProduct(productRowSchema.parse(data));
+}
+
+export async function setProductFavorite(id: string, isFavorite: boolean): Promise<Product> {
+  const { data, error } = await supabase
+    .from('products')
+    .update({ is_favorite: isFavorite })
+    .eq('id', id)
+    .select(productColumns)
+    .single();
+  if (error) {
+    throw error;
+  }
+  return toProduct(productRowSchema.parse(data));
+}
+
+// A product that is already gone counts as deleted.
+export async function deleteProduct(id: string): Promise<void> {
+  const { error } = await supabase.from('products').delete().eq('id', id);
+  if (error) {
+    throw error;
+  }
+}
+
 // Null when the product is gone or belongs to someone else (RLS hides it), so the screen can say so.
 export async function getProduct(id: string): Promise<Product | null> {
   const { data, error } = await supabase
