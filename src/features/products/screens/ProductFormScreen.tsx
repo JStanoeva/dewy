@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Controller, useForm, useWatch, type FieldErrors } from 'react-hook-form';
 import {
   Keyboard,
@@ -12,7 +12,6 @@ import {
   type TextStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
 
 import { AppButton } from '@/components/AppButton';
 import { DateField } from '@/components/DateField';
@@ -23,7 +22,9 @@ import { FormTextField } from '@/components/FormTextField';
 import { LoadingState } from '@/components/LoadingState';
 import { Screen } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
+import { BarcodeCard } from '@/features/products/components/BarcodeCard';
 import { CategoryChips, categoryOptions } from '@/features/products/components/CategoryChips';
+import { CloseIcon } from '@/features/products/components/CloseIcon';
 import { IngredientChips } from '@/features/products/components/IngredientChips';
 import { paoMonthsOptions, type Category } from '@/features/products/constants';
 import { useCreateProduct, useUpdateProduct } from '@/features/products/hooks/useProductMutations';
@@ -50,6 +51,7 @@ const statusOptions = [
 ] as const;
 
 const fieldOrder = [
+  'barcode',
   'name',
   'brand',
   'category',
@@ -74,14 +76,18 @@ const notOpenedSlop = { top: spacing.xs, bottom: 18, left: spacing.lg, right: sp
 
 export function ProductFormScreen({ navigation, route }: ProductFormScreenProps) {
   const productId = route.params?.productId;
+  const scannedBarcode = route.params?.barcode;
   if (productId) {
-    return <EditProduct productId={productId} navigation={navigation} />;
+    return (
+      <EditProduct productId={productId} navigation={navigation} scannedBarcode={scannedBarcode} />
+    );
   }
   return (
     <ProductForm
       navigation={navigation}
       status={route.params?.status}
       category={route.params?.category}
+      scannedBarcode={scannedBarcode}
     />
   );
 }
@@ -89,14 +95,17 @@ export function ProductFormScreen({ navigation, route }: ProductFormScreenProps)
 type EditProductProps = {
   productId: string;
   navigation: ProductFormScreenProps['navigation'];
+  scannedBarcode?: string;
 };
 
 // The form reads its starting values once, so it mounts only after the product has loaded.
-function EditProduct({ productId, navigation }: EditProductProps) {
+function EditProduct({ productId, navigation, scannedBarcode }: EditProductProps) {
   const product = useProduct(productId);
 
   if (product.data) {
-    return <ProductForm navigation={navigation} product={product.data} />;
+    return (
+      <ProductForm navigation={navigation} product={product.data} scannedBarcode={scannedBarcode} />
+    );
   }
 
   return (
@@ -128,9 +137,17 @@ type ProductFormProps = {
   product?: Product;
   status?: ProductStatus;
   category?: Category;
+  // Set by the scanner through the route params.
+  scannedBarcode?: string;
 };
 
-function ProductForm({ navigation, product, status: initialStatus, category }: ProductFormProps) {
+function ProductForm({
+  navigation,
+  product,
+  status: initialStatus,
+  category,
+  scannedBarcode,
+}: ProductFormProps) {
   const { palette } = useDewyTheme();
   const insets = useSafeAreaInsets();
   const formRef = useRef<FormScrollViewHandle>(null);
@@ -151,6 +168,8 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
       ? toProductFormValues(product)
       : {
           status: initialStatus ?? 'owned',
+          // Required: without the key the schema would block every save with no visible error.
+          barcode: null,
           name: '',
           brand: '',
           category,
@@ -162,14 +181,35 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
     shouldFocusError: false,
   });
   const status = useWatch({ control, name: 'status' });
+  const barcode = useWatch({ control, name: 'barcode' });
   const openedOn = useWatch({ control, name: 'openedOn' });
   const ingredientPreview = parseIngredients(useWatch({ control, name: 'ingredients' }));
   const isOwned = status === 'owned';
   // Stays busy after a successful save too, so a tap during the closing animation can't save twice.
   const saving = isSubmitting || createProduct.isSuccess || updateProduct.isSuccess;
 
+  // Clearing the param lets the same code arrive again after it was removed.
+  useEffect(() => {
+    if (scannedBarcode) {
+      setValue('barcode', scannedBarcode);
+      clearErrors('barcode');
+      navigation.setParams({ barcode: undefined });
+    }
+  }, [scannedBarcode, navigation, setValue, clearErrors]);
+
   function revealFocusedField() {
     formRef.current?.revealFocusedField();
+  }
+
+  // The keyboard would otherwise stay up over the camera, because the form keeps taps while it shows.
+  function openScanner() {
+    Keyboard.dismiss();
+    navigation.navigate('BarcodeScanner');
+  }
+
+  function removeBarcode() {
+    setValue('barcode', null);
+    clearErrors('barcode');
   }
 
   async function onSubmit(values: ProductInput) {
@@ -248,6 +288,17 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
             />
           </View>
         )}
+
+        {/* Disabled while saving: a scan that lands after the save would leave the form unable to close. */}
+        <View style={styles.inset}>
+          <BarcodeCard
+            barcode={barcode}
+            error={errors.barcode?.message}
+            disabled={saving}
+            onScan={openScanner}
+            onRemove={removeBarcode}
+          />
+        </View>
 
         <View style={[styles.inset, styles.nameRow]}>
           <Controller
@@ -506,22 +557,6 @@ function FormHeader({ title, onClose }: { title: string; onClose: () => void }) 
       <Text style={[styles.headerTitle, { color: palette.text }]}>{title}</Text>
       <View style={styles.iconButton} />
     </View>
-  );
-}
-
-function CloseIcon({ color }: { color: string }) {
-  return (
-    <Svg
-      width={18}
-      height={18}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={2.2}
-      strokeLinecap="round"
-    >
-      <Path d="M6 6l12 12M18 6L6 18" />
-    </Svg>
   );
 }
 

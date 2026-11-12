@@ -7,7 +7,10 @@ export type RootStackParamList = {
   Auth: undefined;
   Main: NavigatorScreenParams<MainTabParamList>;
   ProductDetails: { productId: string };
-  ProductForm: { productId?: string; status?: ProductStatus; category?: Category } | undefined;
+  ProductForm:
+    | { productId?: string; status?: ProductStatus; category?: Category; barcode?: string }
+    | undefined;
+  BarcodeScanner: undefined;
 };
 
 export type MainTabParamList = {

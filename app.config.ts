@@ -17,7 +17,18 @@ const config: ExpoConfig = {
     },
     predictiveBackGestureEnabled: false,
   },
-  plugins: [['expo-splash-screen', { backgroundColor: '#FFF5EF' }], 'expo-secure-store'],
+  plugins: [
+    ['expo-splash-screen', { backgroundColor: '#FFF5EF' }],
+    'expo-secure-store',
+    [
+      'expo-camera',
+      {
+        cameraPermission: 'Dewy uses your camera to scan product barcodes.',
+        microphonePermission: false,
+        recordAudioAndroid: false,
+      },
+    ],
+  ],
 };
 
 export default config;

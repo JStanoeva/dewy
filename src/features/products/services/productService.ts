@@ -51,6 +51,7 @@ export async function createProduct(input: ProductInput): Promise<Product> {
     .from('products')
     .insert({
       status: input.status,
+      barcode: input.barcode,
       name: input.name,
       brand: input.brand,
       category: input.category,
@@ -67,11 +68,12 @@ export async function createProduct(input: ProductInput): Promise<Product> {
   return toProduct(productRowSchema.parse(data));
 }
 
-// Status, barcode, photo and favourite never change here; a wishlist edit leaves the opened date alone.
+// Status, photo and favourite never change here; a wishlist edit leaves the opened date alone.
 export async function updateProduct(id: string, input: ProductInput): Promise<Product> {
   const { data, error } = await supabase
     .from('products')
     .update({
+      barcode: input.barcode,
       name: input.name,
       brand: input.brand,
       category: input.category,

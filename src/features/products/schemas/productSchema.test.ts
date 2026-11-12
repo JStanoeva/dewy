@@ -9,6 +9,7 @@ import { toLocalDate, todayLocalDate } from '@/utils/localDate';
 
 const valid: ProductFormValues = {
   status: 'owned',
+  barcode: null,
   name: 'Hydrating Toner',
   brand: 'Dewy Lab',
   category: 'toner',
@@ -35,6 +36,7 @@ describe('productFormSchema', () => {
     expect(
       productFormSchema.parse({
         ...valid,
+        barcode: '3600523614080',
         name: '  Hydrating Toner ',
         brand: '  ',
         ingredients: 'Niacinamide, , Ceramides ,niacinamide',
@@ -42,6 +44,7 @@ describe('productFormSchema', () => {
       }),
     ).toEqual({
       status: 'owned',
+      barcode: '3600523614080',
       name: 'Hydrating Toner',
       brand: null,
       category: 'toner',
@@ -147,6 +150,67 @@ describe('productFormSchema', () => {
     expect(errorsFor({ notes: 'n'.repeat(500) }).notes).toBeUndefined();
     expect(errorsFor({ notes: 'n'.repeat(501) }).notes).toBe('Up to 500 characters');
   });
+
+  describe('barcode', () => {
+    it('keeps no barcode as null', () => {
+      expect(productFormSchema.parse(valid).barcode).toBeNull();
+    });
+
+    it('keeps EAN-13, EAN-8 and UPC-A codes exactly as scanned, leading zeros too', () => {
+      for (const code of [
+        '3600523614080',
+        '96385074',
+        '036000291452',
+        '123456',
+        '00012345678905',
+      ]) {
+        expect(productFormSchema.parse({ ...valid, barcode: code }).barcode).toBe(code);
+      }
+    });
+
+    it('rejects what the database check rejects', () => {
+      for (const code of [
+        '12345',
+        '123456789012345',
+        '',
+        '36005 23614080',
+        '3600523614080\n',
+        ' 3600523614080',
+        '٣٦٠٠٥٢٣٦١٤٠٨٠',
+        '３６００５２３６１４０８０',
+        '3600523614O80',
+        'abcdef',
+      ]) {
+        expect(errorsFor({ barcode: code }).barcode).toBe('Scan the barcode again');
+      }
+    });
+
+    it('rejects a missing barcode instead of dropping it from the save', () => {
+      const withoutBarcode = Object.fromEntries(
+        Object.entries(valid).filter(([key]) => key !== 'barcode'),
+      );
+      const result = productFormSchema.safeParse(withoutBarcode);
+      expect(result.success).toBe(false);
+      expect(result.error?.issues[0]).toMatchObject({
+        path: ['barcode'],
+        message: 'Scan the barcode again',
+      });
+    });
+
+    it('stays with a wishlist product while the hidden opened date is dropped', () => {
+      const result = productFormSchema.parse({
+        ...valid,
+        status: 'wishlist',
+        barcode: '3600523614080',
+      });
+      expect(result).toMatchObject({ barcode: '3600523614080', openedOn: null, paoMonths: null });
+    });
+
+    it('reports a bad barcode together with other field errors', () => {
+      const errors = errorsFor({ barcode: '12345', name: '' });
+      expect(Object.keys(errors).sort()).toEqual(['barcode', 'name']);
+    });
+  });
 });
 
 describe('parseIngredients', () => {
@@ -181,6 +245,7 @@ describe('toProductFormValues', () => {
   it('gives back every stored field of an opened product', () => {
     expect(roundTrip(stored)).toEqual({
       status: 'owned',
+      barcode: null,
       name: 'Retinal 0.1% Serum',
       brand: 'Nightjar',
       category: 'serum',
@@ -212,6 +277,12 @@ describe('toProductFormValues', () => {
   it('keeps 20 ingredients in order', () => {
     const ingredients = Array.from({ length: 20 }, (_, i) => `Ingredient ${i + 1}`);
     expect(roundTrip({ ...stored, ingredients }).ingredients).toEqual(ingredients);
+  });
+
+  it('keeps a stored barcode unchanged', () => {
+    const scanned = { ...stored, barcode: '5901234123457' };
+    expect(toProductFormValues(scanned).barcode).toBe('5901234123457');
+    expect(roundTrip(scanned).barcode).toBe('5901234123457');
   });
 
   it('drops a use-within value the form does not offer', () => {

@@ -50,6 +50,9 @@ const morning = {
   heroButton: 'rgba(255, 245, 239, 0.8)',
   berry: '#A2545F',
   scrim: 'rgba(59, 53, 65, 0.4)',
+  cream: '#FFF5EF',
+  onAccentSoft: '#4F4957',
+  cameraScrim: 'rgba(0, 0, 0, 0.6)',
 };
 
 export type Palette = typeof morning;
@@ -106,6 +109,9 @@ const evening: Palette = {
   heroButton: 'rgba(255, 245, 239, 0.8)',
   berry: '#A2545F',
   scrim: 'rgba(0, 0, 0, 0.5)',
+  cream: '#FFF5EF',
+  onAccentSoft: '#4F4957',
+  cameraScrim: 'rgba(0, 0, 0, 0.6)',
 };
 
 export const palettes = { morning, evening };
