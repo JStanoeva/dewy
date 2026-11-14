@@ -7,6 +7,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  Vibration,
   View,
   type StyleProp,
   type TextStyle,
@@ -248,6 +249,8 @@ function ProductForm({
         if (!result || getValues('barcode') !== scannedBarcode) {
           return;
         }
+        // One short buzz says the product was found.
+        Vibration.vibrate(60);
         // Read at answer time, so anything typed while it was looking up wins.
         const current = lookupFills.current;
         if (result.name && (current.name || !getValues('name').trim())) {
