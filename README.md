@@ -42,6 +42,10 @@ npm run lint        # run ESLint
 npm run format      # format code with Prettier
 ```
 
+## Credits
+
+Scanning a barcode fills in product details from [Open Beauty Facts](https://world.openbeautyfacts.org), available under the [Open Database License](https://opendatacommons.org/licenses/odbl/1-0/).
+
 ## License
 
 [MIT](LICENSE)

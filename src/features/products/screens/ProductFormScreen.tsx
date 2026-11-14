@@ -22,12 +22,16 @@ import { FormTextField } from '@/components/FormTextField';
 import { LoadingState } from '@/components/LoadingState';
 import { Screen } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
-import { BarcodeCard } from '@/features/products/components/BarcodeCard';
+import { BarcodeCard, type BarcodeLookupState } from '@/features/products/components/BarcodeCard';
 import { CategoryChips, categoryOptions } from '@/features/products/components/CategoryChips';
 import { CloseIcon } from '@/features/products/components/CloseIcon';
 import { IngredientChips } from '@/features/products/components/IngredientChips';
 import { paoMonthsOptions, type Category } from '@/features/products/constants';
-import { useCreateProduct, useUpdateProduct } from '@/features/products/hooks/useProductMutations';
+import {
+  useBarcodeLookup,
+  useCreateProduct,
+  useUpdateProduct,
+} from '@/features/products/hooks/useProductMutations';
 import { useProduct } from '@/features/products/hooks/useProducts';
 import {
   earliestOpenedOn,
@@ -132,6 +136,9 @@ function EditProduct({ productId, navigation, scannedBarcode }: EditProductProps
   );
 }
 
+// The last code scanned here, and which fields still hold what its lookup filled in.
+type LookupFills = { code: string | null; name: boolean; brand: boolean; category: boolean };
+
 type ProductFormProps = {
   navigation: ProductFormScreenProps['navigation'];
   product?: Product;
@@ -153,6 +160,15 @@ function ProductForm({
   const formRef = useRef<FormScrollViewHandle>(null);
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
+  const barcodeLookup = useBarcodeLookup();
+  const { mutate: lookUp, reset: resetLookup } = barcodeLookup;
+  const lookupFills = useRef<LookupFills>({
+    code: null,
+    name: false,
+    brand: false,
+    category: false,
+  });
+  const isEdit = product !== undefined;
 
   const {
     control,
@@ -160,6 +176,8 @@ function ProductForm({
     setError,
     setFocus,
     setValue,
+    getValues,
+    resetField,
     clearErrors,
     formState: { errors, isSubmitting },
   } = useForm<ProductFormValues, unknown, ProductInput>({
@@ -188,14 +206,68 @@ function ProductForm({
   // Stays busy after a successful save too, so a tap during the closing animation can't save twice.
   const saving = isSubmitting || createProduct.isSuccess || updateProduct.isSuccess;
 
+  const lookupState: BarcodeLookupState = barcodeLookup.isPending
+    ? 'pending'
+    : barcodeLookup.isError
+      ? 'failed'
+      : barcodeLookup.isSuccess
+        ? barcodeLookup.data
+          ? 'found'
+          : 'notFound'
+        : 'idle';
+
   // Clearing the param lets the same code arrive again after it was removed.
   useEffect(() => {
-    if (scannedBarcode) {
-      setValue('barcode', scannedBarcode);
-      clearErrors('barcode');
-      navigation.setParams({ barcode: undefined });
+    if (!scannedBarcode) {
+      return;
     }
-  }, [scannedBarcode, navigation, setValue, clearErrors]);
+    setValue('barcode', scannedBarcode);
+    clearErrors('barcode');
+    navigation.setParams({ barcode: undefined });
+    // Edit only adds the code: its name and type are always filled in already.
+    if (isEdit) {
+      return;
+    }
+    // A different product: take back what the last lookup filled in, never what the user typed.
+    const fills = lookupFills.current;
+    if (fills.code !== scannedBarcode) {
+      if (fills.name) {
+        setValue('name', '');
+      }
+      if (fills.brand) {
+        setValue('brand', '');
+      }
+      if (fills.category) {
+        resetField('category');
+      }
+      lookupFills.current = { code: scannedBarcode, name: false, brand: false, category: false };
+    }
+    // Per-call callbacks run only for the latest lookup, and only while the form is open.
+    lookUp(scannedBarcode, {
+      onSuccess: (result) => {
+        if (!result || getValues('barcode') !== scannedBarcode) {
+          return;
+        }
+        // Read at answer time, so anything typed while it was looking up wins.
+        const current = lookupFills.current;
+        if (result.name && (current.name || !getValues('name').trim())) {
+          setValue('name', result.name);
+          clearErrors('name');
+          current.name = true;
+        }
+        if (result.brand && (current.brand || !getValues('brand').trim())) {
+          setValue('brand', result.brand);
+          clearErrors('brand');
+          current.brand = true;
+        }
+        if (result.category && (current.category || !getValues('category'))) {
+          setValue('category', result.category);
+          clearErrors('category');
+          current.category = true;
+        }
+      },
+    });
+  }, [scannedBarcode, isEdit, navigation, setValue, getValues, resetField, clearErrors, lookUp]);
 
   function revealFocusedField() {
     formRef.current?.revealFocusedField();
@@ -210,9 +282,15 @@ function ProductForm({
   function removeBarcode() {
     setValue('barcode', null);
     clearErrors('barcode');
+    // A lookup still running for the removed code then fills nothing.
+    resetLookup();
   }
 
   async function onSubmit(values: ProductInput) {
+    // A lookup still running would change the form after its values were taken.
+    if (barcodeLookup.isPending) {
+      resetLookup();
+    }
     try {
       if (product) {
         await updateProduct.mutateAsync({ id: product.id, input: values });
@@ -293,6 +371,8 @@ function ProductForm({
         <View style={styles.inset}>
           <BarcodeCard
             barcode={barcode}
+            prefills={!isEdit}
+            lookup={lookupState}
             error={errors.barcode?.message}
             disabled={saving}
             onScan={openScanner}
@@ -313,7 +393,10 @@ function ProductForm({
                 returnKeyType="next"
                 submitBehavior="submit"
                 value={field.value}
-                onChangeText={field.onChange}
+                onChangeText={(text) => {
+                  lookupFills.current.name = false;
+                  field.onChange(text);
+                }}
                 onBlur={field.onBlur}
                 onFocus={revealFocusedField}
                 onSubmitEditing={() => setFocus('brand')}
@@ -334,7 +417,10 @@ function ProductForm({
                 returnKeyType="next"
                 submitBehavior="submit"
                 value={field.value}
-                onChangeText={field.onChange}
+                onChangeText={(text) => {
+                  lookupFills.current.brand = false;
+                  field.onChange(text);
+                }}
                 onBlur={field.onBlur}
                 onFocus={revealFocusedField}
                 onSubmitEditing={() => setFocus('ingredients')}
@@ -355,7 +441,10 @@ function ProductForm({
                   <CategoryChips
                     options={categoryOptions}
                     value={field.value}
-                    onChange={field.onChange}
+                    onChange={(value) => {
+                      lookupFills.current.category = false;
+                      field.onChange(value);
+                    }}
                     shadow={false}
                   />
                 </View>

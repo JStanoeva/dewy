@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 
 import type { ProductInput } from '@/features/products/schemas/productSchema';
+import { lookupBarcode } from '@/features/products/services/barcodeLookupService';
 import {
   createProduct,
   deleteProduct,
@@ -17,6 +18,11 @@ export function useCreateProduct() {
     // Returning the refetch keeps the mutation pending until the Shelf list is fresh.
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['products'] }),
   });
+}
+
+// No callbacks here: they would also run for lookups a rescan, Remove or Save has replaced.
+export function useBarcodeLookup() {
+  return useMutation({ mutationFn: lookupBarcode });
 }
 
 // The saved row the server sends back goes straight into Details and the Shelf list.

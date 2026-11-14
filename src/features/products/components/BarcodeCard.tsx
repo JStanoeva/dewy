@@ -1,22 +1,48 @@
 import { useEffect, useRef, type ComponentRef } from 'react';
-import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  AccessibilityInfo,
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import { fonts, fontSizes, radii, spacing } from '@/theme/tokens';
 
+export type BarcodeLookupState = 'idle' | 'pending' | 'found' | 'notFound' | 'failed';
+
 type BarcodeCardProps = {
   barcode: string | null;
+  // Only a new product is filled in from the lookup; Edit just adds the code.
+  prefills: boolean;
+  lookup: BarcodeLookupState;
   error?: string;
   disabled: boolean;
   onScan: () => void;
   onRemove: () => void;
 };
 
+const lookupMessages: Partial<Record<BarcodeLookupState, string>> = {
+  found: 'Found on Open Beauty Facts',
+  notFound: "We don't know this one yet — add the details below",
+  failed: "Couldn't look that up right now — fill it in yourself",
+};
+
 // The same 44 target as the form's "Not opened yet" link: 8 above and 18 below stay inside the gaps.
 const removeSlop = { top: spacing.xs, bottom: 18, left: spacing.lg, right: spacing.lg };
 
-export function BarcodeCard({ barcode, error, disabled, onScan, onRemove }: BarcodeCardProps) {
+export function BarcodeCard({
+  barcode,
+  prefills,
+  lookup,
+  error,
+  disabled,
+  onScan,
+  onRemove,
+}: BarcodeCardProps) {
   const { palette } = useDewyTheme();
   const cardRef = useRef<ComponentRef<typeof Pressable>>(null);
   const removedRef = useRef(false);
@@ -29,8 +55,15 @@ export function BarcodeCard({ barcode, error, disabled, onScan, onRemove }: Barc
     }
   }, [barcode]);
 
-  const title = barcode ? 'Scan again' : 'Scan the barcode';
-  const subtitle = barcode ? `Barcode ${barcode}` : 'Adds the code to this product';
+  const lookingUp = lookup === 'pending';
+  const message = lookupMessages[lookup];
+  const title = lookingUp ? 'Looking up…' : barcode ? 'Scan again' : 'Scan the barcode';
+  // Without the ellipsis, so TalkBack doesn't read "Looking up…. Barcode".
+  const spokenTitle = lookingUp ? 'Looking up' : title;
+  const idleSubtitle = prefills
+    ? 'Fills in name, brand and type for you'
+    : 'Adds the code to this product';
+  const subtitle = barcode ? `Barcode ${barcode}` : idleSubtitle;
   // Spaced digits make TalkBack read the code one digit at a time instead of as a huge number.
   const spokenSubtitle = barcode ? `Barcode ${barcode.split('').join(' ')}` : subtitle;
 
@@ -44,8 +77,9 @@ export function BarcodeCard({ barcode, error, disabled, onScan, onRemove }: Barc
       <Pressable
         ref={cardRef}
         accessibilityRole="button"
-        accessibilityLabel={`${title}. ${spokenSubtitle}`}
+        accessibilityLabel={`${spokenTitle}. ${spokenSubtitle}`}
         accessibilityHint="Opens the camera"
+        accessibilityState={{ busy: lookingUp }}
         disabled={disabled}
         onPress={onScan}
         style={({ pressed }) => [
@@ -53,14 +87,32 @@ export function BarcodeCard({ barcode, error, disabled, onScan, onRemove }: Barc
           { backgroundColor: palette.peach, opacity: pressed ? 0.7 : 1 },
         ]}
       >
-        <View style={[styles.iconCircle, { backgroundColor: palette.cream }]}>
-          <ScanIcon color={palette.onAccent} />
+        <View
+          importantForAccessibility="no-hide-descendants"
+          accessibilityElementsHidden
+          style={[styles.iconCircle, { backgroundColor: palette.cream }]}
+        >
+          {lookingUp ? (
+            <ActivityIndicator size="small" color={palette.onAccent} />
+          ) : (
+            <ScanIcon color={palette.onAccent} />
+          )}
         </View>
         <View style={styles.text}>
           <Text style={[styles.title, { color: palette.onAccent }]}>{title}</Text>
           <Text style={[styles.subtitle, { color: palette.onAccentSoft }]}>{subtitle}</Text>
         </View>
       </Pressable>
+
+      {/* Above the Remove link, so the link's touch area never covers it. */}
+      {message ? (
+        <Text
+          accessibilityLiveRegion="polite"
+          style={[styles.message, { color: palette.textMuted }]}
+        >
+          {message}
+        </Text>
+      ) : null}
 
       {barcode ? (
         <Pressable
@@ -126,6 +178,11 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.cardTitle,
   },
   subtitle: {
+    fontFamily: fonts.body,
+    fontSize: fontSizes.meta,
+  },
+  message: {
+    marginTop: spacing.xs,
     fontFamily: fonts.body,
     fontSize: fontSizes.meta,
   },
