@@ -1,5 +1,6 @@
 import type { Session } from '@supabase/supabase-js';
 import { useQueryClient } from '@tanstack/react-query';
+import { Image } from 'expo-image';
 import {
   createContext,
   useContext,
@@ -35,6 +36,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const nextUserId = nextSession?.user.id ?? null;
       if (userIdRef.current !== null && userIdRef.current !== nextUserId) {
         queryClient.clear();
+        // Product photos are cached on the device too, so the next account starts without them.
+        Image.clearMemoryCache();
+        Image.clearDiskCache();
       }
       userIdRef.current = nextUserId;
       setSession(nextSession);

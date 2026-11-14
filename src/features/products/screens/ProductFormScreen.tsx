@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Controller, useForm, useWatch, type FieldErrors } from 'react-hook-form';
 import {
   Keyboard,
@@ -25,8 +25,13 @@ import { Screen } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { CategoryChips, categoryOptions } from '@/features/products/components/CategoryChips';
 import { IngredientChips } from '@/features/products/components/IngredientChips';
+import { ProductPhotoField } from '@/features/products/components/ProductPhotoField';
 import { paoMonthsOptions, type Category } from '@/features/products/constants';
-import { useCreateProduct, useUpdateProduct } from '@/features/products/hooks/useProductMutations';
+import {
+  useCreateProduct,
+  useUpdateProduct,
+  useUploadProductPhoto,
+} from '@/features/products/hooks/useProductMutations';
 import { useProduct } from '@/features/products/hooks/useProducts';
 import {
   earliestOpenedOn,
@@ -36,7 +41,7 @@ import {
   type ProductFormValues,
   type ProductInput,
 } from '@/features/products/schemas/productSchema';
-import type { Product, ProductStatus } from '@/features/products/types';
+import type { Product, ProductPhotoValue, ProductStatus } from '@/features/products/types';
 import type { RootStackParamList } from '@/navigation/types';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import { fonts, fontSizes, letterSpacings, minTouchTarget, radii, spacing } from '@/theme/tokens';
@@ -136,6 +141,12 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
   const formRef = useRef<FormScrollViewHandle>(null);
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
+  const uploadPhoto = useUploadProductPhoto();
+  const [photo, setPhoto] = useState<ProductPhotoValue | null>(
+    product?.photoPath ? { kind: 'stored', path: product.photoPath } : null,
+  );
+  // A retry after a failed save reuses the photo that already uploaded instead of sending it again.
+  const uploaded = useRef<{ uri: string; path: string } | null>(null);
 
   const {
     control,
@@ -172,12 +183,31 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
     formRef.current?.revealFocusedField();
   }
 
+  async function photoPathToSave() {
+    if (photo === null || photo.kind === 'stored') {
+      return photo?.path ?? null;
+    }
+    if (uploaded.current?.uri === photo.uri) {
+      return uploaded.current.path;
+    }
+    const path = await uploadPhoto.mutateAsync(photo.uri);
+    uploaded.current = { uri: photo.uri, path };
+    return path;
+  }
+
+  // The photo uploads first, so a failed upload saves nothing and the product is never half-saved.
   async function onSubmit(values: ProductInput) {
     try {
+      const photoPath = await photoPathToSave();
       if (product) {
-        await updateProduct.mutateAsync({ id: product.id, input: values });
+        await updateProduct.mutateAsync({
+          id: product.id,
+          input: values,
+          photoPath,
+          previousPhotoPath: product.photoPath,
+        });
       } else {
-        await createProduct.mutateAsync(values);
+        await createProduct.mutateAsync({ input: values, photoPath });
       }
       if (navigation.isFocused()) {
         navigation.goBack();
@@ -248,6 +278,10 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
             />
           </View>
         )}
+
+        <View style={styles.inset}>
+          <ProductPhotoField value={photo} onChange={setPhoto} disabled={saving} />
+        </View>
 
         <View style={[styles.inset, styles.nameRow]}>
           <Controller

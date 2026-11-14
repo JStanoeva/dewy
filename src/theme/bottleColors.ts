@@ -10,6 +10,9 @@ const labelOnLight = 'rgba(109, 104, 117, 0.16)';
 const labelOnColour = 'rgba(255, 255, 255, 0.6)';
 const heroLabelOnColour = 'rgba(255, 255, 255, 0.65)';
 
+// The fade under the status bar on a Details photo, drawn at partial opacity in both palettes.
+export const photoScrim = '#3B3541';
+
 type BottleColorSet = {
   tile: string;
   body: string;

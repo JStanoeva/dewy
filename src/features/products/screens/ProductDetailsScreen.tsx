@@ -3,7 +3,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState, type ReactNode } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Ellipse, Path } from 'react-native-svg';
+import { StatusBar } from 'expo-status-bar';
+import Svg, { Defs, Ellipse, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
 import { BottleIllustration } from '@/components/BottleIllustration';
 import { EmptyState } from '@/components/EmptyState';
@@ -12,6 +13,7 @@ import { LoadingState } from '@/components/LoadingState';
 import { Screen } from '@/components/Screen';
 import { IngredientChips } from '@/features/products/components/IngredientChips';
 import { ProductActionsSheet } from '@/features/products/components/ProductActionsSheet';
+import { ProductPhoto } from '@/features/products/components/ProductPhoto';
 import { ShelfLifeCard } from '@/features/products/components/ShelfLifeCard';
 import { categoryDetails } from '@/features/products/constants';
 import {
@@ -24,7 +26,7 @@ import type { Product } from '@/features/products/types';
 import { noteLines, productInitials, splitLastWord } from '@/features/products/utils/productLabels';
 import { useLocalToday } from '@/hooks/useLocalToday';
 import type { RootStackParamList } from '@/navigation/types';
-import { bottleColorsFor } from '@/theme/bottleColors';
+import { bottleColorsFor, photoScrim } from '@/theme/bottleColors';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import { fonts, fontSizes, letterSpacings, minTouchTarget, radii, spacing } from '@/theme/tokens';
 import type { LocalDate } from '@/utils/localDate';
@@ -95,6 +97,22 @@ function ProductDetailsContent({ product, today, navigation }: ProductDetailsCon
   const category = categoryDetails[product.category];
   const title = splitLastWord(product.name);
   const notes = noteLines(product.notes);
+  const heroArt = (
+    <>
+      <View style={[styles.heroCircle, { backgroundColor: palette.peach }]} />
+      <View style={styles.bottle}>
+        <BottleIllustration
+          shape={category.bottle}
+          colors={colors}
+          size="hero"
+          monogram={productInitials(product.name)}
+        />
+        <Svg width={130} height={12} style={styles.ground}>
+          <Ellipse cx={65} cy={6} rx={65} ry={6} fill={palette.tileGroundShadow} />
+        </Svg>
+      </View>
+    </>
+  );
 
   const deleting = deleteProduct.isPending || deleteProduct.isSuccess;
 
@@ -170,18 +188,17 @@ function ProductDetailsContent({ product, today, navigation }: ProductDetailsCon
         pointerEvents="none"
         style={[styles.hero, { backgroundColor: colors.tile }]}
       >
-        <View style={[styles.heroCircle, { backgroundColor: palette.peach }]} />
-        <View style={styles.bottle}>
-          <BottleIllustration
-            shape={category.bottle}
-            colors={colors}
-            size="hero"
-            monogram={productInitials(product.name)}
+        {product.photoPath ? (
+          <ProductPhoto
+            path={product.photoPath}
+            style={StyleSheet.absoluteFill}
+            placeholderColor={colors.tile}
+            fallback={heroArt}
+            overlay={<HeroPhotoScrim />}
           />
-          <Svg width={130} height={12} style={styles.ground}>
-            <Ellipse cx={65} cy={6} rx={65} ry={6} fill={palette.tileGroundShadow} />
-          </Svg>
-        </View>
+        ) : (
+          heroArt
+        )}
       </View>
 
       <View style={styles.sheetFrame}>
@@ -328,6 +345,24 @@ function HeroButton({ label, selected, onPress, children }: HeroButtonProps) {
   );
 }
 
+// A photo can be any colour, so the status bar turns light over a soft dark fade while it shows.
+function HeroPhotoScrim() {
+  return (
+    <>
+      <StatusBar style="light" />
+      <Svg width="100%" height={140} style={styles.scrim}>
+        <Defs>
+          <LinearGradient id="heroScrim" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={photoScrim} stopOpacity={0.45} />
+            <Stop offset="1" stopColor={photoScrim} stopOpacity={0} />
+          </LinearGradient>
+        </Defs>
+        <Rect width="100%" height="100%" fill="url(#heroScrim)" />
+      </Svg>
+    </>
+  );
+}
+
 function HeartIcon({ color, filled }: { color: string; filled: boolean }) {
   return (
     <Svg
@@ -428,6 +463,12 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 48,
     alignItems: 'center',
+  },
+  scrim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
   },
   ground: {
     marginTop: spacing.snug,

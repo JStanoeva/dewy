@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { categories, productStatuses } from '@/features/products/constants';
 import type { ProductInput } from '@/features/products/schemas/productSchema';
+import { removeProductPhoto } from '@/features/products/services/productPhotoService';
 import type { Product } from '@/features/products/types';
 import { supabase } from '@/lib/supabase';
 
@@ -44,7 +45,10 @@ function toProduct(row: z.infer<typeof productRowSchema>): Product {
 }
 
 // The database fills in id, user_id and the timestamps; clients aren't allowed to send them.
-export async function createProduct(input: ProductInput): Promise<Product> {
+export async function createProduct(
+  input: ProductInput,
+  photoPath: string | null,
+): Promise<Product> {
   const { data, error } = await supabase
     .from('products')
     .insert({
@@ -52,6 +56,7 @@ export async function createProduct(input: ProductInput): Promise<Product> {
       name: input.name,
       brand: input.brand,
       category: input.category,
+      photo_path: photoPath,
       opened_on: input.openedOn,
       pao_months: input.paoMonths,
       ingredients: input.ingredients,
@@ -65,14 +70,19 @@ export async function createProduct(input: ProductInput): Promise<Product> {
   return toProduct(productRowSchema.parse(data));
 }
 
-// Status, photo and favourite never change here; a wishlist edit leaves the opened date alone.
-export async function updateProduct(id: string, input: ProductInput): Promise<Product> {
+// Status and favourite never change here; a wishlist edit leaves the opened date alone.
+export async function updateProduct(
+  id: string,
+  input: ProductInput,
+  photoPath: string | null,
+): Promise<Product> {
   const { data, error } = await supabase
     .from('products')
     .update({
       name: input.name,
       brand: input.brand,
       category: input.category,
+      photo_path: photoPath,
       ingredients: input.ingredients,
       notes: input.notes,
       ...(input.status === 'owned'
@@ -115,11 +125,20 @@ export async function setProductFavorite(id: string, isFavorite: boolean): Promi
   return toProduct(productRowSchema.parse(data));
 }
 
-// A product that is already gone counts as deleted.
+// A product that is already gone counts as deleted; the photo path comes from the deleted row itself.
 export async function deleteProduct(id: string): Promise<void> {
-  const { error } = await supabase.from('products').delete().eq('id', id);
+  const { data, error } = await supabase
+    .from('products')
+    .delete()
+    .eq('id', id)
+    .select('photo_path');
   if (error) {
     throw error;
+  }
+  for (const row of data) {
+    if (row.photo_path) {
+      removeProductPhoto(row.photo_path);
+    }
   }
 }
 

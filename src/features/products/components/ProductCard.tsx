@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Ellipse } from 'react-native-svg';
 
 import { BottleIllustration } from '@/components/BottleIllustration';
+import { ProductPhoto } from '@/features/products/components/ProductPhoto';
 import { ShelfLifeBar } from '@/features/products/components/ShelfLifeCard';
 import { categoryDetails } from '@/features/products/constants';
 import type { Product } from '@/features/products/types';
@@ -25,6 +26,18 @@ export function ProductCard({ product, width, today, onPress }: ProductCardProps
   const isWish = product.status === 'wishlist';
   const shelfLife = isWish ? null : getShelfLife(product.openedOn, product.paoMonths, today);
   const status = isWish ? savedLabel(product.createdAt, today) : (shelfLife?.label ?? 'Unopened');
+  const bottle = (
+    <>
+      <BottleIllustration
+        shape={categoryDetails[product.category].bottle}
+        colors={colors}
+        size="card"
+      />
+      <Svg width={60} height={6} style={styles.ground}>
+        <Ellipse cx={30} cy={3} rx={30} ry={3} fill={palette.tileGroundShadow} />
+      </Svg>
+    </>
+  );
   const accessibilityLabel = [
     product.name,
     product.brand,
@@ -50,14 +63,16 @@ export function ProductCard({ product, width, today, onPress }: ProductCardProps
       ]}
     >
       <View style={[styles.tile, { backgroundColor: colors.tile }]}>
-        <BottleIllustration
-          shape={categoryDetails[product.category].bottle}
-          colors={colors}
-          size="card"
-        />
-        <Svg width={60} height={6} style={styles.ground}>
-          <Ellipse cx={30} cy={3} rx={30} ry={3} fill={palette.tileGroundShadow} />
-        </Svg>
+        {product.photoPath ? (
+          <ProductPhoto
+            path={product.photoPath}
+            style={StyleSheet.absoluteFill}
+            placeholderColor={colors.tile}
+            fallback={bottle}
+          />
+        ) : (
+          bottle
+        )}
         {isWish ? (
           <View style={[styles.tag, { backgroundColor: palette.tileTag }]}>
             <Feather name="heart" size={11} color={palette.onAccent} />
@@ -106,6 +121,8 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
     borderTopLeftRadius: radii.productCard,
     borderTopRightRadius: radii.productCard,
+    // Clips a full-tile photo to the card's rounded top.
+    overflow: 'hidden',
   },
   tag: {
     position: 'absolute',

@@ -2,6 +2,10 @@ import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-q
 
 import type { ProductInput } from '@/features/products/schemas/productSchema';
 import {
+  removeProductPhoto,
+  uploadProductPhoto,
+} from '@/features/products/services/productPhotoService';
+import {
   createProduct,
   deleteProduct,
   moveProductToShelf,
@@ -10,13 +14,19 @@ import {
 } from '@/features/products/services/productService';
 import type { Product } from '@/features/products/types';
 
+type CreateVariables = { input: ProductInput; photoPath: string | null };
+
 export function useCreateProduct() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: createProduct,
+    mutationFn: ({ input, photoPath }: CreateVariables) => createProduct(input, photoPath),
     // Returning the refetch keeps the mutation pending until the Shelf list is fresh.
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['products'] }),
   });
+}
+
+export function useUploadProductPhoto() {
+  return useMutation({ mutationFn: uploadProductPhoto });
 }
 
 // The saved row the server sends back goes straight into Details and the Shelf list.
@@ -27,11 +37,24 @@ function storeProduct(queryClient: QueryClient, product: Product) {
   );
 }
 
+type UpdateVariables = {
+  id: string;
+  input: ProductInput;
+  photoPath: string | null;
+  previousPhotoPath: string | null;
+};
+
 export function useUpdateProduct() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: ProductInput }) => updateProduct(id, input),
-    onSuccess: (product) => storeProduct(queryClient, product),
+    mutationFn: ({ id, input, photoPath }: UpdateVariables) => updateProduct(id, input, photoPath),
+    // The replaced or removed photo goes only once the product no longer points to it.
+    onSuccess: (product, { photoPath, previousPhotoPath }) => {
+      storeProduct(queryClient, product);
+      if (previousPhotoPath && previousPhotoPath !== photoPath) {
+        removeProductPhoto(previousPhotoPath);
+      }
+    },
     // Not awaited, so a failed save reports at once instead of after the refetch's retries.
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
