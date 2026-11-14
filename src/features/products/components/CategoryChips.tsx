@@ -1,5 +1,4 @@
-import { useEffect, useRef } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, type ScrollViewInstance } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 
 import { categories, categoryDetails, type Category } from '@/features/products/constants';
 import { useDewyTheme } from '@/theme/ThemeProvider';
@@ -38,33 +37,12 @@ export function CategoryChips<T extends string>({
   shadow = true,
 }: CategoryChipsProps<T>) {
   const { palette } = useDewyTheme();
-  const scrollRef = useRef<ScrollViewInstance>(null);
-  const rowWidth = useRef(0);
-  const chipEnds = useRef<Partial<Record<string, number>>>({});
-  const tapped = useRef(false);
-
-  // A type set by a barcode lookup may be off-screen, so scroll the row until that chip fits.
-  useEffect(() => {
-    if (tapped.current) {
-      tapped.current = false;
-      return;
-    }
-    const end = value === undefined ? undefined : chipEnds.current[value];
-    if (end !== undefined) {
-      const x = Math.max(0, end + spacing.screen - rowWidth.current);
-      scrollRef.current?.scrollTo({ x, animated: true });
-    }
-  }, [value]);
 
   return (
     <ScrollView
-      ref={scrollRef}
       horizontal
       showsHorizontalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
-      onLayout={(event) => {
-        rowWidth.current = event.nativeEvent.layout.width;
-      }}
       style={styles.scroll}
       contentContainerStyle={styles.content}
     >
@@ -75,14 +53,7 @@ export function CategoryChips<T extends string>({
             key={option.value}
             accessibilityRole="button"
             accessibilityState={{ selected }}
-            onLayout={(event) => {
-              const { x, width } = event.nativeEvent.layout;
-              chipEnds.current[option.value] = x + width;
-            }}
-            onPress={() => {
-              tapped.current = option.value !== value;
-              onChange(option.value);
-            }}
+            onPress={() => onChange(option.value)}
             style={[
               styles.chip,
               {

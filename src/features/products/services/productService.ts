@@ -6,7 +6,7 @@ import type { Product } from '@/features/products/types';
 import { supabase } from '@/lib/supabase';
 
 const productColumns =
-  'id, status, name, brand, category, barcode, photo_path, opened_on, pao_months, ingredients, notes, is_favorite, created_at, updated_at';
+  'id, status, name, brand, category, photo_path, opened_on, pao_months, ingredients, notes, is_favorite, created_at, updated_at';
 
 // The generated types only say "string" for status and category, so rows are parsed before use.
 const productRowSchema = z.object({
@@ -15,7 +15,6 @@ const productRowSchema = z.object({
   name: z.string(),
   brand: z.string().nullable(),
   category: z.enum(categories),
-  barcode: z.string().nullable(),
   photo_path: z.string().nullable(),
   opened_on: z.string().nullable(),
   pao_months: z.number().nullable(),
@@ -33,7 +32,6 @@ function toProduct(row: z.infer<typeof productRowSchema>): Product {
     name: row.name,
     brand: row.brand,
     category: row.category,
-    barcode: row.barcode,
     photoPath: row.photo_path,
     openedOn: row.opened_on,
     paoMonths: row.pao_months,
@@ -51,7 +49,6 @@ export async function createProduct(input: ProductInput): Promise<Product> {
     .from('products')
     .insert({
       status: input.status,
-      barcode: input.barcode,
       name: input.name,
       brand: input.brand,
       category: input.category,
@@ -73,7 +70,6 @@ export async function updateProduct(id: string, input: ProductInput): Promise<Pr
   const { data, error } = await supabase
     .from('products')
     .update({
-      barcode: input.barcode,
       name: input.name,
       brand: input.brand,
       category: input.category,

@@ -36,7 +36,6 @@ export const fontSizes = {
   authTitle: 26,
   section: 22,
   subSection: 20,
-  cardTitle: 17,
   button: 16,
   bodyLarge: 16,
   body: 15,

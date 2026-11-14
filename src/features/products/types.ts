@@ -8,7 +8,6 @@ export type Product = {
   name: string;
   brand: string | null;
   category: Category;
-  barcode: string | null;
   photoPath: string | null;
   openedOn: string | null;
   paoMonths: number | null;

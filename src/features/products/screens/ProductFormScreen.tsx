@@ -1,18 +1,18 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { Controller, useForm, useWatch, type FieldErrors } from 'react-hook-form';
 import {
   Keyboard,
   Pressable,
   StyleSheet,
   Text,
-  Vibration,
   View,
   type StyleProp,
   type TextStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path } from 'react-native-svg';
 
 import { AppButton } from '@/components/AppButton';
 import { DateField } from '@/components/DateField';
@@ -23,16 +23,10 @@ import { FormTextField } from '@/components/FormTextField';
 import { LoadingState } from '@/components/LoadingState';
 import { Screen } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
-import { BarcodeCard, type BarcodeLookupState } from '@/features/products/components/BarcodeCard';
 import { CategoryChips, categoryOptions } from '@/features/products/components/CategoryChips';
-import { CloseIcon } from '@/features/products/components/CloseIcon';
 import { IngredientChips } from '@/features/products/components/IngredientChips';
 import { paoMonthsOptions, type Category } from '@/features/products/constants';
-import {
-  useBarcodeLookup,
-  useCreateProduct,
-  useUpdateProduct,
-} from '@/features/products/hooks/useProductMutations';
+import { useCreateProduct, useUpdateProduct } from '@/features/products/hooks/useProductMutations';
 import { useProduct } from '@/features/products/hooks/useProducts';
 import {
   earliestOpenedOn,
@@ -56,7 +50,6 @@ const statusOptions = [
 ] as const;
 
 const fieldOrder = [
-  'barcode',
   'name',
   'brand',
   'category',
@@ -81,18 +74,14 @@ const notOpenedSlop = { top: spacing.xs, bottom: 18, left: spacing.lg, right: sp
 
 export function ProductFormScreen({ navigation, route }: ProductFormScreenProps) {
   const productId = route.params?.productId;
-  const scannedBarcode = route.params?.barcode;
   if (productId) {
-    return (
-      <EditProduct productId={productId} navigation={navigation} scannedBarcode={scannedBarcode} />
-    );
+    return <EditProduct productId={productId} navigation={navigation} />;
   }
   return (
     <ProductForm
       navigation={navigation}
       status={route.params?.status}
       category={route.params?.category}
-      scannedBarcode={scannedBarcode}
     />
   );
 }
@@ -100,17 +89,14 @@ export function ProductFormScreen({ navigation, route }: ProductFormScreenProps)
 type EditProductProps = {
   productId: string;
   navigation: ProductFormScreenProps['navigation'];
-  scannedBarcode?: string;
 };
 
 // The form reads its starting values once, so it mounts only after the product has loaded.
-function EditProduct({ productId, navigation, scannedBarcode }: EditProductProps) {
+function EditProduct({ productId, navigation }: EditProductProps) {
   const product = useProduct(productId);
 
   if (product.data) {
-    return (
-      <ProductForm navigation={navigation} product={product.data} scannedBarcode={scannedBarcode} />
-    );
+    return <ProductForm navigation={navigation} product={product.data} />;
   }
 
   return (
@@ -137,39 +123,19 @@ function EditProduct({ productId, navigation, scannedBarcode }: EditProductProps
   );
 }
 
-// The last code scanned here, and which fields still hold what its lookup filled in.
-type LookupFills = { code: string | null; name: boolean; brand: boolean; category: boolean };
-
 type ProductFormProps = {
   navigation: ProductFormScreenProps['navigation'];
   product?: Product;
   status?: ProductStatus;
   category?: Category;
-  // Set by the scanner through the route params.
-  scannedBarcode?: string;
 };
 
-function ProductForm({
-  navigation,
-  product,
-  status: initialStatus,
-  category,
-  scannedBarcode,
-}: ProductFormProps) {
+function ProductForm({ navigation, product, status: initialStatus, category }: ProductFormProps) {
   const { palette } = useDewyTheme();
   const insets = useSafeAreaInsets();
   const formRef = useRef<FormScrollViewHandle>(null);
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
-  const barcodeLookup = useBarcodeLookup();
-  const { mutate: lookUp, reset: resetLookup } = barcodeLookup;
-  const lookupFills = useRef<LookupFills>({
-    code: null,
-    name: false,
-    brand: false,
-    category: false,
-  });
-  const isEdit = product !== undefined;
 
   const {
     control,
@@ -177,8 +143,6 @@ function ProductForm({
     setError,
     setFocus,
     setValue,
-    getValues,
-    resetField,
     clearErrors,
     formState: { errors, isSubmitting },
   } = useForm<ProductFormValues, unknown, ProductInput>({
@@ -187,8 +151,6 @@ function ProductForm({
       ? toProductFormValues(product)
       : {
           status: initialStatus ?? 'owned',
-          // Required: without the key the schema would block every save with no visible error.
-          barcode: null,
           name: '',
           brand: '',
           category,
@@ -200,100 +162,17 @@ function ProductForm({
     shouldFocusError: false,
   });
   const status = useWatch({ control, name: 'status' });
-  const barcode = useWatch({ control, name: 'barcode' });
   const openedOn = useWatch({ control, name: 'openedOn' });
   const ingredientPreview = parseIngredients(useWatch({ control, name: 'ingredients' }));
   const isOwned = status === 'owned';
   // Stays busy after a successful save too, so a tap during the closing animation can't save twice.
   const saving = isSubmitting || createProduct.isSuccess || updateProduct.isSuccess;
 
-  const lookupState: BarcodeLookupState = barcodeLookup.isPending
-    ? 'pending'
-    : barcodeLookup.isError
-      ? 'failed'
-      : barcodeLookup.isSuccess
-        ? barcodeLookup.data
-          ? 'found'
-          : 'notFound'
-        : 'idle';
-
-  // Clearing the param lets the same code arrive again after it was removed.
-  useEffect(() => {
-    if (!scannedBarcode) {
-      return;
-    }
-    setValue('barcode', scannedBarcode);
-    clearErrors('barcode');
-    navigation.setParams({ barcode: undefined });
-    // Edit only adds the code: its name and type are always filled in already.
-    if (isEdit) {
-      return;
-    }
-    // A different product: take back what the last lookup filled in, never what the user typed.
-    const fills = lookupFills.current;
-    if (fills.code !== scannedBarcode) {
-      if (fills.name) {
-        setValue('name', '');
-      }
-      if (fills.brand) {
-        setValue('brand', '');
-      }
-      if (fills.category) {
-        resetField('category');
-      }
-      lookupFills.current = { code: scannedBarcode, name: false, brand: false, category: false };
-    }
-    // Per-call callbacks run only for the latest lookup, and only while the form is open.
-    lookUp(scannedBarcode, {
-      onSuccess: (result) => {
-        if (!result || getValues('barcode') !== scannedBarcode) {
-          return;
-        }
-        // One short buzz says the product was found.
-        Vibration.vibrate(60);
-        // Read at answer time, so anything typed while it was looking up wins.
-        const current = lookupFills.current;
-        if (result.name && (current.name || !getValues('name').trim())) {
-          setValue('name', result.name);
-          clearErrors('name');
-          current.name = true;
-        }
-        if (result.brand && (current.brand || !getValues('brand').trim())) {
-          setValue('brand', result.brand);
-          clearErrors('brand');
-          current.brand = true;
-        }
-        if (result.category && (current.category || !getValues('category'))) {
-          setValue('category', result.category);
-          clearErrors('category');
-          current.category = true;
-        }
-      },
-    });
-  }, [scannedBarcode, isEdit, navigation, setValue, getValues, resetField, clearErrors, lookUp]);
-
   function revealFocusedField() {
     formRef.current?.revealFocusedField();
   }
 
-  // The keyboard would otherwise stay up over the camera, because the form keeps taps while it shows.
-  function openScanner() {
-    Keyboard.dismiss();
-    navigation.navigate('BarcodeScanner');
-  }
-
-  function removeBarcode() {
-    setValue('barcode', null);
-    clearErrors('barcode');
-    // A lookup still running for the removed code then fills nothing.
-    resetLookup();
-  }
-
   async function onSubmit(values: ProductInput) {
-    // A lookup still running would change the form after its values were taken.
-    if (barcodeLookup.isPending) {
-      resetLookup();
-    }
     try {
       if (product) {
         await updateProduct.mutateAsync({ id: product.id, input: values });
@@ -370,19 +249,6 @@ function ProductForm({
           </View>
         )}
 
-        {/* Disabled while saving: a scan that lands after the save would leave the form unable to close. */}
-        <View style={styles.inset}>
-          <BarcodeCard
-            barcode={barcode}
-            prefills={!isEdit}
-            lookup={lookupState}
-            error={errors.barcode?.message}
-            disabled={saving}
-            onScan={openScanner}
-            onRemove={removeBarcode}
-          />
-        </View>
-
         <View style={[styles.inset, styles.nameRow]}>
           <Controller
             control={control}
@@ -396,10 +262,7 @@ function ProductForm({
                 returnKeyType="next"
                 submitBehavior="submit"
                 value={field.value}
-                onChangeText={(text) => {
-                  lookupFills.current.name = false;
-                  field.onChange(text);
-                }}
+                onChangeText={field.onChange}
                 onBlur={field.onBlur}
                 onFocus={revealFocusedField}
                 onSubmitEditing={() => setFocus('brand')}
@@ -420,10 +283,7 @@ function ProductForm({
                 returnKeyType="next"
                 submitBehavior="submit"
                 value={field.value}
-                onChangeText={(text) => {
-                  lookupFills.current.brand = false;
-                  field.onChange(text);
-                }}
+                onChangeText={field.onChange}
                 onBlur={field.onBlur}
                 onFocus={revealFocusedField}
                 onSubmitEditing={() => setFocus('ingredients')}
@@ -444,10 +304,7 @@ function ProductForm({
                   <CategoryChips
                     options={categoryOptions}
                     value={field.value}
-                    onChange={(value) => {
-                      lookupFills.current.category = false;
-                      field.onChange(value);
-                    }}
+                    onChange={field.onChange}
                     shadow={false}
                   />
                 </View>
@@ -649,6 +506,22 @@ function FormHeader({ title, onClose }: { title: string; onClose: () => void }) 
       <Text style={[styles.headerTitle, { color: palette.text }]}>{title}</Text>
       <View style={styles.iconButton} />
     </View>
+  );
+}
+
+function CloseIcon({ color }: { color: string }) {
+  return (
+    <Svg
+      width={18}
+      height={18}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={2.2}
+      strokeLinecap="round"
+    >
+      <Path d="M6 6l12 12M18 6L6 18" />
+    </Svg>
   );
 }
 

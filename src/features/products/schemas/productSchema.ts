@@ -1,11 +1,6 @@
 import { z } from 'zod';
 
-import {
-  barcodePattern,
-  categories,
-  paoMonthsOptions,
-  productStatuses,
-} from '@/features/products/constants';
+import { categories, paoMonthsOptions, productStatuses } from '@/features/products/constants';
 import type { Product } from '@/features/products/types';
 import { isValidLocalDate, todayLocalDate } from '@/utils/localDate';
 
@@ -36,11 +31,6 @@ export function parseIngredients(text: string): string[] {
 export const productFormSchema = z
   .object({
     status: z.enum(productStatuses),
-    // Only the scanner sets it, and it checks the same rule first; null (never undefined) clears it.
-    barcode: z
-      .string({ error: 'Scan the barcode again' })
-      .regex(barcodePattern, 'Scan the barcode again')
-      .nullable(),
     name: z
       .string()
       .trim()
@@ -109,7 +99,6 @@ export type ProductInput = z.output<typeof productFormSchema>;
 export function toProductFormValues(product: Product): ProductFormValues {
   return {
     status: product.status,
-    barcode: product.barcode,
     name: product.name,
     brand: product.brand ?? '',
     category: product.category,

@@ -9,8 +9,6 @@ create table public.products (
     check (char_length(brand) <= 60 and btrim(brand) <> ''),
   category text not null
     check (category in ('cleanser', 'toner', 'serum', 'moisturizer', 'spf', 'mask')),
-  barcode text
-    check (barcode ~ '^[0-9]{6,14}$'),
   photo_path text,
   -- The server runs in UTC, so allow one day of slack for users ahead of UTC; the form checks the local date.
   opened_on date
@@ -69,7 +67,6 @@ grant insert (
   name,
   brand,
   category,
-  barcode,
   photo_path,
   opened_on,
   pao_months,
@@ -82,7 +79,6 @@ grant update (
   name,
   brand,
   category,
-  barcode,
   photo_path,
   opened_on,
   pao_months,

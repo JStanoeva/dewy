@@ -4,7 +4,6 @@ import * as SplashScreen from 'expo-splash-screen';
 
 import { useAuth } from '@/features/auth/providers/AuthProvider';
 import { AuthScreen } from '@/features/auth/screens/AuthScreen';
-import { BarcodeScannerScreen } from '@/features/products/screens/BarcodeScannerScreen';
 import { ProductDetailsScreen } from '@/features/products/screens/ProductDetailsScreen';
 import { ProductFormScreen } from '@/features/products/screens/ProductFormScreen';
 import { MainTabs } from '@/navigation/MainTabs';
@@ -38,11 +37,6 @@ export function RootNavigator() {
               name="ProductForm"
               component={ProductFormScreen}
               options={{ presentation: 'modal' }}
-            />
-            <Stack.Screen
-              name="BarcodeScanner"
-              component={BarcodeScannerScreen}
-              options={{ presentation: 'fullScreenModal' }}
             />
           </Stack.Group>
         ) : (

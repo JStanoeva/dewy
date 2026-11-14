@@ -8,9 +8,6 @@ export type Category = (typeof categories)[number];
 
 export const paoMonthsOptions = [3, 6, 12, 24] as const;
 
-// Same rule as products_barcode_check; no g or y flag, which would make test() stateful.
-export const barcodePattern = /^[0-9]{6,14}$/;
-
 type CategoryDetails = {
   label: string;
   stepKind: string;
