@@ -95,6 +95,25 @@ export const productFormSchema = z
 export type ProductFormValues = z.input<typeof productFormSchema>;
 export type ProductInput = z.output<typeof productFormSchema>;
 
+// What the photo's label suggests; a value the form would reject becomes null instead of an error.
+export const labelReadingSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .refine((value) => charLength(value) >= 2 && charLength(value) <= 80)
+    .nullable()
+    .catch(null),
+  brand: z
+    .string()
+    .trim()
+    .refine((value) => charLength(value) >= 1 && charLength(value) <= 60)
+    .nullable()
+    .catch(null),
+  category: z.enum(categories).nullable().catch(null),
+});
+
+export type LabelReading = z.output<typeof labelReadingSchema>;
+
 // The edit form starts from the stored product; an unopened product stays unopened.
 export function toProductFormValues(product: Product): ProductFormValues {
   return {

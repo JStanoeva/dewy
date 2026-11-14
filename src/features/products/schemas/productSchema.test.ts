@@ -1,4 +1,5 @@
 import {
+  labelReadingSchema,
   parseIngredients,
   productFormSchema,
   toProductFormValues,
@@ -215,5 +216,53 @@ describe('toProductFormValues', () => {
 
   it('drops a use-within value the form does not offer', () => {
     expect(toProductFormValues({ ...stored, paoMonths: 9 }).paoMonths).toBeNull();
+  });
+});
+
+describe('labelReadingSchema', () => {
+  it('keeps a full reading, trimmed', () => {
+    expect(
+      labelReadingSchema.parse({
+        name: ' Vitamin C 15% Serum ',
+        brand: 'Brightside',
+        category: 'serum',
+      }),
+    ).toEqual({ name: 'Vitamin C 15% Serum', brand: 'Brightside', category: 'serum' });
+  });
+
+  it('keeps nulls for anything the label did not show', () => {
+    expect(
+      labelReadingSchema.parse({ name: 'Clay Detox Mask', brand: null, category: null }),
+    ).toEqual({ name: 'Clay Detox Mask', brand: null, category: null });
+  });
+
+  it('drops names and brands the form would reject instead of cutting them', () => {
+    expect(
+      labelReadingSchema.parse({ name: 'x'.repeat(81), brand: 'b'.repeat(61), category: null }),
+    ).toEqual({ name: null, brand: null, category: null });
+    expect(labelReadingSchema.parse({ name: 'x', brand: '   ', category: null })).toMatchObject({
+      name: null,
+      brand: null,
+    });
+  });
+
+  it('counts code points, like the form', () => {
+    expect(
+      labelReadingSchema.parse({ name: '💖'.repeat(80), brand: null, category: null }).name,
+    ).toBe('💖'.repeat(80));
+  });
+
+  it('turns an unknown type, a wrong type or a missing field into null', () => {
+    expect(labelReadingSchema.parse({ name: 7, brand: undefined, category: 'Serum' })).toEqual({
+      name: null,
+      brand: null,
+      category: null,
+    });
+    expect(labelReadingSchema.parse({})).toEqual({ name: null, brand: null, category: null });
+  });
+
+  it('rejects an answer that is not an object', () => {
+    expect(labelReadingSchema.safeParse('{"name":"x"}').success).toBe(false);
+    expect(labelReadingSchema.safeParse(null).success).toBe(false);
   });
 });

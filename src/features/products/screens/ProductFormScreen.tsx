@@ -25,10 +25,14 @@ import { Screen } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { CategoryChips, categoryOptions } from '@/features/products/components/CategoryChips';
 import { IngredientChips } from '@/features/products/components/IngredientChips';
-import { ProductPhotoField } from '@/features/products/components/ProductPhotoField';
+import {
+  ProductPhotoField,
+  type LabelStatus,
+} from '@/features/products/components/ProductPhotoField';
 import { paoMonthsOptions, type Category } from '@/features/products/constants';
 import {
   useCreateProduct,
+  useReadProductLabel,
   useUpdateProduct,
   useUploadProductPhoto,
 } from '@/features/products/hooks/useProductMutations';
@@ -38,6 +42,7 @@ import {
   parseIngredients,
   productFormSchema,
   toProductFormValues,
+  type LabelReading,
   type ProductFormValues,
   type ProductInput,
 } from '@/features/products/schemas/productSchema';
@@ -135,6 +140,9 @@ type ProductFormProps = {
   category?: Category;
 };
 
+// Null when the label had nothing new, or label reading is switched off: the line then stays blank.
+type LabelOutcome = 'filled' | 'unread' | null;
+
 function ProductForm({ navigation, product, status: initialStatus, category }: ProductFormProps) {
   const { palette } = useDewyTheme();
   const insets = useSafeAreaInsets();
@@ -142,15 +150,18 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const uploadPhoto = useUploadProductPhoto();
+  const readLabel = useReadProductLabel();
   const [photo, setPhoto] = useState<ProductPhotoValue | null>(
     product?.photoPath ? { kind: 'stored', path: product.photoPath } : null,
   );
+  const [labelOutcome, setLabelOutcome] = useState<LabelOutcome>(null);
   // A retry after a failed save reuses the photo that already uploaded instead of sending it again.
   const uploaded = useRef<{ uri: string; path: string } | null>(null);
 
   const {
     control,
     handleSubmit,
+    getValues,
     setError,
     setFocus,
     setValue,
@@ -178,9 +189,51 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
   const isOwned = status === 'owned';
   // Stays busy after a successful save too, so a tap during the closing animation can't save twice.
   const saving = isSubmitting || createProduct.isSuccess || updateProduct.isSuccess;
+  let labelStatus: LabelStatus | undefined;
+  if (!product && photo?.kind === 'new') {
+    labelStatus = readLabel.isPending ? 'reading' : (labelOutcome ?? 'idle');
+  }
 
   function revealFocusedField() {
     formRef.current?.revealFocusedField();
+  }
+
+  // Checked when the answer arrives, so a field typed into during the read is never overwritten.
+  function fillEmptyFields(reading: LabelReading | null): LabelOutcome {
+    if (!reading) {
+      return null;
+    }
+    const { name, brand, category } = reading;
+    if (!name && !brand && !category) {
+      return 'unread';
+    }
+    let filled = false;
+    if (name && !getValues('name').trim()) {
+      setValue('name', name, { shouldValidate: true });
+      filled = true;
+    }
+    if (brand && !getValues('brand').trim()) {
+      setValue('brand', brand, { shouldValidate: true });
+      filled = true;
+    }
+    if (category && !getValues('category')) {
+      setValue('category', category, { shouldValidate: true });
+      filled = true;
+    }
+    return filled ? 'filled' : null;
+  }
+
+  // reset() drops the previous read's callbacks, so only the latest photo's answer can fill the form.
+  function changePhoto(next: ProductPhotoValue | null) {
+    setPhoto(next);
+    readLabel.reset();
+    setLabelOutcome(null);
+    if (!product && next?.kind === 'new') {
+      readLabel.mutate(next.uri, {
+        onSuccess: (reading) => setLabelOutcome(fillEmptyFields(reading)),
+        onError: () => setLabelOutcome('unread'),
+      });
+    }
   }
 
   async function photoPathToSave() {
@@ -197,6 +250,8 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
 
   // The photo uploads first, so a failed upload saves nothing and the product is never half-saved.
   async function onSubmit(values: ProductInput) {
+    // Runs only after validation passes, so a read still going can't change the form while it saves.
+    readLabel.reset();
     try {
       const photoPath = await photoPathToSave();
       if (product) {
@@ -280,7 +335,12 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
         )}
 
         <View style={styles.inset}>
-          <ProductPhotoField value={photo} onChange={setPhoto} disabled={saving} />
+          <ProductPhotoField
+            value={photo}
+            onChange={changePhoto}
+            disabled={saving}
+            labelStatus={labelStatus}
+          />
         </View>
 
         <View style={[styles.inset, styles.nameRow]}>

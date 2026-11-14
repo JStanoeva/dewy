@@ -3,12 +3,15 @@ import { File } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 
+import { labelReadingSchema, type LabelReading } from '@/features/products/schemas/productSchema';
 import { supabase } from '@/lib/supabase';
 
 const bucket = 'product-photos';
 // A square crop at 960 gives 960×960: small to upload, sharp on Details, and read whole by Claude in 3.1b.
 const photoWidth = 960;
 const signedUrlSeconds = 60 * 60;
+// The function gives Claude 15 s, so the app waits a little longer than that.
+const labelReadingTimeoutMs = 20_000;
 
 export type PhotoSource = 'camera' | 'library';
 
@@ -91,6 +94,22 @@ export async function getPhotoUrl(path: string): Promise<string> {
     throw error;
   }
   return data.signedUrl;
+}
+
+// Null means label reading is switched off: the function isn't deployed (404) or has no working key (503).
+export async function readProductLabel(localUri: string): Promise<LabelReading | null> {
+  const image = await new File(localUri).base64();
+  const { data, error, response } = await supabase.functions.invoke<unknown>('read-product-label', {
+    body: { image },
+    timeout: labelReadingTimeoutMs,
+  });
+  if (error) {
+    if (response?.status === 404 || response?.status === 503) {
+      return null;
+    }
+    throw error;
+  }
+  return labelReadingSchema.parse(data);
 }
 
 // Best effort and not awaited: a file left behind is harmless, so it never fails a save or a delete.

@@ -13,16 +13,32 @@ import type { ProductPhotoValue } from '@/features/products/types';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import { fonts, fontSizes, minTouchTarget, radii, spacing } from '@/theme/tokens';
 
+// 'idle' keeps the line's height once a read is over, so the fields below don't jump.
+export type LabelStatus = 'reading' | 'filled' | 'unread' | 'idle';
+
+const labelMessages: Record<LabelStatus, string> = {
+  reading: 'Reading the label…',
+  filled: 'Filled in from the label. Check it before saving.',
+  unread: "Couldn't read the label. Add the details yourself.",
+  idle: '',
+};
+
 type ProductPhotoFieldProps = {
   value: ProductPhotoValue | null;
   onChange: (value: ProductPhotoValue | null) => void;
   disabled: boolean;
+  labelStatus?: LabelStatus;
 };
 
 // 18 tall plus 12 above and 14 below makes a 44 target that stays inside the gaps around it.
 const removeSlop = { top: spacing.md, bottom: spacing.lg, left: spacing.lg, right: spacing.lg };
 
-export function ProductPhotoField({ value, onChange, disabled }: ProductPhotoFieldProps) {
+export function ProductPhotoField({
+  value,
+  onChange,
+  disabled,
+  labelStatus,
+}: ProductPhotoFieldProps) {
   const { palette } = useDewyTheme();
   const [picking, setPicking] = useState(false);
   const busy = disabled || picking;
@@ -115,6 +131,24 @@ export function ProductPhotoField({ value, onChange, disabled }: ProductPhotoFie
           ) : null}
         </View>
       </View>
+
+      {labelStatus ? (
+        <View style={styles.labelStatus}>
+          {labelStatus === 'reading' ? (
+            <ActivityIndicator
+              size="small"
+              color={palette.textMuted}
+              importantForAccessibility="no"
+            />
+          ) : null}
+          <Text
+            accessibilityLiveRegion="polite"
+            style={[styles.label, styles.labelStatusText, { color: palette.textMuted }]}
+          >
+            {labelMessages[labelStatus]}
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -192,5 +226,15 @@ const styles = StyleSheet.create({
     minHeight: 18,
     justifyContent: 'center',
     marginTop: spacing.xxs,
+  },
+  // As tall as Android's small spinner, so the line keeps its height when the spinner goes.
+  labelStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minHeight: 20,
+  },
+  labelStatusText: {
+    flexShrink: 1,
   },
 });

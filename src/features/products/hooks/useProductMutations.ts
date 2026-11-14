@@ -2,6 +2,7 @@ import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-q
 
 import type { ProductInput } from '@/features/products/schemas/productSchema';
 import {
+  readProductLabel,
   removeProductPhoto,
   uploadProductPhoto,
 } from '@/features/products/services/productPhotoService';
@@ -27,6 +28,11 @@ export function useCreateProduct() {
 
 export function useUploadProductPhoto() {
   return useMutation({ mutationFn: uploadProductPhoto });
+}
+
+// The form passes its callbacks to each mutate() call, so only the latest photo's answer is used.
+export function useReadProductLabel() {
+  return useMutation({ mutationFn: readProductLabel });
 }
 
 // The saved row the server sends back goes straight into Details and the Shelf list.
