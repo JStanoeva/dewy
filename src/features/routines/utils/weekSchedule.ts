@@ -1,10 +1,10 @@
 import type { RoutineStep } from '@/features/routines/types';
 import type { Period } from '@/theme/period';
 
-const dayLetters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as const;
+export const dayLetters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as const;
 // One letter where it is unambiguous, two where T and S would be.
 const chipDays = ['M', 'Tu', 'W', 'Th', 'F', 'Sa', 'Su'] as const;
-const dayNames = [
+export const dayNames = [
   'Monday',
   'Tuesday',
   'Wednesday',

@@ -9,24 +9,31 @@ type AppButtonProps = {
   loading?: boolean;
   // A button pinned to the bottom of the screen casts the artboards' stronger shadow.
   pinned?: boolean;
+  disabled?: boolean;
 };
 
-export function AppButton({ title, onPress, loading = false, pinned = false }: AppButtonProps) {
+export function AppButton({
+  title,
+  onPress,
+  loading = false,
+  pinned = false,
+  disabled = false,
+}: AppButtonProps) {
   const { palette } = useDewyTheme();
 
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={title}
-      accessibilityState={{ disabled: loading, busy: loading }}
-      disabled={loading}
+      accessibilityState={{ disabled: loading || disabled, busy: loading }}
+      disabled={loading || disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
         {
           backgroundColor: palette.primary,
           boxShadow: pinned ? palette.pinnedCtaShadow : palette.ctaShadow,
-          opacity: pressed ? 0.9 : 1,
+          opacity: disabled && !loading ? 0.4 : pressed ? 0.9 : 1,
         },
       ]}
     >

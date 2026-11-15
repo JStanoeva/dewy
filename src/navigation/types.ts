@@ -9,6 +9,7 @@ export type RootStackParamList = {
   Main: NavigatorScreenParams<MainTabParamList>;
   ProductDetails: { productId: string };
   ProductForm: { productId?: string; status?: ProductStatus; category?: Category } | undefined;
+  RoutineStepForm: { period: Period; stepId?: string };
 };
 
 export type MainTabParamList = {

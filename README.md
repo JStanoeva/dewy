@@ -18,9 +18,9 @@ Dewy keeps a shelf of the skincare products you own and the ones on your wishlis
 - Take or choose a product photo, stored privately for your account.
 - Optionally fill in a new product's name, brand and type from the label in its photo.
 
-- Add a new owned product to your morning or evening routine, and see each routine's steps, schedule and time on the Routines tab.
+- Build morning and evening routines from the products you own: pick each step's days, time, wait and note, then edit, reorder or remove steps on the Routines tab.
 
-The routine step editor and the Today checklist are still in progress.
+The Today checklist is still in progress.
 
 ## Tech stack
 
@@ -171,7 +171,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 
 - **Application Name:** Dewy
 - **Application Category / Topic:** Health and beauty: a personal skincare companion.
-- **Main Purpose:** Dewy helps people keep track of their skincare products. Users keep a shelf of the products they own and a wishlist of the ones they want. For each opened product, Dewy shows how long it has left before it should be replaced. New products can join a morning or evening routine. Editing routines and a daily checklist are still in progress.
+- **Main Purpose:** Dewy helps people keep track of their skincare products. Users keep a shelf of the products they own and a wishlist of the ones they want. For each opened product, Dewy shows how long it has left before it should be replaced. Owned products make up a morning and an evening routine, with each step's days, time, wait and note. A daily checklist is still in progress.
 
 ### User Access & Permissions
 
@@ -187,12 +187,12 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 - **Main sections:** four bottom tabs (Today, Shelf, Routines, Me) and a raised centre "+" button that opens the New product form.
   - **Today:** the date, a "Good morning" or "Good evening" greeting with the user's name, and an "Add your first product" prompt. The checklist is still in progress.
   - **Shelf:** the user's products in a two-column grid, with Owned and Wishlist sides and category chips. Products in a routine carry an AM, PM or AM · PM tag.
-  - **Routines:** "Your rituals" with Morning and Evening. Each shows a week strip, the number of steps and the time they take, and the ordered steps with their days and waits. Editing steps is still in progress.
+  - **Routines:** "Your rituals" with Morning and Evening. Each shows a week strip, the number of steps and the time they take, and the ordered steps with their days and waits. Tapping a step opens the step editor, and "Add a step from your shelf" adds one.
   - **Me:** the user's initial, name, "Glowing with Dewy since" with the month they joined, and Log out.
 - **Details screen:** Product details, opened by tapping a product card on the Shelf.
-- **Create:** add a product, with an optional photo.
-- **Edit:** edit a product, mark it as a favourite, or move a wishlist product to the shelf.
-- **Delete:** delete a product after a confirmation step. Its photo is removed too.
+- **Create:** add a product, with an optional photo, or add a routine step.
+- **Edit:** edit a product, mark it as a favourite, or move a wishlist product to the shelf. Edit a routine step, or move it up or down.
+- **Delete:** delete a product after a confirmation step (its photo is removed too), or remove a routine step.
 - Each user sees and changes only their own data. Row level security in Postgres and storage policies enforce this on the server.
 
 ### Authentication & Session Handling
@@ -216,7 +216,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 - One root native stack inside a `NavigationContainer`.
 - Its screens depend on the session:
   - **Signed out:** only `Auth`.
-  - **Signed in:** `Main` (the tabs), `ProductDetails` and `ProductForm`, which opens as a modal.
+  - **Signed in:** `Main` (the tabs), `ProductDetails`, and two modals: `ProductForm` and `RoutineStepForm` (the step editor, with `{ period, stepId? }` params).
 - The two groups never mix, so a guest can't reach app screens and a signed-in user never sees Auth.
 
 #### Main Navigation
@@ -227,7 +227,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 #### Nested Navigation
 
 - Shelf, Routines and Me each have their own native stack. For now each stack holds one screen: Shelf, Routines and Profile.
-- Product details and the product form sit on the root stack, so they cover the tab bar.
+- Product details, the product form and the step editor sit on the root stack, so they cover the tab bar.
 - A routine chip on Product details returns to the tabs with `popTo` and opens the Routines tab on that routine through nested params (`RoutinesTab` → `Routines { period }`).
 - The More options menu on Product details is a modal sheet, not a separate route.
 
@@ -264,6 +264,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 - The Shelf fetches all of the user's products with TanStack Query and shows them in the grid.
 - Product details fetches one product by its id.
 - Routines fetches the user's routine steps for both routines, each with its product. The Shelf tags and the Product details chips use the same cached list.
+- Edit step fetches one step by its id.
 - Today and Me read the user's profile for the name and the join date.
 
 #### Create (POST)
@@ -271,6 +272,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 - The user taps "+" (or "Add a product" on an empty screen), fills in the New product form and taps "Save to shelf" or "Save to wishlist".
 - A chosen photo is uploaded to Storage first, then the product row is inserted. The shelf is refetched and the form closes.
 - If Morning or Evening is ticked under "Add to routine", one routine step per routine is inserted after the product, at the end of that routine.
+- On Routines, "Add a step from your shelf" opens New step: the user picks an owned product that isn't in that routine yet, its days, time, wait and note, and taps "Add to ritual". The step is inserted at the end of the routine.
 
 #### Update / Delete (Mutation)
 
@@ -278,7 +280,8 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 - **Favourite:** the heart updates at once and rolls back if saving fails.
 - **Move to shelf:** turns a wishlist product into an owned, unopened one.
 - **Delete product:** after confirmation, the product disappears from the shelf at once and comes back if the delete fails. Its photo is removed from Storage.
-- After each change, the product queries are refreshed so every screen shows the latest data.
+- **Edit step:** tapping a step on Routines opens Edit step to change its days, time, wait and note. "Move up" and "Move down" reorder the routine at once through a database function. "Remove step" removes it after a confirmation step; the product stays on the shelf.
+- After each change, the product and routine queries are refreshed so every screen shows the latest data.
 
 ### Forms & Validation
 
@@ -286,10 +289,11 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 
 - **Auth form** (Sign up / Log in): name (sign-up only), email and password.
 - **Product form** (New product / Edit product): status (I own it / Wishlist, new products only), photo, product name, brand, type, opened on, use within, key ingredients and notes.
+- **Step form** (New step / Edit step): product (new steps only), days (seven day buttons), time (a slider from 10 seconds to 10 minutes), wait before the next step and a note.
 
 #### Validation Rules
 
-Both forms use React Hook Form with Zod schemas.
+All three forms use React Hook Form with Zod schemas.
 
 - **Email:** required and must be a valid email address.
 - **Sign-up password:** required, at least 8 characters and at most 72 bytes (multiple rules).
@@ -301,8 +305,11 @@ Both forms use React Hook Form with Zod schemas.
 - **Use within:** required once an opened date is set.
 - **Key ingredients:** up to 20, each up to 50 characters.
 - **Notes:** up to 500 characters.
+- **Step product:** one of your owned products must be picked.
+- **Days:** at least one day must be ticked.
+- **Step note:** optional, up to 80 characters.
 
-Database CHECK constraints back up the product rules on the server: name 2–80 characters, brand up to 60, one of the eight types, an opened date from 2000 on (with one day of slack for time zones), "Use within" required once an opened date is set, up to 20 ingredients (1,000 characters in total) and notes up to 500. The profile name is capped at 40 characters. Supabase Auth checks the email and password.
+Database CHECK constraints back up the product rules on the server: name 2–80 characters, brand up to 60, one of the eight types, an opened date from 2000 on (with one day of slack for time zones), "Use within" required once an opened date is set, up to 20 ingredients (1,000 characters in total) and notes up to 500. The profile name is capped at 40 characters. A routine step needs at least one day (Monday to Sunday), a time of 10 seconds to 30 minutes, a wait of 1 to 60 minutes or none, a note of up to 80 characters, and one of the same user's products, at most once per routine. Supabase Auth checks the email and password.
 
 ### Native Device Features
 
@@ -331,19 +338,20 @@ Database CHECK constraints back up the product rules on the server: name 2–80 
 5. Check the name and brand, pick a type, keep today as the opened date, pick a "Use within" period, tick Morning under "Add to routine", add ingredients and notes, then tap "Save to shelf".
 6. Open the Shelf tab. The new card shows the photo, an "AM" tag and how long the product has left. Try the category chips and pull to refresh.
 7. Tap the card. Its details show "Morning · step 1". Tap that chip to open your morning ritual on the Routines tab, where the product is step 1.
-8. Add a second product with "Wishlist" selected. It appears on the Wishlist side.
-9. Tap a card to open its details, and tap the heart to mark it as a favourite.
-10. Open More options to edit the product, move a wishlist product to your shelf, or delete a product. Deleting a product also removes its routine steps.
-11. On the Me tab, tap Log out.
+8. Tap the centre "+" and save a second owned product, leaving "Add to routine" unticked. Back on the Routines tab, tap "Add a step from your shelf", pick that product, leave only Monday, Wednesday and Friday ticked, slide the time, and tap "Add to ritual". Tap the new step to change its note or move it up, or remove it.
+9. Add a product with "Wishlist" selected. It appears on the Wishlist side.
+10. Tap a card to open its details, and tap the heart to mark it as a favourite.
+11. Open More options to edit the product, move a wishlist product to your shelf, or delete a product. Deleting a product also removes its routine steps.
+12. On the Me tab, tap Log out.
 
 ### Error & Edge Case Handling
 
 - **Authentication errors** are shown on the right field or above the button in plain language: wrong email or password, an email that already has an account, an invalid email, a weak password, too many attempts, no connection, and a general fallback.
-- **Network or data errors:** screens that load data (Shelf, Product details, Edit product, Routines, Today and Me) show "Something went wrong" with a "Try again" button. Data that is already loaded stays visible.
-- **Failed saves:** the product form shows an error above the Save button. If the product saves but its routine steps don't, the form closes and says so, so the product is never saved twice. A failed favourite or delete shows an error and undoes the change on screen. A failed move shows an error in the More options sheet.
+- **Network or data errors:** screens that load data (Shelf, Product details, Edit product, Routines, New step, Edit step, Today and Me) show "Something went wrong" with a "Try again" button. Data that is already loaded stays visible.
+- **Failed saves:** the product form shows an error above the Save button. If the product saves but its routine steps don't, the form closes and says so, so the product is never saved twice. A failed favourite or delete shows an error and undoes the change on screen. A failed move shows an error in the More options sheet. The step form shows its own errors: a failed save above its button, a failed move under the Move buttons, and a failed remove in its confirmation sheet. A product added to that routine on another device is caught, and the form asks for another one.
 - **Duplicate taps:** buttons are disabled while a request is running, so a form or action can't be sent twice.
-- **Empty states:** an empty Shelf or category shows "Nothing here yet" with an "Add a product" button. Today shows a prompt to add a product. Routines asks for a product first, or, when there are products but no steps in that routine, explains how to add the first step.
-- **Missing data:** a product that was deleted elsewhere shows "This product is no longer on your shelf" with a Back button.
+- **Empty states:** an empty Shelf or category shows "Nothing here yet" with an "Add a product" button. Today shows a prompt to add a product. Routines asks for a product first, or, when there are products but no steps in that routine, offers "Add a step". New step says when every owned product is already in that routine.
+- **Missing data:** a product that was deleted elsewhere shows "This product is no longer on your shelf" with a Back button, and a removed step shows "This step is no longer in your routine" with a Close button.
 - **Photos:** if a photo can't load, the Shelf card and Product details show a bottle illustration instead, and the product form shows an empty photo frame.
 - **Configuration:** missing or invalid environment values show a setup screen instead of a crash.
 

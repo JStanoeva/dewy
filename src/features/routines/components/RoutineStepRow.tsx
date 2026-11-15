@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 
 import { categoryDetails } from '@/features/products/constants';
@@ -13,13 +13,14 @@ type RoutineStepRowProps = {
   number: number;
   // The wait line only shows between two steps, never after the last one.
   showWait: boolean;
+  onPress: () => void;
 };
 
 const tileLeft = spacing.md;
 const tileSize = 40;
 const waitLineWidth = 2;
 
-export function RoutineStepRow({ step, number, showWait }: RoutineStepRowProps) {
+export function RoutineStepRow({ step, number, showWait, onPress }: RoutineStepRowProps) {
   const { palette } = useDewyTheme();
   const kind = categoryDetails[step.product.category].stepKind;
   const daily = isDaily(step.weekdays);
@@ -34,7 +35,13 @@ export function RoutineStepRow({ step, number, showWait }: RoutineStepRowProps) 
     .join(', ');
 
   return (
-    <View accessible accessibilityLabel={accessibilityLabel} style={styles.container}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint="Edit this step"
+      onPress={onPress}
+      style={({ pressed }) => [styles.container, { opacity: pressed ? 0.7 : 1 }]}
+    >
       <View
         style={[styles.card, { backgroundColor: palette.surface, boxShadow: palette.cardShadow }]}
       >
@@ -87,7 +94,7 @@ export function RoutineStepRow({ step, number, showWait }: RoutineStepRowProps) 
           </View>
         </View>
       ) : null}
-    </View>
+    </Pressable>
   );
 }
 

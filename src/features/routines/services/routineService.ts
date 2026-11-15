@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { categories, categoryDetails, type Category } from '@/features/products/constants';
+import type { RoutineStepInput } from '@/features/routines/schemas/routineStepSchema';
 import type { RoutineStep } from '@/features/routines/types';
 import { supabase } from '@/lib/supabase';
 import type { Period } from '@/theme/period';
@@ -74,6 +75,83 @@ export async function addProductToRoutines(
       duration_seconds: categoryDetails[category].defaultDurationSeconds,
     })),
   );
+  if (error) {
+    throw error;
+  }
+}
+
+// Null when the step is gone (removed elsewhere) or isn't the caller's.
+export async function getRoutineStep(id: string): Promise<RoutineStep | null> {
+  const { data, error } = await supabase
+    .from('routine_steps')
+    .select(stepColumns)
+    .eq('id', id)
+    .maybeSingle();
+  if (error) {
+    throw error;
+  }
+  return data ? toRoutineStep(stepRowSchema.parse(data)) : null;
+}
+
+// The database puts the new step at the end of its period.
+export async function createRoutineStep(period: Period, input: RoutineStepInput): Promise<void> {
+  const { error } = await supabase.from('routine_steps').insert({
+    product_id: input.productId,
+    period,
+    weekdays: input.weekdays,
+    duration_seconds: input.durationSeconds,
+    wait_minutes: input.waitMinutes,
+    note: input.note,
+  });
+  if (error) {
+    throw error;
+  }
+}
+
+// Why an insert was refused: the product is already in that period, or it has been deleted.
+export function createStepConflict(error: unknown): 'duplicate' | 'productGone' | null {
+  const code = typeof error === 'object' && error !== null && 'code' in error ? error.code : null;
+  if (code === '23505') {
+    return 'duplicate';
+  }
+  return code === '23503' ? 'productGone' : null;
+}
+
+// The product and period never change here; null when the step is gone.
+export async function updateRoutineStep(
+  id: string,
+  input: RoutineStepInput,
+): Promise<RoutineStep | null> {
+  const { data, error } = await supabase
+    .from('routine_steps')
+    .update({
+      weekdays: input.weekdays,
+      duration_seconds: input.durationSeconds,
+      wait_minutes: input.waitMinutes,
+      note: input.note,
+    })
+    .eq('id', id)
+    .select(stepColumns)
+    .maybeSingle();
+  if (error) {
+    throw error;
+  }
+  return data ? toRoutineStep(stepRowSchema.parse(data)) : null;
+}
+
+export async function deleteRoutineStep(id: string): Promise<void> {
+  const { error } = await supabase.from('routine_steps').delete().eq('id', id);
+  if (error) {
+    throw error;
+  }
+}
+
+// stepIds must list every one of the period's steps once, in the new order.
+export async function reorderRoutineSteps(period: Period, stepIds: string[]): Promise<void> {
+  const { error } = await supabase.rpc('reorder_routine_steps', {
+    p_period: period,
+    p_step_ids: stepIds,
+  });
   if (error) {
     throw error;
   }

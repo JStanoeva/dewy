@@ -6,6 +6,7 @@ import { useAuth } from '@/features/auth/providers/AuthProvider';
 import { AuthScreen } from '@/features/auth/screens/AuthScreen';
 import { ProductDetailsScreen } from '@/features/products/screens/ProductDetailsScreen';
 import { ProductFormScreen } from '@/features/products/screens/ProductFormScreen';
+import { RoutineStepFormScreen } from '@/features/routines/screens/RoutineStepFormScreen';
 import { MainTabs } from '@/navigation/MainTabs';
 import type { RootStackParamList } from '@/navigation/types';
 import { MorningTheme, useDewyTheme } from '@/theme/ThemeProvider';
@@ -36,6 +37,11 @@ export function RootNavigator() {
             <Stack.Screen
               name="ProductForm"
               component={ProductFormScreen}
+              options={{ presentation: 'modal' }}
+            />
+            <Stack.Screen
+              name="RoutineStepForm"
+              component={RoutineStepFormScreen}
               options={{ presentation: 'modal' }}
             />
           </Stack.Group>

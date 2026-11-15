@@ -2,23 +2,15 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useRef, useState } from 'react';
 import { Controller, useForm, useWatch, type FieldErrors } from 'react-hook-form';
-import {
-  Alert,
-  Keyboard,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  type StyleProp,
-  type TextStyle,
-} from 'react-native';
+import { Alert, Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
 
 import { AppButton } from '@/components/AppButton';
 import { DateField } from '@/components/DateField';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { FieldError } from '@/components/FieldError';
+import { FormHeader, formHeaderBottom } from '@/components/FormHeader';
 import { FormScrollView, type FormScrollViewHandle } from '@/components/FormScrollView';
 import { FormTextField } from '@/components/FormTextField';
 import { LoadingState } from '@/components/LoadingState';
@@ -73,9 +65,6 @@ const fieldOrder = [
   'notes',
 ] as const;
 
-// The header row sits at the artboard's y 48 and is 44 high, so the form scrolls from y 92.
-const headerTop = 48;
-const headerHeight = 44;
 // The design leaves 28 under the button for the system bar; taller insets get a small gap instead.
 const MIN_BOTTOM_SPACE = 28;
 
@@ -329,7 +318,7 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
 
       <FormScrollView
         ref={formRef}
-        topOffset={headerTop + headerHeight}
+        topOffset={formHeaderBottom}
         contentContainerStyle={styles.content}
       >
         <Text
@@ -594,85 +583,7 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
   );
 }
 
-function FieldError({
-  children,
-  style,
-}: {
-  children: string | undefined;
-  style?: StyleProp<TextStyle>;
-}) {
-  const { palette } = useDewyTheme();
-  return (
-    <Text
-      accessibilityLiveRegion="polite"
-      style={[styles.fieldError, { color: palette.warning }, style]}
-    >
-      {children}
-    </Text>
-  );
-}
-
-function FormHeader({ title, onClose }: { title: string; onClose: () => void }) {
-  const { palette } = useDewyTheme();
-  return (
-    <View style={styles.header}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Close"
-        onPress={onClose}
-        style={({ pressed }) => [
-          styles.iconButton,
-          {
-            backgroundColor: palette.surface,
-            boxShadow: palette.iconButtonShadow,
-            opacity: pressed ? 0.7 : 1,
-          },
-        ]}
-      >
-        <CloseIcon color={palette.text} />
-      </Pressable>
-      <Text style={[styles.headerTitle, { color: palette.text }]}>{title}</Text>
-      <View style={styles.iconButton} />
-    </View>
-  );
-}
-
-function CloseIcon({ color }: { color: string }) {
-  return (
-    <Svg
-      width={18}
-      height={18}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={2.2}
-      strokeLinecap="round"
-    >
-      <Path d="M6 6l12 12M18 6L6 18" />
-    </Svg>
-  );
-}
-
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: headerTop,
-    height: headerHeight,
-    paddingHorizontal: spacing.xxl,
-  },
-  iconButton: {
-    width: minTouchTarget,
-    height: minTouchTarget,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.pill,
-  },
-  headerTitle: {
-    fontFamily: fonts.bodyBold,
-    fontSize: fontSizes.body,
-  },
   content: {
     gap: 18,
     paddingTop: spacing.xxl,
@@ -750,10 +661,6 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingTop: spacing.md,
     paddingHorizontal: spacing.screen,
-  },
-  fieldError: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: fontSizes.meta,
   },
   formError: {
     fontFamily: fonts.bodyMedium,

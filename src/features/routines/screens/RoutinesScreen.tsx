@@ -1,7 +1,8 @@
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
-import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
@@ -17,7 +18,7 @@ import { useLocalToday } from '@/hooks/useLocalToday';
 import type { RootStackParamList, RoutinesStackParamList } from '@/navigation/types';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import type { Period } from '@/theme/period';
-import { fonts, fontSizes, letterSpacings, spacing } from '@/theme/tokens';
+import { fonts, fontSizes, letterSpacings, radii, spacing } from '@/theme/tokens';
 import { isoWeekday } from '@/utils/localDate';
 
 type RoutinesScreenProps = CompositeScreenProps<
@@ -44,6 +45,8 @@ export function RoutinesScreen({ navigation, route }: RoutinesScreenProps) {
   const loaded = steps.data !== undefined && products.data !== undefined;
   const periodSteps = steps.data?.filter((step) => step.period === period) ?? [];
   const hasOwnedProducts = products.data?.some((product) => product.status === 'owned') ?? false;
+  // Shown for either ritual's steps, so switching the control never moves it.
+  const hasSteps = (steps.data?.length ?? 0) > 0;
 
   // Local state, so the spinner only shows for a pull and not for background refetches.
   async function handleRefresh() {
@@ -55,6 +58,10 @@ export function RoutinesScreen({ navigation, route }: RoutinesScreenProps) {
   function choosePeriod(next: Period) {
     setChosenPeriod(next);
     navigation.setParams({ period: undefined });
+  }
+
+  function addStep() {
+    navigation.navigate('RoutineStepForm', { period });
   }
 
   function retry() {
@@ -71,6 +78,9 @@ export function RoutinesScreen({ navigation, route }: RoutinesScreenProps) {
       <Text accessibilityRole="header" style={[styles.title, { color: palette.text }]}>
         Your <Text style={[styles.titleItalic, { color: palette.emphasis }]}>rituals</Text>
       </Text>
+      {loaded && hasSteps ? (
+        <Text style={[styles.subtitle, { color: palette.textMuted }]}>Tap a step to edit</Text>
+      ) : null}
       {loaded ? (
         <View style={styles.segmented}>
           <SegmentedControl options={periodOptions} value={period} onChange={choosePeriod} />
@@ -104,19 +114,46 @@ export function RoutinesScreen({ navigation, route }: RoutinesScreenProps) {
             step={item}
             number={index + 1}
             showWait={index < periodSteps.length - 1}
+            onPress={() =>
+              navigation.navigate('RoutineStepForm', { period: item.period, stepId: item.id })
+            }
           />
         )}
         ListHeaderComponent={header}
+        ListFooterComponent={
+          loaded && periodSteps.length > 0 ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={addStep}
+              style={({ pressed }) => [
+                styles.addStep,
+                { borderColor: palette.mauve, opacity: pressed ? 0.7 : 1 },
+              ]}
+            >
+              <Svg
+                width={18}
+                height={18}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke={palette.textMuted}
+                strokeWidth={2.2}
+                strokeLinecap="round"
+              >
+                <Path d="M12 5v14M5 12h14" />
+              </Svg>
+              <Text style={[styles.addStepLabel, { color: palette.textMuted }]}>
+                Add a step from your shelf
+              </Text>
+            </Pressable>
+          ) : undefined
+        }
         ListEmptyComponent={
           loaded ? (
             hasOwnedProducts ? (
               <EmptyState
                 title="Add your first step"
-                message={`Add a product and tick Add to routine to start your ${period} ritual.`}
-                action={{
-                  label: 'Add a product',
-                  onPress: () => navigation.navigate('ProductForm', { status: 'owned' }),
-                }}
+                message={`Pick a product from your shelf to start your ${period} ritual.`}
+                action={{ label: 'Add a step', onPress: addStep }}
               />
             ) : (
               <EmptyState
@@ -179,6 +216,11 @@ const styles = StyleSheet.create({
   titleItalic: {
     fontFamily: fonts.displayItalic,
   },
+  subtitle: {
+    marginTop: spacing.xxs,
+    fontFamily: fonts.body,
+    fontSize: fontSizes.secondary,
+  },
   segmented: {
     marginTop: 18,
   },
@@ -206,5 +248,20 @@ const styles = StyleSheet.create({
   },
   stepGap: {
     height: spacing.xs,
+  },
+  addStep: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    height: 56,
+    marginTop: spacing.sm,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderRadius: radii.detailCard,
+  },
+  addStepLabel: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSizes.secondary,
   },
 });

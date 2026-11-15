@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 
+import { TickCircle } from '@/features/routines/components/TickCircle';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import type { Period } from '@/theme/period';
 import { fonts, fontSizes, radii, spacing } from '@/theme/tokens';
@@ -29,7 +29,6 @@ export function AddToRoutineField({ value, onChange, disabled }: AddToRoutineFie
       <View style={styles.rows}>
         {options.map(({ period, label }) => {
           const checked = value.includes(period);
-          const ring = checked ? palette.primary : palette.mauve;
           return (
             <Pressable
               key={period}
@@ -40,31 +39,14 @@ export function AddToRoutineField({ value, onChange, disabled }: AddToRoutineFie
               onPress={() => toggle(period)}
               style={[
                 styles.row,
-                { borderColor: ring, backgroundColor: checked ? palette.surface : 'transparent' },
+                {
+                  borderColor: checked ? palette.primary : palette.mauve,
+                  backgroundColor: checked ? palette.surface : 'transparent',
+                },
               ]}
             >
               <Text style={[styles.rowLabel, { color: palette.text }]}>{label}</Text>
-              <View
-                style={[
-                  styles.check,
-                  { borderColor: ring, backgroundColor: checked ? palette.primary : 'transparent' },
-                ]}
-              >
-                {checked ? (
-                  <Svg
-                    width={12}
-                    height={12}
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke={palette.onPrimary}
-                    strokeWidth={3}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <Path d="M5 12.5l4.5 4.5L19 7.5" />
-                  </Svg>
-                ) : null}
-              </View>
+              <TickCircle checked={checked} />
             </Pressable>
           );
         })}
@@ -96,13 +78,5 @@ const styles = StyleSheet.create({
   rowLabel: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSizes.secondary,
-  },
-  check: {
-    width: 22,
-    height: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderRadius: radii.pill,
   },
 });
