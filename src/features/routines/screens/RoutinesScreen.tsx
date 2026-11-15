@@ -1,4 +1,5 @@
-import { useNavigation } from '@react-navigation/native';
+import type { CompositeScreenProps } from '@react-navigation/native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
@@ -13,24 +14,31 @@ import { WeekStrip } from '@/features/routines/components/WeekStrip';
 import { useRoutineSteps } from '@/features/routines/hooks/useRoutineSteps';
 import { routineMeta } from '@/features/routines/utils/weekSchedule';
 import { useLocalToday } from '@/hooks/useLocalToday';
+import type { RootStackParamList, RoutinesStackParamList } from '@/navigation/types';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import type { Period } from '@/theme/period';
 import { fonts, fontSizes, letterSpacings, spacing } from '@/theme/tokens';
 import { isoWeekday } from '@/utils/localDate';
+
+type RoutinesScreenProps = CompositeScreenProps<
+  NativeStackScreenProps<RoutinesStackParamList, 'Routines'>,
+  NativeStackScreenProps<RootStackParamList>
+>;
 
 const periodOptions = [
   { value: 'morning', label: 'Morning' },
   { value: 'evening', label: 'Evening' },
 ] as const;
 
-export function RoutinesScreen() {
+export function RoutinesScreen({ navigation, route }: RoutinesScreenProps) {
   const { palette, paletteName } = useDewyTheme();
-  const navigation = useNavigation();
   const steps = useRoutineSteps();
   const products = useProducts();
   const today = useLocalToday();
   // Starts on the period the palette shows; switching here never changes the palette.
-  const [period, setPeriod] = useState<Period>(paletteName);
+  const [chosenPeriod, setChosenPeriod] = useState<Period>(paletteName);
+  // A Details chip's period wins until the control is switched, so the same chip works again.
+  const period = route.params?.period ?? chosenPeriod;
   const [refreshing, setRefreshing] = useState(false);
 
   const loaded = steps.data !== undefined && products.data !== undefined;
@@ -42,6 +50,11 @@ export function RoutinesScreen() {
     setRefreshing(true);
     await Promise.all([steps.refetch(), products.refetch()]);
     setRefreshing(false);
+  }
+
+  function choosePeriod(next: Period) {
+    setChosenPeriod(next);
+    navigation.setParams({ period: undefined });
   }
 
   function retry() {
@@ -60,7 +73,7 @@ export function RoutinesScreen() {
       </Text>
       {loaded ? (
         <View style={styles.segmented}>
-          <SegmentedControl options={periodOptions} value={period} onChange={setPeriod} />
+          <SegmentedControl options={periodOptions} value={period} onChange={choosePeriod} />
         </View>
       ) : null}
       {loaded && periodSteps.length > 0 ? (

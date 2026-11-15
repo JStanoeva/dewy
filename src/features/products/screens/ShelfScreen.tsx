@@ -23,6 +23,7 @@ import { ProductCard } from '@/features/products/components/ProductCard';
 import { useProducts } from '@/features/products/hooks/useProducts';
 import type { ProductStatus } from '@/features/products/types';
 import { getShelfLife } from '@/features/products/utils/shelfLife';
+import { useRoutineSteps } from '@/features/routines/hooks/useRoutineSteps';
 import { useLocalToday } from '@/hooks/useLocalToday';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import { fonts, fontSizes, letterSpacings, spacing } from '@/theme/tokens';
@@ -38,6 +39,8 @@ export function ShelfScreen() {
   const { width } = useWindowDimensions();
   const navigation = useNavigation();
   const products = useProducts();
+  // Only feeds the AM / PM tags, so the shelf shows no loading or error state for it.
+  const routineSteps = useRoutineSteps();
   const [status, setStatus] = useState<ProductStatus>('owned');
   const [category, setCategory] = useState<CategoryFilter>('all');
   const [refreshing, setRefreshing] = useState(false);
@@ -65,7 +68,7 @@ export function ShelfScreen() {
   // Local state, so the spinner only shows for a pull and not for background refetches.
   async function handleRefresh() {
     setRefreshing(true);
-    await products.refetch();
+    await Promise.all([products.refetch(), routineSteps.refetch()]);
     setRefreshing(false);
   }
 
@@ -120,12 +123,17 @@ export function ShelfScreen() {
         renderItem={({ item }) => (
           <ProductCard
             product={item}
+            routinePeriods={
+              routineSteps.data
+                ?.filter((step) => step.productId === item.id)
+                .map((step) => step.period) ?? []
+            }
             width={cardWidth}
             today={today}
             onPress={() => navigation.navigate('ProductDetails', { productId: item.id })}
           />
         )}
-        extraData={today}
+        extraData={[today, routineSteps.data]}
         ListHeaderComponent={header}
         ListEmptyComponent={
           <View style={styles.inset}>

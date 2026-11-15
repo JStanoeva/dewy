@@ -7,15 +7,20 @@ type IconProps = {
 const SIZE = 24;
 const STROKE = 1.8;
 
-export function SunIcon({ color }: IconProps) {
+type PeriodIconProps = IconProps & {
+  size?: number;
+  strokeWidth?: number;
+};
+
+export function SunIcon({ color, size = SIZE, strokeWidth = STROKE }: PeriodIconProps) {
   return (
     <Svg
-      width={SIZE}
-      height={SIZE}
+      width={size}
+      height={size}
       viewBox="0 0 24 24"
       fill="none"
       stroke={color}
-      strokeWidth={STROKE}
+      strokeWidth={strokeWidth}
       strokeLinecap="round"
     >
       <Circle cx="12" cy="12" r="4" />
@@ -24,15 +29,15 @@ export function SunIcon({ color }: IconProps) {
   );
 }
 
-export function MoonIcon({ color }: IconProps) {
+export function MoonIcon({ color, size = SIZE, strokeWidth = STROKE }: PeriodIconProps) {
   return (
     <Svg
-      width={SIZE}
-      height={SIZE}
+      width={size}
+      height={size}
       viewBox="0 0 24 24"
       fill="none"
       stroke={color}
-      strokeWidth={STROKE}
+      strokeWidth={strokeWidth}
       strokeLinecap="round"
       strokeLinejoin="round"
     >

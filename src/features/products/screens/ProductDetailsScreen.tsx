@@ -25,9 +25,12 @@ import { useProduct } from '@/features/products/hooks/useProducts';
 import type { Product } from '@/features/products/types';
 import { noteLines, productInitials, splitLastWord } from '@/features/products/utils/productLabels';
 import { useRoutineSteps } from '@/features/routines/hooks/useRoutineSteps';
+import { routineMemberships } from '@/features/routines/utils/routineMembership';
 import { useLocalToday } from '@/hooks/useLocalToday';
+import { MoonIcon, SunIcon } from '@/navigation/TabIcons';
 import type { RootStackParamList } from '@/navigation/types';
 import { bottleColorsFor, photoScrim } from '@/theme/bottleColors';
+import type { Period } from '@/theme/period';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import { fonts, fontSizes, letterSpacings, minTouchTarget, radii, spacing } from '@/theme/tokens';
 import type { LocalDate } from '@/utils/localDate';
@@ -40,6 +43,8 @@ const topRowTop = 52;
 const sheetTop = 328;
 // Scrolling slides the sheet up over the hero until it docks just below the back button.
 const sheetDockTop = topRowTop + minTouchTarget + spacing.md;
+const chipHeight = 34;
+const chipHitSlop = (minTouchTarget - chipHeight) / 2;
 
 export function ProductDetailsScreen({ navigation, route }: ProductDetailsScreenProps) {
   const { palette } = useDewyTheme();
@@ -95,7 +100,8 @@ function ProductDetailsContent({ product, today, navigation }: ProductDetailsCon
   const moveToShelf = useMoveToShelf();
   const deleteProduct = useDeleteProduct();
   const routineSteps = useRoutineSteps();
-  const inRoutine = routineSteps.data?.some((step) => step.productId === product.id);
+  const memberships = routineSteps.data && routineMemberships(routineSteps.data, product.id);
+  const inRoutine = memberships && memberships.length > 0;
   const colors = bottleColorsFor(product.id);
   const category = categoryDetails[product.category];
   const title = splitLastWord(product.name);
@@ -149,6 +155,14 @@ function ProductDetailsContent({ product, today, navigation }: ProductDetailsCon
     }
     setSheetOpen(false);
     navigation.navigate('ProductForm', { productId: product.id });
+  }
+
+  // Details is a root screen, so it pops back to the tabs instead of pushing a second Main.
+  function openRoutine(period: Period) {
+    navigation.popTo('Main', {
+      screen: 'RoutinesTab',
+      params: { screen: 'Routines', params: { period } },
+    });
   }
 
   // A failure reopens the sheet, so its error shows even if the sheet was closed while saving.
@@ -228,8 +242,16 @@ function ProductDetailsContent({ product, today, navigation }: ProductDetailsCon
                 <Text style={[styles.titleItalic, { color: palette.emphasis }]}>{title.last}</Text>
               </Text>
               <View style={styles.chips}>
+                {memberships?.map(({ period, stepNumber }) => (
+                  <RoutineChip
+                    key={period}
+                    period={period}
+                    stepNumber={stepNumber}
+                    onPress={() => openRoutine(period)}
+                  />
+                ))}
                 <View style={[styles.statusChip, { backgroundColor: palette.plum }]}>
-                  <Text style={[styles.statusChipLabel, { color: palette.onPlum }]}>
+                  <Text style={[styles.chipLabel, { color: palette.onPlum }]}>
                     {product.status === 'owned' ? 'Owned' : 'Wishlist'}
                   </Text>
                 </View>
@@ -345,6 +367,43 @@ function HeroButton({ label, selected, onPress, children }: HeroButtonProps) {
       ]}
     >
       {children}
+    </Pressable>
+  );
+}
+
+type RoutineChipProps = {
+  period: Period;
+  stepNumber: number;
+  onPress: () => void;
+};
+
+function RoutineChip({ period, stepNumber, onPress }: RoutineChipProps) {
+  const { palette } = useDewyTheme();
+  const name = period === 'morning' ? 'Morning' : 'Evening';
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${name} routine, step ${stepNumber}`}
+      accessibilityHint={`Opens your ${period} ritual`}
+      hitSlop={{ top: chipHitSlop, bottom: chipHitSlop }}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.routineChip,
+        {
+          backgroundColor: palette.surface,
+          boxShadow: palette.routineChipShadow,
+          opacity: pressed ? 0.7 : 1,
+        },
+      ]}
+    >
+      {period === 'morning' ? (
+        <SunIcon color={palette.rose} size={16} strokeWidth={2} />
+      ) : (
+        <MoonIcon color={palette.rose} size={16} strokeWidth={2} />
+      )}
+      <Text style={[styles.chipLabel, { color: palette.text }]}>
+        {name} · step {stepNumber}
+      </Text>
     </Pressable>
   );
 }
@@ -544,13 +603,21 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     marginTop: spacing.md,
   },
+  routineChip: {
+    height: chipHeight,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.snug,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+  },
   statusChip: {
-    height: 34,
+    height: chipHeight,
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
     borderRadius: radii.pill,
   },
-  statusChipLabel: {
+  chipLabel: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSizes.meta,
   },

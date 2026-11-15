@@ -8,24 +8,28 @@ import { ShelfLifeBar } from '@/features/products/components/ShelfLifeCard';
 import { categoryDetails } from '@/features/products/constants';
 import type { Product } from '@/features/products/types';
 import { getShelfLife, savedLabel } from '@/features/products/utils/shelfLife';
+import { describeRoutines, routineTag } from '@/features/routines/utils/routineMembership';
 import { bottleColorsFor } from '@/theme/bottleColors';
+import type { Period } from '@/theme/period';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import { fonts, fontSizes, radii, spacing } from '@/theme/tokens';
 import type { LocalDate } from '@/utils/localDate';
 
 type ProductCardProps = {
   product: Product;
+  routinePeriods: readonly Period[];
   width: number;
   today: LocalDate;
   onPress: () => void;
 };
 
-export function ProductCard({ product, width, today, onPress }: ProductCardProps) {
+export function ProductCard({ product, routinePeriods, width, today, onPress }: ProductCardProps) {
   const { palette } = useDewyTheme();
   const colors = bottleColorsFor(product.id);
   const isWish = product.status === 'wishlist';
   const shelfLife = isWish ? null : getShelfLife(product.openedOn, product.paoMonths, today);
   const status = isWish ? savedLabel(product.createdAt, today) : (shelfLife?.label ?? 'Unopened');
+  const routineTagText = isWish ? null : routineTag(routinePeriods);
   const bottle = (
     <>
       <BottleIllustration
@@ -41,7 +45,7 @@ export function ProductCard({ product, width, today, onPress }: ProductCardProps
   const accessibilityLabel = [
     product.name,
     product.brand,
-    isWish ? 'on your wishlist' : null,
+    isWish ? 'on your wishlist' : describeRoutines(routinePeriods),
     status,
   ]
     .filter(Boolean)
@@ -77,6 +81,10 @@ export function ProductCard({ product, width, today, onPress }: ProductCardProps
           <View style={[styles.tag, { backgroundColor: palette.tileTag }]}>
             <Feather name="heart" size={11} color={palette.onAccent} />
             <Text style={[styles.tagLabel, { color: palette.onAccent }]}>Wish</Text>
+          </View>
+        ) : routineTagText ? (
+          <View style={[styles.tag, { backgroundColor: palette.tileTag }]}>
+            <Text style={[styles.tagLabel, { color: palette.onAccent }]}>{routineTagText}</Text>
           </View>
         ) : null}
       </View>

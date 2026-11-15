@@ -186,7 +186,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 
 - **Main sections:** four bottom tabs (Today, Shelf, Routines, Me) and a raised centre "+" button that opens the New product form.
   - **Today:** the date, a "Good morning" or "Good evening" greeting with the user's name, and an "Add your first product" prompt. The checklist is still in progress.
-  - **Shelf:** the user's products in a two-column grid, with Owned and Wishlist sides and category chips.
+  - **Shelf:** the user's products in a two-column grid, with Owned and Wishlist sides and category chips. Products in a routine carry an AM, PM or AM · PM tag.
   - **Routines:** "Your rituals" with Morning and Evening. Each shows a week strip, the number of steps and the time they take, and the ordered steps with their days and waits. Editing steps is still in progress.
   - **Me:** the user's initial, name, "Glowing with Dewy since" with the month they joined, and Log out.
 - **Details screen:** Product details, opened by tapping a product card on the Shelf.
@@ -228,6 +228,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 
 - Shelf, Routines and Me each have their own native stack. For now each stack holds one screen: Shelf, Routines and Profile.
 - Product details and the product form sit on the root stack, so they cover the tab bar.
+- A routine chip on Product details returns to the tabs with `popTo` and opens the Routines tab on that routine through nested params (`RoutinesTab` → `Routines { period }`).
 - The More options menu on Product details is a modal sheet, not a separate route.
 
 ### List → Details Flow
@@ -236,6 +237,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 
 - The Shelf lists the user's products, newest first, in a two-column grid.
 - Each card shows the photo or a bottle illustration, the brand, the name and a status line. For owned products that line is the shelf life (for example "5 months left", or "Unopened"). For wishlist products it is the date the product was saved.
+- A tag on the picture shows which routines an owned product is in ("AM", "PM" or "AM · PM"). Wishlist products show "Wish".
 - The user switches between Owned and Wishlist, filters by category (Cleanser, Exfoliant, Toner, Mist, Serum, Moisturizer, SPF, Mask) and pulls down to refresh.
 
 #### Details Screen
@@ -243,6 +245,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 - Tapping a card calls `navigation.navigate('ProductDetails', { productId })`.
 - The screen receives only `productId` through route params. It shows the cached product at once, then loads the latest version of it from Supabase.
 - It shows the photo, category and brand, a shelf-life card, key ingredients and notes, plus the favourite and More options buttons.
+- A chip for each routine the product is in shows its place there, for example "Morning · step 1". Tapping it opens the Routines tab on that routine.
 
 ### Data Source & Backend
 
@@ -260,7 +263,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 
 - The Shelf fetches all of the user's products with TanStack Query and shows them in the grid.
 - Product details fetches one product by its id.
-- Routines fetches the user's routine steps for both routines, each with its product.
+- Routines fetches the user's routine steps for both routines, each with its product. The Shelf tags and the Product details chips use the same cached list.
 - Today and Me read the user's profile for the name and the join date.
 
 #### Create (POST)
@@ -326,8 +329,8 @@ Database CHECK constraints back up the product rules on the server: name 2–80 
 3. Tap the centre "+" to open New product and keep "I own it" selected.
 4. Tap "Take photo" or "Choose photo". If label reading is set up, empty fields are filled in from the label.
 5. Check the name and brand, pick a type, keep today as the opened date, pick a "Use within" period, tick Morning under "Add to routine", add ingredients and notes, then tap "Save to shelf".
-6. Open the Shelf tab. The new card shows the photo and how long the product has left. Try the category chips and pull to refresh.
-7. Open the Routines tab. The product is step 1 of your morning ritual.
+6. Open the Shelf tab. The new card shows the photo, an "AM" tag and how long the product has left. Try the category chips and pull to refresh.
+7. Tap the card. Its details show "Morning · step 1". Tap that chip to open your morning ritual on the Routines tab, where the product is step 1.
 8. Add a second product with "Wishlist" selected. It appears on the Wishlist side.
 9. Tap a card to open its details, and tap the heart to mark it as a favourite.
 10. Open More options to edit the product, move a wishlist product to your shelf, or delete a product. Deleting a product also removes its routine steps.

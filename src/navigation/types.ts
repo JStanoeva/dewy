@@ -2,6 +2,7 @@ import type { NavigatorScreenParams } from '@react-navigation/native';
 
 import type { Category } from '@/features/products/constants';
 import type { ProductStatus } from '@/features/products/types';
+import type { Period } from '@/theme/period';
 
 export type RootStackParamList = {
   Auth: undefined;
@@ -22,7 +23,7 @@ export type ShelfStackParamList = {
 };
 
 export type RoutinesStackParamList = {
-  Routines: undefined;
+  Routines: { period?: Period } | undefined;
 };
 
 export type MeStackParamList = {
