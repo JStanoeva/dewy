@@ -119,12 +119,62 @@ export type Database = {
         }
         Relationships: []
       }
+      routine_steps: {
+        Row: {
+          created_at: string
+          duration_seconds: number
+          id: string
+          note: string | null
+          period: string
+          position: number
+          product_id: string
+          user_id: string
+          wait_minutes: number | null
+          weekdays: number[]
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number
+          id?: string
+          note?: string | null
+          period: string
+          position?: number
+          product_id: string
+          user_id?: string
+          wait_minutes?: number | null
+          weekdays?: number[]
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number
+          id?: string
+          note?: string | null
+          period?: string
+          position?: number
+          product_id?: string
+          user_id?: string
+          wait_minutes?: number | null
+          weekdays?: number[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routine_steps_product_fkey"
+            columns: ["product_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      reorder_routine_steps: {
+        Args: { p_period: string; p_step_ids: string[] }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

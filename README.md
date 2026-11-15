@@ -18,7 +18,9 @@ Dewy keeps a shelf of the skincare products you own and the ones on your wishlis
 - Take or choose a product photo, stored privately for your account.
 - Optionally fill in a new product's name, brand and type from the label in its photo.
 
-Routines and the Today checklist are still in progress.
+- Add a new owned product to your morning or evening routine, and see each routine's steps, schedule and time on the Routines tab.
+
+The routine step editor and the Today checklist are still in progress.
 
 ## Tech stack
 
@@ -54,6 +56,7 @@ On Windows, if PowerShell refuses to run `npm` or `npx` because running scripts 
    2. `002_products.sql`
    3. `003_product_photos_storage.sql`
    4. `004_more_categories.sql`
+   5. `005_routine_steps.sql`
 
    Run each file once, before anyone signs up. `003_product_photos_storage.sql` creates the private `product-photos` bucket itself, so don't create it by hand.
 
@@ -168,7 +171,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 
 - **Application Name:** Dewy
 - **Application Category / Topic:** Health and beauty: a personal skincare companion.
-- **Main Purpose:** Dewy helps people keep track of their skincare products. Users keep a shelf of the products they own and a wishlist of the ones they want. For each opened product, Dewy shows how long it has left before it should be replaced. Morning and evening routines and a daily checklist are still in progress.
+- **Main Purpose:** Dewy helps people keep track of their skincare products. Users keep a shelf of the products they own and a wishlist of the ones they want. For each opened product, Dewy shows how long it has left before it should be replaced. New products can join a morning or evening routine. Editing routines and a daily checklist are still in progress.
 
 ### User Access & Permissions
 
@@ -184,7 +187,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 - **Main sections:** four bottom tabs (Today, Shelf, Routines, Me) and a raised centre "+" button that opens the New product form.
   - **Today:** the date, a "Good morning" or "Good evening" greeting with the user's name, and an "Add your first product" prompt. The checklist is still in progress.
   - **Shelf:** the user's products in a two-column grid, with Owned and Wishlist sides and category chips.
-  - **Routines:** the title "Your rituals" and an "Add a product first" prompt. The routine builder is still in progress.
+  - **Routines:** "Your rituals" with Morning and Evening. Each shows a week strip, the number of steps and the time they take, and the ordered steps with their days and waits. Editing steps is still in progress.
   - **Me:** the user's initial, name, "Glowing with Dewy since" with the month they joined, and Log out.
 - **Details screen:** Product details, opened by tapping a product card on the Shelf.
 - **Create:** add a product, with an optional photo.
@@ -247,7 +250,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 
 - A real backend: Supabase, used through `@supabase/supabase-js`.
 - **Supabase Auth** handles email and password accounts.
-- **Postgres** holds two tables, `profiles` and `products`. Row level security limits every row to its owner.
+- **Postgres** holds three tables, `profiles`, `products` and `routine_steps`. Row level security limits every row to its owner, and a routine step can only point to its owner's own product.
 - **Storage** holds product photos in a private bucket, one folder per user. Photos are shown through signed links that expire after an hour.
 - **Edge Functions** run the optional label reading, which calls Anthropic's Claude API.
 
@@ -257,12 +260,14 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 
 - The Shelf fetches all of the user's products with TanStack Query and shows them in the grid.
 - Product details fetches one product by its id.
+- Routines fetches the user's routine steps for both routines, each with its product.
 - Today and Me read the user's profile for the name and the join date.
 
 #### Create (POST)
 
 - The user taps "+" (or "Add a product" on an empty screen), fills in the New product form and taps "Save to shelf" or "Save to wishlist".
 - A chosen photo is uploaded to Storage first, then the product row is inserted. The shelf is refetched and the form closes.
+- If Morning or Evening is ticked under "Add to routine", one routine step per routine is inserted after the product, at the end of that routine.
 
 #### Update / Delete (Mutation)
 
@@ -320,20 +325,21 @@ Database CHECK constraints back up the product rules on the server: name 2–80 
 2. You land on Today, which greets you by name.
 3. Tap the centre "+" to open New product and keep "I own it" selected.
 4. Tap "Take photo" or "Choose photo". If label reading is set up, empty fields are filled in from the label.
-5. Check the name and brand, pick a type, keep today as the opened date, pick a "Use within" period, add ingredients and notes, then tap "Save to shelf".
+5. Check the name and brand, pick a type, keep today as the opened date, pick a "Use within" period, tick Morning under "Add to routine", add ingredients and notes, then tap "Save to shelf".
 6. Open the Shelf tab. The new card shows the photo and how long the product has left. Try the category chips and pull to refresh.
-7. Add a second product with "Wishlist" selected. It appears on the Wishlist side.
-8. Tap a card to open its details, and tap the heart to mark it as a favourite.
-9. Open More options to edit the product, move a wishlist product to your shelf, or delete a product.
-10. On the Me tab, tap Log out.
+7. Open the Routines tab. The product is step 1 of your morning ritual.
+8. Add a second product with "Wishlist" selected. It appears on the Wishlist side.
+9. Tap a card to open its details, and tap the heart to mark it as a favourite.
+10. Open More options to edit the product, move a wishlist product to your shelf, or delete a product. Deleting a product also removes its routine steps.
+11. On the Me tab, tap Log out.
 
 ### Error & Edge Case Handling
 
 - **Authentication errors** are shown on the right field or above the button in plain language: wrong email or password, an email that already has an account, an invalid email, a weak password, too many attempts, no connection, and a general fallback.
-- **Network or data errors:** screens that load data (Shelf, Product details, Edit product, Today and Me) show "Something went wrong" with a "Try again" button. Data that is already loaded stays visible.
-- **Failed saves:** the product form shows an error above the Save button. A failed favourite or delete shows an error and undoes the change on screen. A failed move shows an error in the More options sheet.
+- **Network or data errors:** screens that load data (Shelf, Product details, Edit product, Routines, Today and Me) show "Something went wrong" with a "Try again" button. Data that is already loaded stays visible.
+- **Failed saves:** the product form shows an error above the Save button. If the product saves but its routine steps don't, the form closes and says so, so the product is never saved twice. A failed favourite or delete shows an error and undoes the change on screen. A failed move shows an error in the More options sheet.
 - **Duplicate taps:** buttons are disabled while a request is running, so a form or action can't be sent twice.
-- **Empty states:** an empty Shelf or category shows "Nothing here yet" with an "Add a product" button. Today and Routines show prompts to add a product.
+- **Empty states:** an empty Shelf or category shows "Nothing here yet" with an "Add a product" button. Today shows a prompt to add a product. Routines asks for a product first, or, when there are products but no steps in that routine, explains how to add the first step.
 - **Missing data:** a product that was deleted elsewhere shows "This product is no longer on your shelf" with a Back button.
 - **Photos:** if a photo can't load, the Shelf card and Product details show a bottle illustration instead, and the product form shows an empty photo frame.
 - **Configuration:** missing or invalid environment values show a setup screen instead of a crash.

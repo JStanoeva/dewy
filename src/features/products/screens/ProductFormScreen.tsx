@@ -3,6 +3,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useRef, useState } from 'react';
 import { Controller, useForm, useWatch, type FieldErrors } from 'react-hook-form';
 import {
+  Alert,
   Keyboard,
   Pressable,
   StyleSheet,
@@ -47,8 +48,11 @@ import {
   type ProductInput,
 } from '@/features/products/schemas/productSchema';
 import type { Product, ProductPhotoValue, ProductStatus } from '@/features/products/types';
+import { AddToRoutineField } from '@/features/routines/components/AddToRoutineField';
+import { useAddProductToRoutines } from '@/features/routines/hooks/useRoutineMutations';
 import type { RootStackParamList } from '@/navigation/types';
 import { useDewyTheme } from '@/theme/ThemeProvider';
+import type { Period } from '@/theme/period';
 import { fonts, fontSizes, letterSpacings, minTouchTarget, radii, spacing } from '@/theme/tokens';
 import { parseLocalDate, todayLocalDate } from '@/utils/localDate';
 
@@ -151,9 +155,11 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
   const updateProduct = useUpdateProduct();
   const uploadPhoto = useUploadProductPhoto();
   const readLabel = useReadProductLabel();
+  const addToRoutines = useAddProductToRoutines();
   const [photo, setPhoto] = useState<ProductPhotoValue | null>(
     product?.photoPath ? { kind: 'stored', path: product.photoPath } : null,
   );
+  const [routinePeriods, setRoutinePeriods] = useState<Period[]>([]);
   const [labelOutcome, setLabelOutcome] = useState<LabelOutcome>(null);
   // A retry after a failed save reuses the photo that already uploaded instead of sending it again.
   const uploaded = useRef<{ uri: string; path: string } | null>(null);
@@ -252,25 +258,42 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
   async function onSubmit(values: ProductInput) {
     // Runs only after validation passes, so a read still going can't change the form while it saves.
     readLabel.reset();
+    let saved: Product;
     try {
       const photoPath = await photoPathToSave();
-      if (product) {
-        await updateProduct.mutateAsync({
-          id: product.id,
-          input: values,
-          photoPath,
-          previousPhotoPath: product.photoPath,
-        });
-      } else {
-        await createProduct.mutateAsync({ input: values, photoPath });
-      }
-      if (navigation.isFocused()) {
-        navigation.goBack();
-      }
+      saved = product
+        ? await updateProduct.mutateAsync({
+            id: product.id,
+            input: values,
+            photoPath,
+            previousPhotoPath: product.photoPath,
+          })
+        : await createProduct.mutateAsync({ input: values, photoPath });
     } catch {
       setError('root.server', {
         message: "We couldn't save this product. Check your connection and try again.",
       });
+      return;
+    }
+    // The product is saved by now, so a failure here closes the form rather than inviting a duplicate.
+    let routineFailed = false;
+    const periods = !product && values.status === 'owned' ? routinePeriods : [];
+    if (periods.length > 0) {
+      try {
+        await addToRoutines.mutateAsync({
+          productId: saved.id,
+          category: saved.category,
+          periods,
+        });
+      } catch {
+        routineFailed = true;
+      }
+    }
+    if (navigation.isFocused()) {
+      navigation.goBack();
+    }
+    if (routineFailed) {
+      Alert.alert('Saved to your shelf', "But we couldn't add it to your routine.");
     }
   }
 
@@ -485,6 +508,17 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
                 <Text style={[styles.label, { color: palette.emphasis }]}>Not opened yet</Text>
               </Pressable>
             ) : null}
+          </View>
+        ) : null}
+
+        {/* New owned products only: Edit never adds routine steps. */}
+        {isOwned && !product ? (
+          <View style={styles.inset}>
+            <AddToRoutineField
+              value={routinePeriods}
+              onChange={setRoutinePeriods}
+              disabled={saving}
+            />
           </View>
         ) : null}
 

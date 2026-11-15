@@ -4,6 +4,7 @@ import {
   formatDayMonth,
   formatLocalDate,
   isValidLocalDate,
+  isoWeekday,
   parseLocalDate,
   toLocalDate,
   todayLocalDate,
@@ -95,6 +96,21 @@ describe('daysBetween', () => {
   it('crosses year ends and leap days', () => {
     expect(daysBetween('2026-12-31', '2027-01-01')).toBe(1);
     expect(daysBetween('2028-02-28', '2028-03-01')).toBe(2);
+  });
+});
+
+describe('isoWeekday', () => {
+  it('numbers Monday 1 through Sunday 7', () => {
+    expect(isoWeekday('2026-11-16')).toBe(1);
+    expect(isoWeekday('2026-11-17')).toBe(2);
+    expect(isoWeekday('2026-11-21')).toBe(6);
+    expect(isoWeekday('2026-11-22')).toBe(7);
+  });
+
+  it('is right across a DST change and a leap day', () => {
+    expect(isoWeekday('2026-10-25')).toBe(7);
+    expect(isoWeekday('2026-10-26')).toBe(1);
+    expect(isoWeekday('2028-02-29')).toBe(2);
   });
 });
 

@@ -65,6 +65,12 @@ export function daysBetween(from: LocalDate, to: LocalDate): number {
   );
 }
 
+// ISO weekday of a local date: Monday is 1 and Sunday is 7.
+export function isoWeekday(value: LocalDate): number {
+  const [year, month, day] = dateParts(value);
+  return ((new Date(Date.UTC(year, month - 1, day)).getUTCDay() + 6) % 7) + 1;
+}
+
 // Calendar months later, clamped to the month end: 31 Aug plus 6 months is 28 Feb, not 3 Mar.
 export function addMonths(value: LocalDate, months: number): LocalDate {
   const [year, month, day] = dateParts(value);

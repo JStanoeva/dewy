@@ -20,6 +20,8 @@ import { fonts, fontSizes, letterSpacings, radii, spacing } from '@/theme/tokens
 
 type ProductActionsSheetProps = {
   product: Product;
+  // Its routine steps go too when it is deleted; undefined while the steps haven't loaded.
+  inRoutine: boolean | undefined;
   moving: boolean;
   deleting: boolean;
   moveFailed: boolean;
@@ -36,6 +38,7 @@ const deleteError = "We couldn't delete this product. Check your connection and 
 // Mounted only while open, so the delete confirmation always starts from the menu.
 export function ProductActionsSheet({
   product,
+  inRoutine,
   moving,
   deleting,
   moveFailed,
@@ -50,6 +53,13 @@ export function ProductActionsSheet({
   const [confirming, setConfirming] = useState(false);
   const confirmTitleRef = useRef<ComponentRef<typeof Text>>(null);
   const busy = moving || deleting;
+  // Without the steps loaded, an owned product gets wording that is true either way.
+  let routinesNote = '';
+  if (inRoutine) {
+    routinesNote = ' and your routines';
+  } else if (inRoutine === undefined && product.status === 'owned') {
+    routinesNote = " and any routine it's in";
+  }
 
   useEffect(() => {
     if (confirming && confirmTitleRef.current) {
@@ -118,8 +128,8 @@ export function ProductActionsSheet({
               </Text>
               <Text style={[styles.confirmMessage, { color: palette.textMuted }]}>
                 <Text style={[styles.confirmName, { color: palette.text }]}>{product.name}</Text>{' '}
-                will be removed from your {product.status === 'owned' ? 'shelf' : 'wishlist'}. This
-                can&apos;t be undone.
+                will be removed from your {product.status === 'owned' ? 'shelf' : 'wishlist'}
+                {routinesNote}. This can&apos;t be undone.
               </Text>
               {deleteFailed ? errorLine(deleteError, styles.confirmError) : null}
               <View style={styles.confirmButtons}>

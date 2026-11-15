@@ -50,6 +50,8 @@ const morning = {
   heroButton: 'rgba(255, 245, 239, 0.8)',
   berry: '#A2545F',
   scrim: 'rgba(59, 53, 65, 0.4)',
+  // A gap in the card colour, then a ring in the text colour, around today in the week strip.
+  todayRing: '0 0 0 3px #FFFFFF, 0 0 0 5px #3B3541',
 };
 
 export type Palette = typeof morning;
@@ -106,6 +108,7 @@ const evening: Palette = {
   heroButton: 'rgba(255, 245, 239, 0.8)',
   berry: '#A2545F',
   scrim: 'rgba(0, 0, 0, 0.5)',
+  todayRing: '0 0 0 3px #45404D, 0 0 0 5px #FFF5EF',
 };
 
 export const palettes = { morning, evening };

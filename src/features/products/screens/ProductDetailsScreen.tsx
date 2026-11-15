@@ -24,6 +24,7 @@ import {
 import { useProduct } from '@/features/products/hooks/useProducts';
 import type { Product } from '@/features/products/types';
 import { noteLines, productInitials, splitLastWord } from '@/features/products/utils/productLabels';
+import { useRoutineSteps } from '@/features/routines/hooks/useRoutineSteps';
 import { useLocalToday } from '@/hooks/useLocalToday';
 import type { RootStackParamList } from '@/navigation/types';
 import { bottleColorsFor, photoScrim } from '@/theme/bottleColors';
@@ -93,6 +94,8 @@ function ProductDetailsContent({ product, today, navigation }: ProductDetailsCon
   const setFavorite = useSetFavorite();
   const moveToShelf = useMoveToShelf();
   const deleteProduct = useDeleteProduct();
+  const routineSteps = useRoutineSteps();
+  const inRoutine = routineSteps.data?.some((step) => step.productId === product.id);
   const colors = bottleColorsFor(product.id);
   const category = categoryDetails[product.category];
   const title = splitLastWord(product.name);
@@ -306,6 +309,7 @@ function ProductDetailsContent({ product, today, navigation }: ProductDetailsCon
       {sheetOpen ? (
         <ProductActionsSheet
           product={product}
+          inRoutine={inRoutine}
           moving={moveToShelf.isPending}
           deleting={deleting}
           moveFailed={moveToShelf.isError}

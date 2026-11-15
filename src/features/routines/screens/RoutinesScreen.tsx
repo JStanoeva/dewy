@@ -1,32 +1,149 @@
 import { useNavigation } from '@react-navigation/native';
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { useState } from 'react';
+import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { LoadingState } from '@/components/LoadingState';
 import { Screen } from '@/components/Screen';
+import { SegmentedControl } from '@/components/SegmentedControl';
+import { useProducts } from '@/features/products/hooks/useProducts';
+import { RoutineStepRow } from '@/features/routines/components/RoutineStepRow';
+import { WeekStrip } from '@/features/routines/components/WeekStrip';
+import { useRoutineSteps } from '@/features/routines/hooks/useRoutineSteps';
+import { routineMeta } from '@/features/routines/utils/weekSchedule';
+import { useLocalToday } from '@/hooks/useLocalToday';
 import { useDewyTheme } from '@/theme/ThemeProvider';
+import type { Period } from '@/theme/period';
 import { fonts, fontSizes, letterSpacings, spacing } from '@/theme/tokens';
+import { isoWeekday } from '@/utils/localDate';
+
+const periodOptions = [
+  { value: 'morning', label: 'Morning' },
+  { value: 'evening', label: 'Evening' },
+] as const;
 
 export function RoutinesScreen() {
-  const { palette } = useDewyTheme();
+  const { palette, paletteName } = useDewyTheme();
   const navigation = useNavigation();
+  const steps = useRoutineSteps();
+  const products = useProducts();
+  const today = useLocalToday();
+  // Starts on the period the palette shows; switching here never changes the palette.
+  const [period, setPeriod] = useState<Period>(paletteName);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loaded = steps.data !== undefined && products.data !== undefined;
+  const periodSteps = steps.data?.filter((step) => step.period === period) ?? [];
+  const hasOwnedProducts = products.data?.some((product) => product.status === 'owned') ?? false;
+
+  // Local state, so the spinner only shows for a pull and not for background refetches.
+  async function handleRefresh() {
+    setRefreshing(true);
+    await Promise.all([steps.refetch(), products.refetch()]);
+    setRefreshing(false);
+  }
+
+  function retry() {
+    if (steps.isLoadingError) {
+      steps.refetch();
+    }
+    if (products.isLoadingError) {
+      products.refetch();
+    }
+  }
+
+  const header = (
+    <View style={loaded && periodSteps.length > 0 && styles.headerAboveList}>
+      <Text accessibilityRole="header" style={[styles.title, { color: palette.text }]}>
+        Your <Text style={[styles.titleItalic, { color: palette.emphasis }]}>rituals</Text>
+      </Text>
+      {loaded ? (
+        <View style={styles.segmented}>
+          <SegmentedControl options={periodOptions} value={period} onChange={setPeriod} />
+        </View>
+      ) : null}
+      {loaded && periodSteps.length > 0 ? (
+        <>
+          <View style={styles.weekStrip}>
+            <WeekStrip period={period} steps={periodSteps} todayWeekday={isoWeekday(today)} />
+          </View>
+          <View style={styles.ritualHeader}>
+            <Text accessibilityRole="header" style={[styles.ritualTitle, { color: palette.text }]}>
+              {period === 'morning' ? 'Morning ritual' : 'Evening ritual'}
+            </Text>
+            <Text style={[styles.meta, { color: palette.textMuted }]}>
+              {routineMeta(periodSteps)}
+            </Text>
+          </View>
+        </>
+      ) : null}
+    </View>
+  );
 
   return (
     <Screen edges={['left', 'right']}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text accessibilityRole="header" style={[styles.title, { color: palette.text }]}>
-          Your <Text style={[styles.titleItalic, { color: palette.emphasis }]}>rituals</Text>
-        </Text>
-        <EmptyState
-          title="Add a product first"
-          message="Routine steps use products you own, so start with your shelf."
-          action={{
-            label: 'Add a product',
-            onPress: () => navigation.navigate('ProductForm', { status: 'owned' }),
-          }}
-        />
-      </ScrollView>
+      <FlatList
+        data={loaded ? periodSteps : []}
+        keyExtractor={(step) => step.id}
+        renderItem={({ item, index }) => (
+          <RoutineStepRow
+            step={item}
+            number={index + 1}
+            showWait={index < periodSteps.length - 1}
+          />
+        )}
+        ListHeaderComponent={header}
+        ListEmptyComponent={
+          loaded ? (
+            hasOwnedProducts ? (
+              <EmptyState
+                title="Add your first step"
+                message={`Add a product and tick Add to routine to start your ${period} ritual.`}
+                action={{
+                  label: 'Add a product',
+                  onPress: () => navigation.navigate('ProductForm', { status: 'owned' }),
+                }}
+              />
+            ) : (
+              <EmptyState
+                title="Add a product first"
+                message="Routine steps use products you own, so start with your shelf."
+                action={{
+                  label: 'Add a product',
+                  onPress: () => navigation.navigate('ProductForm', { status: 'owned' }),
+                }}
+              />
+            )
+          ) : steps.isLoadingError || products.isLoadingError ? (
+            <ErrorState
+              message="We couldn't load your rituals. Check your connection and try again."
+              onRetry={retry}
+              retrying={steps.isFetching || products.isFetching}
+            />
+          ) : (
+            <LoadingState />
+          )
+        }
+        ItemSeparatorComponent={StepGap}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing && loaded}
+            onRefresh={handleRefresh}
+            colors={[palette.primary]}
+            progressBackgroundColor={palette.surface}
+            tintColor={palette.primary}
+          />
+        }
+      />
     </Screen>
   );
+}
+
+function StepGap() {
+  return <View style={styles.stepGap} />;
 }
 
 const styles = StyleSheet.create({
@@ -35,6 +152,9 @@ const styles = StyleSheet.create({
     paddingTop: 56,
     paddingHorizontal: spacing.screen,
     paddingBottom: spacing.screen,
+  },
+  headerAboveList: {
+    marginBottom: spacing.sm,
   },
   title: {
     overflow: 'visible',
@@ -45,5 +165,33 @@ const styles = StyleSheet.create({
   },
   titleItalic: {
     fontFamily: fonts.displayItalic,
+  },
+  segmented: {
+    marginTop: 18,
+  },
+  weekStrip: {
+    marginTop: spacing.lg,
+  },
+  // Wraps the meta under the title when both don't fit, e.g. at a larger font size.
+  ritualHeader: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    columnGap: spacing.md,
+    marginTop: 18,
+  },
+  // Grows into the row's slack, so a hair-short Android measurement can't wrap the title.
+  ritualTitle: {
+    flexGrow: 1,
+    fontFamily: fonts.display,
+    fontSize: fontSizes.section,
+  },
+  meta: {
+    fontFamily: fonts.body,
+    fontSize: fontSizes.meta,
+  },
+  stepGap: {
+    height: spacing.xs,
   },
 });

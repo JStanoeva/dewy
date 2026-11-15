@@ -64,6 +64,7 @@ export function useUpdateProduct() {
     // Not awaited, so a failed save reports at once instead of after the refetch's retries.
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['routineSteps'] });
     },
   });
 }
@@ -75,6 +76,7 @@ export function useMoveToShelf() {
     onSuccess: (product) => storeProduct(queryClient, product),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['routineSteps'] });
     },
   });
 }
@@ -122,8 +124,10 @@ export function useDeleteProduct() {
     onError: (_error, _id, context) => {
       queryClient.setQueryData(['products'], context?.previous);
     },
+    // The database deletes the product's routine steps with it.
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'], exact: true });
+      queryClient.invalidateQueries({ queryKey: ['routineSteps'] });
     },
   });
 }
