@@ -1,3 +1,4 @@
+import { NavigationBar } from 'expo-navigation-bar';
 import { StatusBar } from 'expo-status-bar';
 import type { ReactNode } from 'react';
 import { StyleSheet } from 'react-native';
@@ -18,6 +19,7 @@ export function Screen({ children, edges, statusBarStyle }: ScreenProps) {
   return (
     <SafeAreaView edges={edges} style={[styles.container, { backgroundColor: palette.background }]}>
       <StatusBar style={statusBarStyle ?? (paletteName === 'morning' ? 'dark' : 'light')} />
+      <NavigationBar style={paletteName === 'morning' ? 'dark' : 'light'} />
       {children}
     </SafeAreaView>
   );

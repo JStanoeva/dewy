@@ -20,6 +20,7 @@ const config: ExpoConfig = {
   },
   plugins: [
     ['expo-splash-screen', { backgroundColor: '#FFF5EF' }],
+    ['expo-navigation-bar', { enforceContrast: false, style: 'dark' }],
     'expo-secure-store',
     [
       'expo-image-picker',
