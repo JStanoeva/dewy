@@ -87,6 +87,11 @@ describe('productFormSchema', () => {
     expect(errorsFor({ category: undefined }).category).toBe('Pick a type');
   });
 
+  it('accepts the exfoliant and mist categories', () => {
+    expect(errorsFor({ category: 'exfoliant' }).category).toBeUndefined();
+    expect(errorsFor({ category: 'mist' }).category).toBeUndefined();
+  });
+
   describe('opened date and PAO', () => {
     it('requires PAO when an owned product is opened', () => {
       expect(errorsFor({ paoMonths: null }).paoMonths).toBe('Pick how long it lasts once opened');
@@ -228,6 +233,19 @@ describe('labelReadingSchema', () => {
         category: 'serum',
       }),
     ).toEqual({ name: 'Vitamin C 15% Serum', brand: 'Brightside', category: 'serum' });
+  });
+
+  it('keeps an exfoliant or mist type and drops an unknown one', () => {
+    expect(
+      labelReadingSchema.parse({ name: 'Rose Face Mist', brand: null, category: 'mist' }).category,
+    ).toBe('mist');
+    expect(
+      labelReadingSchema.parse({ name: 'Gentle Scrub', brand: null, category: 'exfoliant' })
+        .category,
+    ).toBe('exfoliant');
+    expect(
+      labelReadingSchema.parse({ name: 'Rosehip Oil', brand: null, category: 'oil' }).category,
+    ).toBeNull();
   });
 
   it('keeps nulls for anything the label did not show', () => {

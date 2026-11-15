@@ -53,6 +53,7 @@ On Windows, if PowerShell refuses to run `npm` or `npx` because running scripts 
    1. `001_profiles.sql`
    2. `002_products.sql`
    3. `003_product_photos_storage.sql`
+   4. `004_more_categories.sql`
 
    Run each file once, before anyone signs up. `003_product_photos_storage.sql` creates the private `product-photos` bucket itself, so don't create it by hand.
 
@@ -232,7 +233,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 
 - The Shelf lists the user's products, newest first, in a two-column grid.
 - Each card shows the photo or a bottle illustration, the brand, the name and a status line. For owned products that line is the shelf life (for example "5 months left", or "Unopened"). For wishlist products it is the date the product was saved.
-- The user switches between Owned and Wishlist, filters by category (Cleanser, Toner, Serum, Moisturizer, SPF, Mask) and pulls down to refresh.
+- The user switches between Owned and Wishlist, filters by category (Cleanser, Exfoliant, Toner, Mist, Serum, Moisturizer, SPF, Mask) and pulls down to refresh.
 
 #### Details Screen
 
@@ -287,13 +288,13 @@ Both forms use React Hook Form with Zod schemas.
 - **Name (sign-up):** required, up to 40 characters.
 - **Product name:** required, at least 2 and up to 80 characters (multiple rules).
 - **Brand:** optional, up to 60 characters.
-- **Type:** one of the six categories must be picked.
+- **Type:** one of the eight categories must be picked.
 - **Opened on:** for owned products, a date from 2000 onward and not in the future.
 - **Use within:** required once an opened date is set.
 - **Key ingredients:** up to 20, each up to 50 characters.
 - **Notes:** up to 500 characters.
 
-Database CHECK constraints back up the product rules on the server: name 2–80 characters, brand up to 60, one of the six types, an opened date from 2000 on (with one day of slack for time zones), "Use within" required once an opened date is set, up to 20 ingredients (1,000 characters in total) and notes up to 500. The profile name is capped at 40 characters. Supabase Auth checks the email and password.
+Database CHECK constraints back up the product rules on the server: name 2–80 characters, brand up to 60, one of the eight types, an opened date from 2000 on (with one day of slack for time zones), "Use within" required once an opened date is set, up to 20 ingredients (1,000 characters in total) and notes up to 500. The profile name is capped at 40 characters. Supabase Auth checks the email and password.
 
 ### Native Device Features
 
