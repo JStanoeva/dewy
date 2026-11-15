@@ -2,12 +2,40 @@
 
 A skincare companion app for building routines, tracking products, and keeping your daily rituals beautifully organized.
 
-Keep a shelf of the products you own and the ones on your wishlist, build morning and evening routines, check off today's steps, and track how long each opened product has left.
+**[Download the Android APK](https://github.com/JStanoeva/dewy/releases/latest/download/dewy.apk)**
+
+Your phone must allow installing apps from the browser or file manager you open the APK with (Android asks the first time). The APK talks to the hosted Dewy backend, so you can create an account and try it with no setup.
+
+## About
+
+Dewy keeps a shelf of the skincare products you own and the ones on your wishlist. What it does today:
+
+- Sign up and log in with email and password. The session survives app restarts.
+- Keep your products on a shelf with Owned and Wishlist sides, category filters and pull to refresh.
+- Open a product to see its shelf life, key ingredients and notes.
+- Add, edit, favourite and delete products, and move wishlist products to your shelf.
+- Track shelf life: the opened date and the "use within" period show how long each opened product has left.
+- Take or choose a product photo, stored privately for your account.
+- Optionally fill in a new product's name, brand and type from the label in its photo.
+
+Routines and the Today checklist are still in progress.
+
+## Tech stack
+
+- Expo SDK 58 with React Native 0.88 and React 19
+- TypeScript in strict mode
+- React Navigation 7 (native stack and bottom tabs)
+- TanStack Query 5 for server state
+- React Hook Form 7 with Zod 4 validation
+- Supabase: Auth, Postgres with row level security, Storage and Edge Functions
+- expo-image-picker and expo-image-manipulator for product photos, expo-image to display them
+- expo-secure-store and AsyncStorage for the encrypted session
+- Jest with jest-expo, ESLint and Prettier
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) 22.13+, 24.3+, or 26 (the versions Expo SDK 58 supports), with npm
-- The [Expo Go](https://expo.dev/go) app on your phone, updated to a version that supports SDK 58
+- [Node.js](https://nodejs.org/) 22.13+, 24.3+, or 26+ (the versions Expo SDK 58 supports), with npm
+- The Expo Go app on an Android phone, updated to a version that supports SDK 58
 - A [Supabase](https://supabase.com/) project of your own
 
 ## Install
@@ -16,21 +44,65 @@ Keep a shelf of the products you own and the ones on your wishlist, build mornin
 npm install
 ```
 
+On Windows, if PowerShell refuses to run `npm` or `npx` because running scripts is disabled, type `npm.cmd` and `npx.cmd` instead (for example `npx.cmd expo start`), or use Command Prompt.
+
+## Backend setup
+
+1. Create a new project in the [Supabase dashboard](https://supabase.com/dashboard).
+2. Open the SQL Editor and run these files from `supabase/migrations`, one at a time and in this order:
+   1. `001_profiles.sql`
+   2. `002_products.sql`
+   3. `003_product_photos_storage.sql`
+
+   Run each file once, before anyone signs up. `003_product_photos_storage.sql` creates the private `product-photos` bucket itself, so don't create it by hand.
+
+3. Go to **Authentication → Sign In / Providers → Email**, turn off **Confirm email** and save. New accounts then sign in straight away. With it on, sign-up creates the account but the app stays on the sign-up screen.
+4. Open the project's **Connect** dialog. It shows the project URL and the publishable key. The publishable key is also listed under **Settings → API Keys**.
+
 ## Environment setup
 
-Copy the example file:
+Copy the example file.
+
+macOS or Linux:
 
 ```bash
 cp .env.example .env
 ```
 
-Then open `.env` and replace the placeholders with your Supabase project URL and publishable key. Both are in your project's Supabase dashboard, under the Connect dialog.
+Windows (PowerShell):
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Windows (Command Prompt):
+
+```bat
+copy .env.example .env
+```
+
+Then open `.env` and replace both placeholders with your project URL and publishable key:
+
+- `EXPO_PUBLIC_SUPABASE_URL`: your project URL, like `https://abcd1234.supabase.co`
+- `EXPO_PUBLIC_SUPABASE_KEY`: your publishable key
+
+The app accepts only a publishable key (`sb_publishable_...`). A secret key or a legacy `anon` key is rejected. If a value is missing or invalid, the app shows a configuration-error screen that lists the problem instead of crashing.
+
+## Run
+
+```bash
+npx expo start
+```
+
+Scan the QR code with Expo Go on your Android phone. Your phone and computer must be on the same network.
+
+If you aren't logged in to an Expo account, the terminal asks you to log in when your phone connects. Choose **Proceed anonymously**, and the app finishes loading.
 
 ## Optional: reading labels from photos
 
 When you add a photo to a new product, Dewy can read the product's name, brand and type from its label and fill in the fields that are still empty. This uses a Supabase Edge Function that calls Anthropic's Claude API. The app works fully without it: the fields simply stay empty for you to fill in.
 
-To turn it on for your own Supabase project, you need an [Anthropic API key](https://console.anthropic.com/). Then run:
+To turn it on for your own Supabase project, you need an [Anthropic API key](https://console.anthropic.com/). Then run these commands from the repository root, one at a time:
 
 ```bash
 npx supabase login
@@ -39,25 +111,231 @@ npx supabase functions deploy read-product-label --no-verify-jwt
 npx supabase secrets set ANTHROPIC_API_KEY=your-anthropic-api-key
 ```
 
-The function checks the signed-in user itself, which is why it is deployed with `--no-verify-jwt`.
+The deploy and secrets commands ask for confirmation, so type `y` when prompted. The function checks the signed-in user itself, which is why it is deployed with `--no-verify-jwt`.
 
 **Privacy:** with this turned on, a product photo is sent to Anthropic's Claude API right after you pick it in New product, only to read the label. Nothing is saved until you tap Save, and the function doesn't store or log the photo. See [Anthropic's Privacy Center](https://privacy.claude.com/) for how Anthropic handles API data.
 
-## Run
+## Scripts and tests
 
 ```bash
-npx expo start
+npm test
+npm run typecheck
+npm run lint
+npm run format
 ```
 
-Scan the QR code with Expo Go (Android) or the Camera app (iOS). Your phone and computer must be on the same network.
+- `npm test` runs the unit tests with Jest.
+- `npm run typecheck` checks types with the TypeScript compiler.
+- `npm run lint` runs ESLint.
+- `npm run format` formats the code with Prettier.
 
-## Useful scripts
+## Building the APK
 
-```bash
-npm run typecheck   # check types
-npm run lint        # run ESLint
-npm run format      # format code with Prettier
-```
+The `preview` profile in `eas.json` builds an installable Android APK. `app.config.ts` points at the original author's Expo project, so set up your own first:
+
+1. Log in to your Expo account:
+
+   ```bash
+   npx eas-cli login
+   ```
+
+2. In `app.config.ts`, set `owner` to your Expo username and delete `extra.eas.projectId`.
+3. Create your own EAS project:
+
+   ```bash
+   npx eas-cli init
+   ```
+
+   Confirm when it asks to create the project. It prints the new project ID, then stops with an error because it can't edit `app.config.ts` itself. That is expected: paste the printed ID into `extra.eas.projectId`.
+
+4. EAS doesn't upload your `.env` file. Create `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_KEY` in the EAS **preview** environment, with plain text visibility:
+
+   ```bash
+   npx eas-cli env:set --environment preview --name EXPO_PUBLIC_SUPABASE_URL --value https://your-project-ref.supabase.co --visibility plaintext
+   npx eas-cli env:set --environment preview --name EXPO_PUBLIC_SUPABASE_KEY --value your-publishable-key --visibility plaintext
+   ```
+
+5. Build the APK:
+
+   ```bash
+   npx eas-cli build -p android --profile preview
+   ```
+
+## Functional Guide
+
+### Project Overview
+
+- **Application Name:** Dewy
+- **Application Category / Topic:** Health and beauty: a personal skincare companion.
+- **Main Purpose:** Dewy helps people keep track of their skincare products. Users keep a shelf of the products they own and a wishlist of the ones they want. For each opened product, Dewy shows how long it has left before it should be replaced. Morning and evening routines and a daily checklist are still in progress.
+
+### User Access & Permissions
+
+#### Guest (Not Authenticated)
+
+- A guest sees only the Auth screen. It has a Sign up / Log in switch.
+- Sign up asks for a name, email and password. Log in asks for email and password.
+- There is no guest browsing. Every other screen requires a signed-in user.
+- The backend enforces this too. Guests have no access to the database tables or the photo storage, and the label-reading function rejects requests without a signed-in user.
+
+#### Authenticated User
+
+- **Main sections:** four bottom tabs (Today, Shelf, Routines, Me) and a raised centre "+" button that opens the New product form.
+  - **Today:** the date, a "Good morning" or "Good evening" greeting with the user's name, and an "Add your first product" prompt. The checklist is still in progress.
+  - **Shelf:** the user's products in a two-column grid, with Owned and Wishlist sides and category chips.
+  - **Routines:** the title "Your rituals" and an "Add a product first" prompt. The routine builder is still in progress.
+  - **Me:** the user's initial, name, "Glowing with Dewy since" with the month they joined, and Log out.
+- **Details screen:** Product details, opened by tapping a product card on the Shelf.
+- **Create:** add a product, with an optional photo.
+- **Edit:** edit a product, mark it as a favourite, or move a wishlist product to the shelf.
+- **Delete:** delete a product after a confirmation step. Its photo is removed too.
+- Each user sees and changes only their own data. Row level security in Postgres and storage policies enforce this on the server.
+
+### Authentication & Session Handling
+
+#### Authentication Flow
+
+1. **When the app starts**, the splash screen stays up while the fonts load and the environment values are checked. If the Supabase URL or key is missing or invalid, a configuration-error screen is shown instead of the app.
+2. **Auth status** comes from Supabase Auth. The app listens to `onAuthStateChange` and keeps the splash screen up until the stored session has been read, for at most 5 seconds. It then shows the signed-in screens if there is a session, and the Auth screen if there isn't.
+3. **On successful login or registration**, Supabase emits the new session and the navigator switches to the tabs. The screen doesn't navigate by itself. A database trigger creates the user's profile row with their name at sign-up.
+4. **On logout**, the Me tab's Log out button signs out this device. The stored session and its encryption key are deleted, the cached data and cached product photos are cleared, and the app returns to the Auth screen.
+
+#### Session Persistence
+
+- The session is encrypted with a random AES-256 key (AES-CTR). The key is stored in expo-secure-store, which Android Keystore encrypts. AsyncStorage holds only the ciphertext, no token is stored in plaintext, and neither is included in Android backups.
+- **Automatic login:** on the next launch, Supabase reads and decrypts the stored session. If it is still valid, or the token can be refreshed, the user goes straight to the tabs without logging in again. Tokens refresh automatically while the app is in the foreground.
+
+### Navigation Structure
+
+#### Root Navigation Logic
+
+- One root native stack inside a `NavigationContainer`.
+- Its screens depend on the session:
+  - **Signed out:** only `Auth`.
+  - **Signed in:** `Main` (the tabs), `ProductDetails` and `ProductForm`, which opens as a modal.
+- The two groups never mix, so a guest can't reach app screens and a signed-in user never sees Auth.
+
+#### Main Navigation
+
+- A bottom tab navigator with four tabs: Today, Shelf, Routines and Me.
+- A custom tab bar adds a raised "+" button between Shelf and Routines. It isn't a tab: it opens the New product form.
+
+#### Nested Navigation
+
+- Shelf, Routines and Me each have their own native stack. For now each stack holds one screen: Shelf, Routines and Profile.
+- Product details and the product form sit on the root stack, so they cover the tab bar.
+- The More options menu on Product details is a modal sheet, not a separate route.
+
+### List → Details Flow
+
+#### List / Overview Screen
+
+- The Shelf lists the user's products, newest first, in a two-column grid.
+- Each card shows the photo or a bottle illustration, the brand, the name and a status line. For owned products that line is the shelf life (for example "5 months left", or "Unopened"). For wishlist products it is the date the product was saved.
+- The user switches between Owned and Wishlist, filters by category (Cleanser, Toner, Serum, Moisturizer, SPF, Mask) and pulls down to refresh.
+
+#### Details Screen
+
+- Tapping a card calls `navigation.navigate('ProductDetails', { productId })`.
+- The screen receives only `productId` through route params. It shows the cached product at once, then loads the latest version of it from Supabase.
+- It shows the photo, category and brand, a shelf-life card, key ingredients and notes, plus the favourite and More options buttons.
+
+### Data Source & Backend
+
+#### Backend Type
+
+- A real backend: Supabase, used through `@supabase/supabase-js`.
+- **Supabase Auth** handles email and password accounts.
+- **Postgres** holds two tables, `profiles` and `products`. Row level security limits every row to its owner.
+- **Storage** holds product photos in a private bucket, one folder per user. Photos are shown through signed links that expire after an hour.
+- **Edge Functions** run the optional label reading, which calls Anthropic's Claude API.
+
+### Data Operations (CRUD)
+
+#### Read (GET)
+
+- The Shelf fetches all of the user's products with TanStack Query and shows them in the grid.
+- Product details fetches one product by its id.
+- Today and Me read the user's profile for the name and the join date.
+
+#### Create (POST)
+
+- The user taps "+" (or "Add a product" on an empty screen), fills in the New product form and taps "Save to shelf" or "Save to wishlist".
+- A chosen photo is uploaded to Storage first, then the product row is inserted. The shelf is refetched and the form closes.
+
+#### Update / Delete (Mutation)
+
+- **Edit product:** saves the changes, then puts the saved product straight into the cached details and list. A replaced or removed photo is deleted from Storage.
+- **Favourite:** the heart updates at once and rolls back if saving fails.
+- **Move to shelf:** turns a wishlist product into an owned, unopened one.
+- **Delete product:** after confirmation, the product disappears from the shelf at once and comes back if the delete fails. Its photo is removed from Storage.
+- After each change, the product queries are refreshed so every screen shows the latest data.
+
+### Forms & Validation
+
+#### Forms Used
+
+- **Auth form** (Sign up / Log in): name (sign-up only), email and password.
+- **Product form** (New product / Edit product): status (I own it / Wishlist, new products only), photo, product name, brand, type, opened on, use within, key ingredients and notes.
+
+#### Validation Rules
+
+Both forms use React Hook Form with Zod schemas.
+
+- **Email:** required and must be a valid email address.
+- **Sign-up password:** required, at least 8 characters and at most 72 bytes (multiple rules).
+- **Name (sign-up):** required, up to 40 characters.
+- **Product name:** required, at least 2 and up to 80 characters (multiple rules).
+- **Brand:** optional, up to 60 characters.
+- **Type:** one of the six categories must be picked.
+- **Opened on:** for owned products, a date from 2000 onward and not in the future.
+- **Use within:** required once an opened date is set.
+- **Key ingredients:** up to 20, each up to 50 characters.
+- **Notes:** up to 500 characters.
+
+Database CHECK constraints back up the product rules on the server: name 2–80 characters, brand up to 60, one of the six types, an opened date from 2000 on (with one day of slack for time zones), "Use within" required once an opened date is set, up to 20 ingredients (1,000 characters in total) and notes up to 500. The profile name is capped at 40 characters. Supabase Auth checks the email and password.
+
+### Native Device Features
+
+#### Used Native Feature(s)
+
+- Camera and photo library (expo-image-picker)
+- Image resizing and JPEG conversion (expo-image-manipulator)
+- Secure key storage (expo-secure-store)
+- The Android date picker dialog (@react-native-community/datetimepicker)
+
+#### Usage Description
+
+- In the product form, "Take photo" opens the camera and "Choose photo" opens the photo library. Both crop the photo to a square.
+- Camera permission is requested when the user taps "Take photo", never at startup. If it is denied, the app explains how to turn it on and offers to open Settings.
+- Each photo is resized and saved as a JPEG, then uploaded to the user's private Storage folder when the product is saved.
+- In New product, a new photo can also be used to fill in the name, brand and type from its label (see the optional label reading section).
+- The "Opened on" field opens the Android date dialog.
+- expo-secure-store holds the key that encrypts the saved session.
+
+### Typical User Flow
+
+1. Open Dewy, choose Sign up, enter your name, email and password, and tap "Create account".
+2. You land on Today, which greets you by name.
+3. Tap the centre "+" to open New product and keep "I own it" selected.
+4. Tap "Take photo" or "Choose photo". If label reading is set up, empty fields are filled in from the label.
+5. Check the name and brand, pick a type, keep today as the opened date, pick a "Use within" period, add ingredients and notes, then tap "Save to shelf".
+6. Open the Shelf tab. The new card shows the photo and how long the product has left. Try the category chips and pull to refresh.
+7. Add a second product with "Wishlist" selected. It appears on the Wishlist side.
+8. Tap a card to open its details, and tap the heart to mark it as a favourite.
+9. Open More options to edit the product, move a wishlist product to your shelf, or delete a product.
+10. On the Me tab, tap Log out.
+
+### Error & Edge Case Handling
+
+- **Authentication errors** are shown on the right field or above the button in plain language: wrong email or password, an email that already has an account, an invalid email, a weak password, too many attempts, no connection, and a general fallback.
+- **Network or data errors:** screens that load data (Shelf, Product details, Edit product, Today and Me) show "Something went wrong" with a "Try again" button. Data that is already loaded stays visible.
+- **Failed saves:** the product form shows an error above the Save button. A failed favourite or delete shows an error and undoes the change on screen. A failed move shows an error in the More options sheet.
+- **Duplicate taps:** buttons are disabled while a request is running, so a form or action can't be sent twice.
+- **Empty states:** an empty Shelf or category shows "Nothing here yet" with an "Add a product" button. Today and Routines show prompts to add a product.
+- **Missing data:** a product that was deleted elsewhere shows "This product is no longer on your shelf" with a Back button.
+- **Photos:** if a photo can't load, the Shelf card and Product details show a bottle illustration instead, and the product form shows an empty photo frame.
+- **Configuration:** missing or invalid environment values show a setup screen instead of a crash.
 
 ## License
 

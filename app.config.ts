@@ -3,6 +3,7 @@ import type { ExpoConfig } from 'expo/config';
 const config: ExpoConfig = {
   name: 'Dewy',
   slug: 'dewy',
+  owner: 'torablaze',
   scheme: 'dewy',
   version: '1.0.0',
   orientation: 'portrait',
@@ -30,6 +31,11 @@ const config: ExpoConfig = {
       },
     ],
   ],
+  extra: {
+    eas: {
+      projectId: '6cf056be-4766-4258-83d2-a6fc19cc359d',
+    },
+  },
 };
 
 export default config;
