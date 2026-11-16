@@ -11,6 +11,8 @@ import { Screen } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { useProducts } from '@/features/products/hooks/useProducts';
 import { useProfile } from '@/features/profile/hooks/useProfile';
+import { RitualProgressArc } from '@/features/today/components/RitualProgressArc';
+import { TodayNoteBanner } from '@/features/today/components/TodayNoteBanner';
 import { TodayStepRow } from '@/features/today/components/TodayStepRow';
 import { useTodayRoutine } from '@/features/today/hooks/useTodayRoutine';
 import { todayState, type TodayRoutine } from '@/features/today/utils/buildTodayRoutine';
@@ -63,6 +65,7 @@ export function TodayScreen({ navigation }: TodayScreenProps) {
     productsFailed: products.isLoadingError,
   });
   const showRitualHeader = state === 'list' || state === 'dayOff';
+  const notes = state === 'list' && routine ? routine.notes : [];
 
   // Local state, so the spinner only shows for a pull and not for background refetches.
   async function handleRefresh() {
@@ -89,7 +92,12 @@ export function TodayScreen({ navigation }: TodayScreenProps) {
   }
 
   const header = (
-    <View style={[styles.header, state === 'list' && styles.headerAboveList]}>
+    <View
+      style={[
+        styles.header,
+        state === 'list' && (notes.length > 0 ? styles.headerAboveNotes : styles.headerAboveList),
+      ]}
+    >
       <View
         style={[styles.circle, { backgroundColor: isMorning ? palette.peach : palette.surfaceAlt }]}
       />
@@ -105,7 +113,7 @@ export function TodayScreen({ navigation }: TodayScreenProps) {
         {formatWeekdayDayMonth(date)}
       </Text>
       <Text accessibilityRole="header" style={[styles.title, { color: palette.text }]}>
-        {isMorning ? 'Good morning' : 'Good evening'}
+        {period === 'morning' ? 'Good morning' : 'Good evening'}
         {name ? (
           <>
             {', '}
@@ -130,6 +138,7 @@ export function TodayScreen({ navigation }: TodayScreenProps) {
           }
           style={styles.progress}
         >
+          <RitualProgressArc period={period} steps={routine.steps} />
           <View style={styles.progressText}>
             <Text style={[styles.count, { color: palette.text }]}>
               {routine.done} <Text style={[styles.countOf, { color: palette.emphasis }]}>of</Text>{' '}
@@ -157,6 +166,14 @@ export function TodayScreen({ navigation }: TodayScreenProps) {
           >
             <Text style={[styles.editLabel, { color: palette.emphasis }]}>Edit</Text>
           </Pressable>
+        </View>
+      ) : null}
+
+      {notes.length > 0 ? (
+        <View style={styles.notes}>
+          {notes.map((note) => (
+            <TodayNoteBanner key={note.stepId} note={note} />
+          ))}
         </View>
       ) : null}
     </View>
@@ -259,6 +276,9 @@ const styles = StyleSheet.create({
   },
   headerAboveList: {
     marginBottom: spacing.xxs,
+  },
+  headerAboveNotes: {
+    marginBottom: spacing.sm,
   },
   inset: {
     paddingHorizontal: spacing.screen,
@@ -371,6 +391,10 @@ const styles = StyleSheet.create({
   editLabel: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSizes.secondary,
+  },
+  notes: {
+    marginTop: spacing.hairline,
+    gap: spacing.xs,
   },
   stepGap: {
     height: spacing.xs,

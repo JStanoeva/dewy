@@ -32,12 +32,12 @@ const periodOptions = [
 ] as const;
 
 export function RoutinesScreen({ navigation, route }: RoutinesScreenProps) {
-  const { palette, paletteName } = useDewyTheme();
+  const { palette, activePeriod } = useDewyTheme();
   const steps = useRoutineSteps();
   const products = useProducts();
   const today = useLocalToday();
-  // Starts on the period the palette shows; switching here never changes the palette.
-  const [chosenPeriod, setChosenPeriod] = useState<Period>(paletteName);
+  // Starts on the ritual Today shows, then keeps its own; switching here never changes the palette.
+  const [chosenPeriod, setChosenPeriod] = useState<Period>(activePeriod);
   // A Details chip's period wins until the control is switched, so the same chip works again.
   const period = route.params?.period ?? chosenPeriod;
   const [refreshing, setRefreshing] = useState(false);

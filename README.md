@@ -185,9 +185,9 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 #### Authenticated User
 
 - **Main sections:** four bottom tabs (Today, Shelf, Routines, Me) and a raised centre "+" button that opens the New product form.
-  - **Today:** the date, a "Good morning" or "Good evening" greeting with the user's name, a Morning / Evening switch, the progress ("2 of 5 steps done · 4 min to go") and the checklist of that routine's steps for today's weekday. Tapping a step ticks or unticks it; a long press opens its product. The day turns over at 05:00, so evening steps ticked after midnight count for that evening.
+  - **Today:** the date, a "Good morning" or "Good evening" greeting with the user's name, a Morning / Evening switch, a progress arc with one dot per step and a sun or moon where the progress ends ("2 of 5 steps done · 4 min to go"), and the checklist of that routine's steps for today's weekday. Steps that fall on some days only show their note in a banner above the list. Tapping a step ticks or unticks it; a long press opens its product. The switch also changes the whole app between the light morning and the plum evening colours; the choice holds until the other half of the day (morning is 05:00–16:59). The day turns over at 05:00, so evening steps ticked after midnight count for that evening.
   - **Shelf:** the user's products in a two-column grid, with Owned and Wishlist sides and category chips. Products in a routine carry an AM, PM or AM · PM tag.
-  - **Routines:** "Your rituals" with Morning and Evening. Each shows a week strip, the number of steps and the time they take, and the ordered steps with their days and waits. Tapping a step opens the step editor, and "Add a step from your shelf" adds one.
+  - **Routines:** "Your rituals" with Morning and Evening. It opens on the routine Today shows, then keeps its own choice; its switch changes only its list, not the colours. Each routine shows a week strip, the number of steps and the time they take, and the ordered steps with their days and waits. Tapping a step opens the step editor, and "Add a step from your shelf" adds one.
   - **Me:** the user's initial, name, "Glowing with Dewy since" with the month they joined, and Log out.
 - **Details screen:** Product details, opened by tapping a product card on the Shelf.
 - **Create:** add a product, with an optional photo, or add a routine step.
@@ -342,8 +342,8 @@ Database CHECK constraints back up the product rules on the server: name 2–80 
 5. Check the name and brand, pick a type, keep today as the opened date, pick a "Use within" period, tick Morning under "Add to routine", add ingredients and notes, then tap "Save to shelf".
 6. Open the Shelf tab. The new card shows the photo, an "AM" tag and how long the product has left. Try the category chips and pull to refresh.
 7. Tap the card. Its details show "Morning · step 1". Tap that chip to open your morning ritual on the Routines tab, where the product is step 1.
-8. Tap the centre "+" and save a second owned product, leaving "Add to routine" unticked. Back on the Routines tab, tap "Add a step from your shelf", pick that product, leave only Monday, Wednesday and Friday ticked, slide the time, and tap "Add to ritual". Tap the new step to change its note or move it up, or remove it.
-9. Open the Today tab and pick Morning. Tap a step to tick it off: the count and the minutes left update. Close and reopen Dewy, and the tick is still there.
+8. Tap the centre "+" and save a second owned product, leaving "Add to routine" unticked. Back on the Routines tab, tap "Add a step from your shelf", pick that product, leave only Monday, Wednesday and Friday ticked, slide the time, type a note such as "Skip exfoliating acids today", and tap "Add to ritual". Tap the new step to change its note or move it up.
+9. Open the Today tab and pick Evening, then Morning: the whole app changes colour with the switch. On a Monday, Wednesday or Friday the note of the step from step 8 shows in a banner above the morning steps. Tap a step to tick it off: the arc, its dot, the count and the minutes left update. Close and reopen Dewy, and the tick is still there.
 10. Add a product with "Wishlist" selected. It appears on the Wishlist side.
 11. Tap a card to open its details, and tap the heart to mark it as a favourite.
 12. Open More options to edit the product, move a wishlist product to your shelf, or delete a product. Deleting a product also removes its routine steps and their ticks.

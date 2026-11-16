@@ -17,3 +17,8 @@ export function getRitualDate(now: Date = new Date()): LocalDate {
   }
   return toLocalDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
 }
+
+// One half of a ritual day, e.g. "2026-11-16:evening"; a picked period holds until the clock moves into the next one.
+export function getClockSlot(now: Date = new Date()): string {
+  return `${getRitualDate(now)}:${getClockPeriod(now)}`;
+}

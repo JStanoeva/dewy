@@ -82,6 +82,27 @@ describe('buildTodayRoutine', () => {
     expect(buildTodayRoutine(steps, [], 'morning', tuesday).total).toBe(0);
     expect(buildTodayRoutine(steps, [], 'morning', '2026-11-22').total).toBe(1);
   });
+
+  it('lists the notes of today steps that fall on some days only, in order', () => {
+    const steps = [
+      step('daily', { note: 'Every day note' }),
+      step('plain', { weekdays: [2, 4] }),
+      step('tue', { weekdays: [2, 4], note: 'Skip acids tonight' }),
+      step('mon', { weekdays: [1], note: 'Not today' }),
+      step('evening', { period: 'evening', weekdays: [2], note: 'Other ritual' }),
+      step('weekdays', { weekdays: [1, 2, 3, 4, 5], note: 'Mask after' }),
+    ];
+    const routine = buildTodayRoutine(steps, [], 'morning', tuesday);
+    expect(routine.notes).toEqual([
+      { stepId: 'tue', productName: 'Product tue', note: 'Skip acids tonight' },
+      { stepId: 'weekdays', productName: 'Product weekdays', note: 'Mask after' },
+    ]);
+  });
+
+  it('keeps a note after its step is ticked', () => {
+    const steps = [step('tue', { weekdays: [2], note: 'Skip acids tonight' })];
+    expect(buildTodayRoutine(steps, ['tue'], 'morning', tuesday).notes).toHaveLength(1);
+  });
 });
 
 describe('todayState', () => {

@@ -62,6 +62,7 @@ export const radii = {
   card: 22,
   detailCard: 20,
   input: 16,
+  banner: 16,
   tile: 14,
 } as const;
 

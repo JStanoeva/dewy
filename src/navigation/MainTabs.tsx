@@ -12,7 +12,7 @@ import { useDewyTheme } from '@/theme/ThemeProvider';
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 export function MainTabs() {
-  const { paletteName } = useDewyTheme();
+  const { activePeriod } = useDewyTheme();
 
   return (
     <Tab.Navigator
@@ -25,7 +25,7 @@ export function MainTabs() {
         options={{
           title: 'Today',
           tabBarIcon: ({ color }) =>
-            paletteName === 'morning' ? <SunIcon color={color} /> : <MoonIcon color={color} />,
+            activePeriod === 'morning' ? <SunIcon color={color} /> : <MoonIcon color={color} />,
         }}
       />
       <Tab.Screen

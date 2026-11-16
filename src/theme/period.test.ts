@@ -1,4 +1,33 @@
-import { getRitualDate } from './period';
+import { getClockSlot, getRitualDate } from './period';
+
+describe('getClockSlot', () => {
+  it('is the same within one half of a ritual day', () => {
+    expect(getClockSlot(new Date(2026, 10, 16, 10, 0))).toBe(
+      getClockSlot(new Date(2026, 10, 16, 12, 0)),
+    );
+    expect(getClockSlot(new Date(2026, 10, 16, 23, 30))).toBe(
+      getClockSlot(new Date(2026, 10, 17, 0, 30)),
+    );
+    expect(getClockSlot(new Date(2026, 10, 16, 23, 30))).toBe('2026-11-16:evening');
+  });
+
+  it('changes when the half changes', () => {
+    expect(getClockSlot(new Date(2026, 10, 17, 4, 59))).toBe('2026-11-16:evening');
+    expect(getClockSlot(new Date(2026, 10, 17, 5, 0))).toBe('2026-11-17:morning');
+    expect(getClockSlot(new Date(2026, 10, 17, 16, 59))).not.toBe(
+      getClockSlot(new Date(2026, 10, 17, 17, 0)),
+    );
+  });
+
+  it('changes for the same half on the next ritual day', () => {
+    expect(getClockSlot(new Date(2026, 10, 16, 10, 0))).not.toBe(
+      getClockSlot(new Date(2026, 10, 17, 10, 0)),
+    );
+    expect(getClockSlot(new Date(2026, 10, 16, 18, 0))).not.toBe(
+      getClockSlot(new Date(2026, 10, 17, 18, 0)),
+    );
+  });
+});
 
 describe('getRitualDate', () => {
   it('is the calendar day from 05:00', () => {
