@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { categories, categoryDetails, type Category } from '@/features/products/constants';
+import { categories } from '@/features/products/constants';
 import type { RoutineStepInput } from '@/features/routines/schemas/routineStepSchema';
 import type { RoutineStep } from '@/features/routines/types';
 import { supabase } from '@/lib/supabase';
@@ -60,24 +60,6 @@ export async function listRoutineSteps(): Promise<RoutineStep[]> {
     throw error;
   }
   return z.array(stepRowSchema).parse(data).map(toRoutineStep);
-}
-
-// One insert for every period, so either all the steps are saved or none; the database puts each one last.
-export async function addProductToRoutines(
-  productId: string,
-  category: Category,
-  periods: readonly Period[],
-): Promise<void> {
-  const { error } = await supabase.from('routine_steps').insert(
-    periods.map((period) => ({
-      product_id: productId,
-      period,
-      duration_seconds: categoryDetails[category].defaultDurationSeconds,
-    })),
-  );
-  if (error) {
-    throw error;
-  }
 }
 
 // Null when the step is gone (removed elsewhere) or isn't the caller's.

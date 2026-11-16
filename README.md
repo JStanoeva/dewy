@@ -273,7 +273,6 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 
 - The user taps "+" (or "Add a product" on an empty screen), fills in the New product form and taps "Save to shelf" or "Save to wishlist".
 - A chosen photo is uploaded to Storage first, then the product row is inserted. The shelf is refetched and the form closes.
-- If Morning or Evening is ticked under "Add to routine", one routine step per routine is inserted after the product, at the end of that routine.
 - On Routines, "Add a step from your shelf" opens New step: the user picks an owned product that isn't in that routine yet, its days, time, wait and note, and taps "Add to ritual". The step is inserted at the end of the routine.
 - On Today, ticking a step inserts a completion for that step and day. The tick shows at once and is saved in the background; a tick already saved from another device is ignored instead of failing.
 
@@ -339,10 +338,10 @@ Database CHECK constraints back up the product rules on the server: name 2–80 
 2. You land on Today, which greets you by name and asks you to add your first product.
 3. Tap the centre "+" to open New product and keep "I own it" selected.
 4. Tap "Take photo" or "Choose photo". If label reading is set up, empty fields are filled in from the label.
-5. Check the name and brand, pick a type, keep today as the opened date, pick a "Use within" period, tick Morning under "Add to routine", add ingredients and notes, then tap "Save to shelf".
-6. Open the Shelf tab. The new card shows the photo, an "AM" tag and how long the product has left. Try the category chips and pull to refresh.
-7. Tap the card. Its details show "Morning · step 1". Tap that chip to open your morning ritual on the Routines tab, where the product is step 1.
-8. Tap the centre "+" and save a second owned product, leaving "Add to routine" unticked. Back on the Routines tab, tap "Add a step from your shelf", pick that product, leave only Monday, Wednesday and Friday ticked, slide the time, type a note such as "Skip exfoliating acids today", and tap "Add to ritual". Tap the new step to change its note or move it up.
+5. Check the name and brand, pick a type, keep today as the opened date, pick a "Use within" period, add ingredients and notes, then tap "Save to shelf".
+6. Open the Shelf tab. The new card shows the photo and how long the product has left. Try the category chips and pull to refresh.
+7. Open the Routines tab, pick Morning and tap "Add a step". Pick the product, keep every day ticked and tap "Add to ritual". Back on the Shelf, the card now carries an "AM" tag. Tap it: its details show "Morning · step 1", and that chip opens your morning ritual on the Routines tab.
+8. Tap the centre "+" and save a second owned product. On the Routines tab, tap "Add a step from your shelf", pick that product, leave only Monday, Wednesday and Friday ticked, slide the time, type a note such as "Skip exfoliating acids today", and tap "Add to ritual". Tap the new step to change its note or move it up.
 9. Open the Today tab and pick Evening, then Morning: the whole app changes colour with the switch. On a Monday, Wednesday or Friday the note of the step from step 8 shows in a banner above the morning steps. Tap a step to tick it off: the arc, its dot, the count and the minutes left update. Close and reopen Dewy, and the tick is still there.
 10. Add a product with "Wishlist" selected. It appears on the Wishlist side.
 11. Tap a card to open its details, and tap the heart to mark it as a favourite.
@@ -353,7 +352,7 @@ Database CHECK constraints back up the product rules on the server: name 2–80 
 
 - **Authentication errors** are shown on the right field or above the button in plain language: wrong email or password, an email that already has an account, an invalid email, a weak password, too many attempts, no connection, and a general fallback.
 - **Network or data errors:** screens that load data (Shelf, Product details, Edit product, Routines, New step, Edit step, Today and Me) show "Something went wrong" with a "Try again" button. Data that is already loaded stays visible.
-- **Failed saves:** the product form shows an error above the Save button. If the product saves but its routine steps don't, the form closes and says so, so the product is never saved twice. A failed favourite or delete shows an error and undoes the change on screen. A failed move shows an error in the More options sheet. The step form shows its own errors: a failed save above its button, a failed move under the Move buttons, and a failed remove in its confirmation sheet. A product added to that routine on another device is caught, and the form asks for another one. A failed tick on Today flips back and shows "Couldn't save this step"; a step removed on another device says it is no longer in your routine.
+- **Failed saves:** the product form shows an error above the Save button. A failed favourite or delete shows an error and undoes the change on screen. A failed move shows an error in the More options sheet. The step form shows its own errors: a failed save above its button, a failed move under the Move buttons, and a failed remove in its confirmation sheet. A product added to that routine on another device is caught, and the form asks for another one. A failed tick on Today flips back and shows "Couldn't save this step"; a step removed on another device says it is no longer in your routine.
 - **Duplicate taps:** buttons are disabled while a request is running, so a form or action can't be sent twice. On Today, a step ignores taps while its tick is saving.
 - **Empty states:** an empty Shelf or category shows "Nothing here yet" with an "Add a product" button. Today asks for a product first, offers "Add a step" when the routine has no steps, and says "Nothing this morning" (or evening) when none of its steps fall on today. Routines asks for a product first, or, when there are products but no steps in that routine, offers "Add a step". New step says when every owned product is already in that routine.
 - **Missing data:** a product that was deleted elsewhere shows "This product is no longer on your shelf" with a Back button, and a removed step shows "This step is no longer in your routine" with a Close button.

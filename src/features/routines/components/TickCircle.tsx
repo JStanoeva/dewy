@@ -4,7 +4,7 @@ import Svg, { Path } from 'react-native-svg';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import { radii } from '@/theme/tokens';
 
-// The 22 tick circle of the Add product artboard's "Add to routine" rows.
+// The 22 tick circle drawn in the Add product artboard.
 export function TickCircle({ checked }: { checked: boolean }) {
   const { palette } = useDewyTheme();
   const ring = checked ? palette.primary : palette.mauve;

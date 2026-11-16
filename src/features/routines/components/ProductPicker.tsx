@@ -14,7 +14,7 @@ type ProductPickerProps = {
   disabled?: boolean;
 };
 
-// One row per product, like the Routines rows, with the "Add to routine" tick.
+// One row per product, like the Routines rows, with a tick circle.
 export function ProductPicker({ products, value, onChange, disabled }: ProductPickerProps) {
   const { palette } = useDewyTheme();
 
