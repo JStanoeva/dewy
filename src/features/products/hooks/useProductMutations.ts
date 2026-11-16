@@ -124,10 +124,11 @@ export function useDeleteProduct() {
     onError: (_error, _id, context) => {
       queryClient.setQueryData(['products'], context?.previous);
     },
-    // The database deletes the product's routine steps with it.
+    // The database deletes the product's routine steps, and their ticks, with it.
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'], exact: true });
       queryClient.invalidateQueries({ queryKey: ['routineSteps'] });
+      queryClient.invalidateQueries({ queryKey: ['completions'] });
     },
   });
 }

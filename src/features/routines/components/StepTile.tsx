@@ -6,15 +6,18 @@ import { bottleColorsFor } from '@/theme/bottleColors';
 type StepTileProps = {
   productId: string;
   photoPath: string | null;
+  // 40 in routine rows (Builder artboard), 44 in Today's rows (Main and Evening artboards).
+  size?: 40 | 44;
 };
 
-// The product's photo, or the small two-part bottle the Builder artboard draws in routine rows.
-export function StepTile({ productId, photoPath }: StepTileProps) {
+// The product's photo, or the small two-part bottle the artboards draw in step rows.
+export function StepTile({ productId, photoPath, size = 40 }: StepTileProps) {
   const colors = bottleColorsFor(productId);
+  const shape = size === 44 ? large : small;
   const bottle = (
-    <View style={[styles.tile, { backgroundColor: colors.tile }]}>
-      <View style={[styles.cap, { backgroundColor: colors.cap }]} />
-      <View style={[styles.body, { backgroundColor: colors.body }]} />
+    <View style={[shape.tile, { backgroundColor: colors.tile }]}>
+      <View style={[shape.cap, { backgroundColor: colors.cap }]} />
+      <View style={[shape.body, { backgroundColor: colors.body }]} />
     </View>
   );
 
@@ -24,14 +27,14 @@ export function StepTile({ productId, photoPath }: StepTileProps) {
   return (
     <ProductPhoto
       path={photoPath}
-      style={styles.tile}
+      style={shape.tile}
       placeholderColor={colors.tile}
       fallback={bottle}
     />
   );
 }
 
-const styles = StyleSheet.create({
+const small = StyleSheet.create({
   tile: {
     width: 40,
     height: 40,
@@ -49,5 +52,26 @@ const styles = StyleSheet.create({
     width: 14,
     height: 20,
     borderRadius: 4,
+  },
+});
+
+const large = StyleSheet.create({
+  tile: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+  },
+  cap: {
+    width: 8,
+    height: 6,
+    borderTopLeftRadius: 2,
+    borderTopRightRadius: 2,
+  },
+  body: {
+    width: 16,
+    height: 22,
+    borderRadius: 5,
   },
 });

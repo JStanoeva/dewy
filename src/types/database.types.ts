@@ -119,6 +119,38 @@ export type Database = {
         }
         Relationships: []
       }
+      routine_completions: {
+        Row: {
+          completed_at: string
+          id: string
+          local_date: string
+          routine_step_id: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          id?: string
+          local_date: string
+          routine_step_id: string
+          user_id?: string
+        }
+        Update: {
+          completed_at?: string
+          id?: string
+          local_date?: string
+          routine_step_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routine_completions_step_fkey"
+            columns: ["routine_step_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "routine_steps"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
       routine_steps: {
         Row: {
           created_at: string

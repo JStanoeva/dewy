@@ -74,11 +74,13 @@ export function useRemoveRoutineStep() {
     mutationFn: deleteRoutineStep,
     // The prefix also stops a by-id refetch that could bring back null once the step is gone.
     onMutate: () => queryClient.cancelQueries({ queryKey: ['routineSteps'] }),
+    // The database deletes the step's ticks with it.
     onSuccess: (_data, id) => {
       queryClient.setQueryData<RoutineStep[]>(['routineSteps'], (old) =>
         old?.filter((step) => step.id !== id),
       );
       queryClient.invalidateQueries({ queryKey: ['routineSteps'], exact: true });
+      queryClient.invalidateQueries({ queryKey: ['completions'] });
     },
   });
 }

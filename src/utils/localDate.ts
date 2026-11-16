@@ -16,6 +16,31 @@ const shortMonths = [
   'Dec',
 ] as const;
 
+const longMonths = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+] as const;
+
+const weekdayNames = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+] as const;
+
 const localDatePattern = /^(\d{4})-(\d{2})-(\d{2})$/;
 const millisecondsPerDay = 86_400_000;
 
@@ -91,4 +116,10 @@ export function formatLocalDate(value: LocalDate): string {
 export function formatDayMonth(value: LocalDate): string {
   const [, month, day] = dateParts(value);
   return `${day} ${shortMonths[month - 1]}`;
+}
+
+// "Tuesday · 3 November", for Today's date kicker.
+export function formatWeekdayDayMonth(value: LocalDate): string {
+  const [, month, day] = dateParts(value);
+  return `${weekdayNames[isoWeekday(value) - 1]} · ${day} ${longMonths[month - 1]}`;
 }

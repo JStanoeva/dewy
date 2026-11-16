@@ -1,10 +1,17 @@
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import { fonts, fontSizes, radii, spacing } from '@/theme/tokens';
 
 type SegmentedControlProps<T extends string> = {
-  options: readonly { value: T; label: string; count?: number }[];
+  // The icon is drawn in the label's colour, before it.
+  options: readonly {
+    value: T;
+    label: string;
+    count?: number;
+    icon?: (color: string) => ReactNode;
+  }[];
   value: T;
   onChange: (value: T) => void;
 };
@@ -23,6 +30,7 @@ export function SegmentedControl<T extends string>({
     >
       {options.map((option) => {
         const selected = option.value === value;
+        const labelColor = selected ? palette.onPrimary : palette.textMuted;
         return (
           <Pressable
             key={option.value}
@@ -32,11 +40,8 @@ export function SegmentedControl<T extends string>({
             onPress={() => onChange(option.value)}
             style={[styles.item, selected && { backgroundColor: palette.primary }]}
           >
-            <Text
-              style={[styles.label, { color: selected ? palette.onPrimary : palette.textMuted }]}
-            >
-              {option.label}
-            </Text>
+            {option.icon?.(labelColor)}
+            <Text style={[styles.label, { color: labelColor }]}>{option.label}</Text>
             {option.count === undefined ? null : (
               <View
                 style={[

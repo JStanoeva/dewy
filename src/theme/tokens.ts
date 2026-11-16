@@ -28,6 +28,7 @@ export const fontAssets = {
 
 export const fontSizes = {
   wordmark: 52,
+  progressCount: 40,
   titleLarge: 34,
   title: 32,
   formTitle: 30,

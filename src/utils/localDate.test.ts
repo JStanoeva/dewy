@@ -3,6 +3,7 @@ import {
   daysBetween,
   formatDayMonth,
   formatLocalDate,
+  formatWeekdayDayMonth,
   isValidLocalDate,
   isoWeekday,
   parseLocalDate,
@@ -76,6 +77,14 @@ describe('formatDayMonth', () => {
   it('prints day and short month', () => {
     expect(formatDayMonth('2026-10-12')).toBe('12 Oct');
     expect(formatDayMonth('2027-01-01')).toBe('1 Jan');
+  });
+});
+
+describe('formatWeekdayDayMonth', () => {
+  it('prints the weekday, day and full month', () => {
+    expect(formatWeekdayDayMonth('2026-11-03')).toBe('Tuesday · 3 November');
+    expect(formatWeekdayDayMonth('2026-11-15')).toBe('Sunday · 15 November');
+    expect(formatWeekdayDayMonth('2027-01-04')).toBe('Monday · 4 January');
   });
 });
 
