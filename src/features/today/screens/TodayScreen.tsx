@@ -1,8 +1,17 @@
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useState } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import {
+  AccessibilityInfo,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+  type ViewInstance,
+} from 'react-native';
 
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
@@ -13,9 +22,12 @@ import { useProducts } from '@/features/products/hooks/useProducts';
 import { useProfile } from '@/features/profile/hooks/useProfile';
 import { RitualProgressArc } from '@/features/today/components/RitualProgressArc';
 import { TodayNoteBanner } from '@/features/today/components/TodayNoteBanner';
+import { TodayNotesFolded } from '@/features/today/components/TodayNotesFolded';
 import { TodayStepRow } from '@/features/today/components/TodayStepRow';
 import { useTodayRoutine } from '@/features/today/hooks/useTodayRoutine';
+import { loadHiddenNotes, saveHiddenNotes } from '@/features/today/services/todayNotesService';
 import { todayState, type TodayRoutine } from '@/features/today/utils/buildTodayRoutine';
+import { foldChanges, importantNoteIds, isFolded } from '@/features/today/utils/noteFold';
 import { useRitualDate } from '@/hooks/useLocalToday';
 import { MoonIcon, SunIcon } from '@/navigation/TabIcons';
 import type { MainTabParamList, RootStackParamList } from '@/navigation/types';
@@ -42,6 +54,9 @@ const periodOptions = [
   },
 ] as const;
 
+// A 44 target around the 18-high link that stays clear of the first row below.
+const hideNotesSlop = { top: 16, bottom: 10, left: 12, right: 12 };
+
 function progressLine(routine: TodayRoutine, period: Period) {
   if (routine.isComplete) {
     return period === 'morning' ? 'All done — go glow' : 'All done — sweet dreams';
@@ -56,6 +71,11 @@ export function TodayScreen({ navigation }: TodayScreenProps) {
   const products = useProducts();
   const { steps, completions, routine } = useTodayRoutine(period, date);
   const [refreshing, setRefreshing] = useState(false);
+  // The important notes each ritual had when folded (null when shown); undefined until read.
+  const [hiddenNotes, setHiddenNotes] = useState<Record<Period, string[] | null>>();
+  const [focusRequest, setFocusRequest] = useState(0);
+  const foldedRef = useRef<ViewInstance>(null);
+  const hideRef = useRef<ViewInstance>(null);
   const isMorning = paletteName === 'morning';
   const name = profile.data?.displayName;
   const state = todayState({
@@ -66,6 +86,54 @@ export function TodayScreen({ navigation }: TodayScreenProps) {
   });
   const showRitualHeader = state === 'list' || state === 'dayOff';
   const notes = state === 'list' && routine ? routine.notes : [];
+  const notesShown = hiddenNotes !== undefined && notes.length > 0;
+  const stepList = steps.data;
+  const shownNoteIds = stepList ? importantNoteIds(stepList, period) : [];
+  const canFold = notes.length >= 2;
+  const folded = canFold && isFolded(hiddenNotes?.[period] ?? null, shownNoteIds);
+
+  // Read once; until then Today shows no banner area, and a failed read counts as shown.
+  useEffect(() => {
+    Promise.all([loadHiddenNotes('morning'), loadHiddenNotes('evening')]).then(
+      ([morning, evening]) => setHiddenNotes({ morning, evening }),
+    );
+  }, []);
+
+  // Both rituals follow their notes: a new important note opens the banners, as Show does.
+  useEffect(() => {
+    if (!stepList || !hiddenNotes) {
+      return;
+    }
+    for (const { period: ritual, stored, next } of foldChanges(hiddenNotes, stepList)) {
+      saveHiddenNotes(ritual, next).then(() =>
+        // Leaves a Hide or Show tapped while this write was running alone.
+        setHiddenNotes((current) =>
+          current?.[ritual] === stored ? { ...current, [ritual]: next } : current,
+        ),
+      );
+    }
+  }, [stepList, hiddenNotes]);
+
+  // After Hide or Show, TalkBack moves to the control that replaced the tapped one.
+  useEffect(() => {
+    if (focusRequest === 0) {
+      return;
+    }
+    // Android attaches the new view after this effect runs, so the focus waits a moment.
+    const timer = setTimeout(() => {
+      const target = foldedRef.current ?? hideRef.current;
+      if (target) {
+        AccessibilityInfo.sendAccessibilityEvent(target, 'focus');
+      }
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [focusRequest]);
+
+  function changeFold(hidden: string[] | null) {
+    setHiddenNotes((current) => current && { ...current, [period]: hidden });
+    saveHiddenNotes(period, hidden);
+    setFocusRequest((count) => count + 1);
+  }
 
   // Local state, so the spinner only shows for a pull and not for background refetches.
   async function handleRefresh() {
@@ -92,12 +160,7 @@ export function TodayScreen({ navigation }: TodayScreenProps) {
   }
 
   const header = (
-    <View
-      style={[
-        styles.header,
-        state === 'list' && (notes.length > 0 ? styles.headerAboveNotes : styles.headerAboveList),
-      ]}
-    >
+    <View style={[styles.header, state === 'list' && !notesShown && styles.headerAboveList]}>
       <View
         style={[styles.circle, { backgroundColor: isMorning ? palette.peach : palette.surfaceAlt }]}
       />
@@ -169,11 +232,36 @@ export function TodayScreen({ navigation }: TodayScreenProps) {
         </View>
       ) : null}
 
-      {notes.length > 0 ? (
+      {notesShown ? (
         <View style={styles.notes}>
-          {notes.map((note) => (
-            <TodayNoteBanner key={note.stepId} note={note} />
-          ))}
+          {folded ? (
+            <TodayNotesFolded
+              ref={foldedRef}
+              count={notes.length}
+              onShow={() => changeFold(null)}
+            />
+          ) : (
+            <>
+              {notes.map((note) => (
+                <TodayNoteBanner key={note.stepId} note={note} />
+              ))}
+              {canFold ? (
+                <Pressable
+                  ref={hideRef}
+                  accessibilityRole="button"
+                  accessibilityLabel="Hide notes"
+                  accessibilityState={{ expanded: true }}
+                  hitSlop={hideNotesSlop}
+                  onPress={() => changeFold(shownNoteIds)}
+                  style={({ pressed }) => [styles.hideNotes, { opacity: pressed ? 0.7 : 1 }]}
+                >
+                  <Text style={[styles.hideNotesLabel, { color: palette.emphasis }]}>
+                    Hide notes
+                  </Text>
+                </Pressable>
+              ) : null}
+            </>
+          )}
         </View>
       ) : null}
     </View>
@@ -276,9 +364,6 @@ const styles = StyleSheet.create({
   },
   headerAboveList: {
     marginBottom: spacing.xxs,
-  },
-  headerAboveNotes: {
-    marginBottom: spacing.sm,
   },
   inset: {
     paddingHorizontal: spacing.screen,
@@ -392,9 +477,20 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSizes.secondary,
   },
+  // The 10 above the rows is padding here, so Hide notes' touch area stays inside its parent on Android.
   notes: {
     marginTop: spacing.hairline,
+    paddingBottom: spacing.sm,
     gap: spacing.xs,
+  },
+  hideNotes: {
+    alignSelf: 'center',
+    minHeight: 18,
+    justifyContent: 'center',
+  },
+  hideNotesLabel: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSizes.meta,
   },
   stepGap: {
     height: spacing.xs,

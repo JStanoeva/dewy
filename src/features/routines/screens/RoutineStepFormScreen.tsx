@@ -20,6 +20,7 @@ import { categoryDetails } from '@/features/products/constants';
 import { useProducts } from '@/features/products/hooks/useProducts';
 import type { Product } from '@/features/products/types';
 import { splitLastWord } from '@/features/products/utils/productLabels';
+import { ImportantNoteRow } from '@/features/routines/components/ImportantNoteRow';
 import { ProductPicker } from '@/features/routines/components/ProductPicker';
 import { RemoveStepSheet } from '@/features/routines/components/RemoveStepSheet';
 import { WeekdaySelector } from '@/features/routines/components/WeekdaySelector';
@@ -232,6 +233,7 @@ function RoutineStepForm({ navigation, period, step, products, steps }: RoutineS
           durationSeconds: defaultDurationSeconds,
           waitMinutes: null,
           note: '',
+          noteImportant: false,
         },
     shouldFocusError: false,
   });
@@ -260,6 +262,10 @@ function RoutineStepForm({ navigation, period, step, products, steps }: RoutineS
     setValue('weekdays', next(getValues('weekdays')), { shouldDirty: true });
     // Shows "Pick at least one day" as soon as the last day is turned off.
     trigger('weekdays');
+  }
+
+  function toggleImportant() {
+    setValue('noteImportant', !getValues('noteImportant'), { shouldDirty: true });
   }
 
   function pickProduct(product: Product, onChange: (productId: string) => void) {
@@ -584,6 +590,7 @@ function RoutineStepForm({ navigation, period, step, products, steps }: RoutineS
               />
             )}
           />
+          <ImportantNoteRow control={control} onToggle={toggleImportant} disabled={saving} />
         </View>
 
         {step ? (

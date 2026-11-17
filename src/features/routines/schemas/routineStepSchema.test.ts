@@ -11,6 +11,7 @@ const valid: RoutineStepFormValues = {
   durationSeconds: 60,
   waitMinutes: null,
   note: '',
+  noteImportant: false,
 };
 
 function errorsFor(values: Partial<RoutineStepFormValues>) {
@@ -35,6 +36,7 @@ describe('routineStepFormSchema', () => {
       durationSeconds: 60,
       waitMinutes: 10,
       note: 'Skip acids tonight',
+      noteImportant: false,
     });
   });
 
@@ -79,6 +81,22 @@ describe('routineStepFormSchema', () => {
     expect(routineStepFormSchema.parse({ ...valid, note: ' \n\t ' }).note).toBeNull();
   });
 
+  it('keeps a note important only while the note has text', () => {
+    expect(
+      routineStepFormSchema.parse({ ...valid, note: 'Skip acids', noteImportant: true }),
+    ).toMatchObject({
+      note: 'Skip acids',
+      noteImportant: true,
+    });
+    expect(routineStepFormSchema.parse({ ...valid, note: '', noteImportant: true })).toMatchObject({
+      note: null,
+      noteImportant: false,
+    });
+    expect(
+      routineStepFormSchema.parse({ ...valid, note: ' \n\t ', noteImportant: true }),
+    ).toMatchObject({ note: null, noteImportant: false });
+  });
+
   it('counts the note in code points, like Postgres', () => {
     expect(errorsFor({ note: '🌙'.repeat(80) })).toEqual({});
     expect(errorsFor({ note: '🌙'.repeat(81) })).toEqual({ note: 'Up to 80 characters' });
@@ -103,7 +121,8 @@ describe('toRoutineStepFormValues', () => {
     weekdays: [1, 3, 5],
     durationSeconds: 900,
     waitMinutes: 3,
-    note: null,
+    note: 'Skip acids tonight',
+    noteImportant: true,
     createdAt: '2026-11-15T10:00:00Z',
     product: { name: 'Retinal Serum', brand: null, category: 'serum', photoPath: null },
   };
@@ -114,7 +133,8 @@ describe('toRoutineStepFormValues', () => {
       weekdays: [1, 3, 5],
       durationSeconds: 900,
       waitMinutes: 3,
-      note: '',
+      note: 'Skip acids tonight',
+      noteImportant: true,
     });
   });
 
@@ -124,7 +144,14 @@ describe('toRoutineStepFormValues', () => {
       weekdays: [1, 3, 5],
       durationSeconds: 900,
       waitMinutes: 3,
-      note: null,
+      note: 'Skip acids tonight',
+      noteImportant: true,
     });
+  });
+
+  it('starts a step without a note with an empty, unimportant note', () => {
+    const plain = toRoutineStepFormValues({ ...step, note: null, noteImportant: false });
+    expect(plain).toMatchObject({ note: '', noteImportant: false });
+    expect(routineStepFormSchema.parse(plain)).toMatchObject({ note: null, noteImportant: false });
   });
 });

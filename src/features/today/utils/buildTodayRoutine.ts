@@ -1,5 +1,4 @@
 import type { RoutineStep } from '@/features/routines/types';
-import { isDaily } from '@/features/routines/utils/weekSchedule';
 import type { Period } from '@/theme/period';
 import { isoWeekday, type LocalDate } from '@/utils/localDate';
 
@@ -18,7 +17,7 @@ export type TodayNote = {
 
 export type TodayRoutine = {
   steps: TodayStep[];
-  // The banners: notes of today's steps that fall on some days only, ticked or not.
+  // The banners: today's steps whose note is marked important, ticked or not.
   notes: TodayNote[];
   done: number;
   total: number;
@@ -49,7 +48,7 @@ export function buildTodayRoutine(
   );
 
   const notes = todaySteps.flatMap(({ step }) =>
-    step.note && !isDaily(step.weekdays)
+    step.note && step.noteImportant
       ? [{ stepId: step.id, productName: step.product.name, note: step.note }]
       : [],
   );

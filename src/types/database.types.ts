@@ -157,6 +157,7 @@ export type Database = {
           duration_seconds: number
           id: string
           note: string | null
+          note_important: boolean
           period: string
           position: number
           product_id: string
@@ -169,6 +170,7 @@ export type Database = {
           duration_seconds?: number
           id?: string
           note?: string | null
+          note_important?: boolean
           period: string
           position?: number
           product_id: string
@@ -181,6 +183,7 @@ export type Database = {
           duration_seconds?: number
           id?: string
           note?: string | null
+          note_important?: boolean
           period?: string
           position?: number
           product_id?: string

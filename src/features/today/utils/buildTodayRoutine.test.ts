@@ -19,6 +19,7 @@ function step(id: string, overrides: Partial<RoutineStep> = {}): RoutineStep {
     durationSeconds: 60,
     waitMinutes: null,
     note: null,
+    noteImportant: false,
     createdAt: '2026-11-15T08:00:00Z',
     product: { name: `Product ${id}`, brand: null, category: 'cleanser', photoPath: null },
     ...overrides,
@@ -83,24 +84,52 @@ describe('buildTodayRoutine', () => {
     expect(buildTodayRoutine(steps, [], 'morning', '2026-11-22').total).toBe(1);
   });
 
-  it('lists the notes of today steps that fall on some days only, in order', () => {
+  it('lists the important notes of today steps, every-day steps too, in order', () => {
     const steps = [
-      step('daily', { note: 'Every day note' }),
+      step('daily', { note: 'Every day note', noteImportant: true }),
       step('plain', { weekdays: [2, 4] }),
-      step('tue', { weekdays: [2, 4], note: 'Skip acids tonight' }),
-      step('mon', { weekdays: [1], note: 'Not today' }),
-      step('evening', { period: 'evening', weekdays: [2], note: 'Other ritual' }),
-      step('weekdays', { weekdays: [1, 2, 3, 4, 5], note: 'Mask after' }),
+      step('quiet', { weekdays: [2, 4], note: 'Not important' }),
+      step('tue', { weekdays: [2, 4], note: 'Skip acids tonight', noteImportant: true }),
+      step('mon', { weekdays: [1], note: 'Not today', noteImportant: true }),
+      step('evening', { period: 'evening', note: 'Other ritual', noteImportant: true }),
+      step('weekdays', { weekdays: [1, 2, 3, 4, 5], note: 'Mask after', noteImportant: true }),
     ];
     const routine = buildTodayRoutine(steps, [], 'morning', tuesday);
     expect(routine.notes).toEqual([
+      { stepId: 'daily', productName: 'Product daily', note: 'Every day note' },
       { stepId: 'tue', productName: 'Product tue', note: 'Skip acids tonight' },
       { stepId: 'weekdays', productName: 'Product weekdays', note: 'Mask after' },
     ]);
   });
 
+  it('never shows a note that is not important, on any day', () => {
+    const steps = [
+      step('daily', { note: 'Every day note' }),
+      step('tue', { weekdays: [2], note: 'Skip acids tonight' }),
+    ];
+    expect(buildTodayRoutine(steps, [], 'morning', tuesday).notes).toEqual([]);
+  });
+
+  it('gives each ritual its own note for the same product', () => {
+    const steps = [
+      step('am', { productId: 'product-1', note: 'SPF after', noteImportant: true }),
+      step('pm', {
+        productId: 'product-1',
+        period: 'evening',
+        note: 'Skip acids tonight',
+        noteImportant: true,
+      }),
+    ];
+    expect(buildTodayRoutine(steps, [], 'morning', tuesday).notes.map((n) => n.note)).toEqual([
+      'SPF after',
+    ]);
+    expect(buildTodayRoutine(steps, [], 'evening', tuesday).notes.map((n) => n.note)).toEqual([
+      'Skip acids tonight',
+    ]);
+  });
+
   it('keeps a note after its step is ticked', () => {
-    const steps = [step('tue', { weekdays: [2], note: 'Skip acids tonight' })];
+    const steps = [step('tue', { weekdays: [2], note: 'Skip acids tonight', noteImportant: true })];
     expect(buildTodayRoutine(steps, ['tue'], 'morning', tuesday).notes).toHaveLength(1);
   });
 });

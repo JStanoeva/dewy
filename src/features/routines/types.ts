@@ -11,6 +11,8 @@ export type RoutineStep = {
   durationSeconds: number;
   waitMinutes: number | null;
   note: string | null;
+  // Shown as a banner on Today; never true without a note.
+  noteImportant: boolean;
   createdAt: string;
   product: {
     name: string;

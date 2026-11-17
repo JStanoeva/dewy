@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 import type { Period } from '@/theme/period';
 
 const stepColumns =
-  'id, product_id, period, position, weekdays, duration_seconds, wait_minutes, note, created_at, product:products(name, brand, category, photo_path)';
+  'id, product_id, period, position, weekdays, duration_seconds, wait_minutes, note, note_important, created_at, product:products(name, brand, category, photo_path)';
 
 // Generated types only say "string" and "number[]", so rows are parsed before use.
 const stepRowSchema = z.object({
@@ -19,6 +19,7 @@ const stepRowSchema = z.object({
   duration_seconds: z.number(),
   wait_minutes: z.number().nullable(),
   note: z.string().nullable(),
+  note_important: z.boolean(),
   created_at: z.string(),
   product: z.object({
     name: z.string(),
@@ -38,6 +39,7 @@ function toRoutineStep(row: z.infer<typeof stepRowSchema>): RoutineStep {
     durationSeconds: row.duration_seconds,
     waitMinutes: row.wait_minutes,
     note: row.note,
+    noteImportant: row.note_important,
     createdAt: row.created_at,
     product: {
       name: row.product.name,
@@ -84,6 +86,7 @@ export async function createRoutineStep(period: Period, input: RoutineStepInput)
     duration_seconds: input.durationSeconds,
     wait_minutes: input.waitMinutes,
     note: input.note,
+    note_important: input.noteImportant,
   });
   if (error) {
     throw error;
@@ -111,6 +114,7 @@ export async function updateRoutineStep(
       duration_seconds: input.durationSeconds,
       wait_minutes: input.waitMinutes,
       note: input.note,
+      note_important: input.noteImportant,
     })
     .eq('id', id)
     .select(stepColumns)

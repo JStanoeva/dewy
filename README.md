@@ -18,7 +18,7 @@ Dewy keeps a shelf of the skincare products you own and the ones on your wishlis
 - Take or choose a product photo, stored privately for your account.
 - Optionally fill in a new product's name, brand and type from the label in its photo.
 
-- Build morning and evening routines from the products you own: pick each step's days, time, wait and note, then edit, reorder or remove steps on the Routines tab.
+- Build morning and evening routines from the products you own: pick each step's days, time, wait and note, then edit, reorder or remove steps on the Routines tab. Switch a step's note to Important to see it on Today.
 - Tick off today's morning or evening steps on the Today tab. Ticks are saved per day, so they survive a restart and start fresh the next morning.
 
 ## Tech stack
@@ -30,7 +30,7 @@ Dewy keeps a shelf of the skincare products you own and the ones on your wishlis
 - React Hook Form 7 with Zod 4 validation
 - Supabase: Auth, Postgres with row level security, Storage and Edge Functions
 - expo-image-picker and expo-image-manipulator for product photos, expo-image to display them
-- expo-secure-store and AsyncStorage for the encrypted session
+- expo-secure-store and AsyncStorage for the encrypted session; AsyncStorage also remembers whether Today's note banners are folded
 - Jest with jest-expo, ESLint and Prettier
 
 ## Prerequisites
@@ -57,6 +57,7 @@ On Windows, if PowerShell refuses to run `npm` or `npx` because running scripts 
    4. `004_more_categories.sql`
    5. `005_routine_steps.sql`
    6. `006_routine_completions.sql`
+   7. `007_step_note_important.sql`
 
    Run each file once, before anyone signs up. `003_product_photos_storage.sql` creates the private `product-photos` bucket itself, so don't create it by hand.
 
@@ -171,7 +172,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 
 - **Application Name:** Dewy
 - **Application Category / Topic:** Health and beauty: a personal skincare companion.
-- **Main Purpose:** Dewy helps people keep track of their skincare products. Users keep a shelf of the products they own and a wishlist of the ones they want. For each opened product, Dewy shows how long it has left before it should be replaced. Owned products make up a morning and an evening routine, with each step's days, time, wait and note. A daily checklist on the Today tab lets users tick off each step.
+- **Main Purpose:** Dewy helps people keep track of their skincare products. Users keep a shelf of the products they own and a wishlist of the ones they want. For each opened product, Dewy shows how long it has left before it should be replaced. Owned products make up a morning and an evening routine, with each step's days, time, wait and note; a note marked Important shows on Today. A daily checklist on the Today tab lets users tick off each step.
 
 ### User Access & Permissions
 
@@ -185,7 +186,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 #### Authenticated User
 
 - **Main sections:** four bottom tabs (Today, Shelf, Routines, Me) and a raised centre "+" button that opens the New product form.
-  - **Today:** the date, a "Good morning" or "Good evening" greeting with the user's name, a Morning / Evening switch, a progress arc with one dot per step and a sun or moon where the progress ends ("2 of 5 steps done · 4 min to go"), and the checklist of that routine's steps for today's weekday. Steps that fall on some days only show their note in a banner above the list. Tapping a step ticks or unticks it; a long press opens its product. The switch also changes the whole app between the light morning and the plum evening colours; the choice holds until the other half of the day (morning is 05:00–16:59). The day turns over at 05:00, so evening steps ticked after midnight count for that evening.
+  - **Today:** the date, a "Good morning" or "Good evening" greeting with the user's name, a Morning / Evening switch, a progress arc with one dot per step and a sun or moon where the progress ends ("2 of 5 steps done · 4 min to go"), and the checklist of that routine's steps for today's weekday. A step's note shows in a banner above the list when it is marked Important. With two or more banners, "Hide notes" folds them into one line ("3 notes for today · Show"); they stay folded until Show is tapped, and open again by themselves when that routine gets a new important note. Tapping a step ticks or unticks it; a long press opens its product. The switch also changes the whole app between the light morning and the plum evening colours; the choice holds until the other half of the day (morning is 05:00–16:59). The day turns over at 05:00, so evening steps ticked after midnight count for that evening.
   - **Shelf:** the user's products in a two-column grid, with Owned and Wishlist sides and category chips. Products in a routine carry an AM, PM or AM · PM tag.
   - **Routines:** "Your rituals" with Morning and Evening. It opens on the routine Today shows, then keeps its own choice; its switch changes only its list, not the colours. Each routine shows a week strip, the number of steps and the time they take, and the ordered steps with their days and waits. Tapping a step opens the step editor, and "Add a step from your shelf" adds one.
   - **Me:** the user's initial, name, "Glowing with Dewy since" with the month they joined, and Log out.
@@ -206,7 +207,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 
 #### Session Persistence
 
-- The session is encrypted with a random AES-256 key (AES-CTR). The key is stored in expo-secure-store, which Android Keystore encrypts. AsyncStorage holds only the ciphertext, no token is stored in plaintext, and neither is included in Android backups.
+- The session is encrypted with a random AES-256 key (AES-CTR). The key is stored in expo-secure-store, which Android Keystore encrypts. For the session, AsyncStorage holds only the ciphertext, no token is stored in plaintext, and neither is included in Android backups. Apart from the session, AsyncStorage keeps one display setting for the phone: whether Today's note banners are folded.
 - **Automatic login:** on the next launch, Supabase reads and decrypts the stored session. If it is still valid, or the token can be refreshed, the user goes straight to the tabs without logging in again. Tokens refresh automatically while the app is in the foreground.
 
 ### Navigation Structure
@@ -273,7 +274,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 
 - The user taps "+" (or "Add a product" on an empty screen), fills in the New product form and taps "Save to shelf" or "Save to wishlist".
 - A chosen photo is uploaded to Storage first, then the product row is inserted. The shelf is refetched and the form closes.
-- On Routines, "Add a step from your shelf" opens New step: the user picks an owned product that isn't in that routine yet, its days, time, wait and note, and taps "Add to ritual". The step is inserted at the end of the routine.
+- On Routines, "Add a step from your shelf" opens New step: the user picks an owned product that isn't in that routine yet, its days, time, wait and note (and whether the note is Important), and taps "Add to ritual". The step is inserted at the end of the routine.
 - On Today, ticking a step inserts a completion for that step and day. The tick shows at once and is saved in the background; a tick already saved from another device is ignored instead of failing.
 
 #### Update / Delete (Mutation)
@@ -282,7 +283,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 - **Favourite:** the heart updates at once and rolls back if saving fails.
 - **Move to shelf:** turns a wishlist product into an owned, unopened one.
 - **Delete product:** after confirmation, the product disappears from the shelf at once and comes back if the delete fails. Its photo is removed from Storage.
-- **Edit step:** tapping a step on Routines opens Edit step to change its days, time, wait and note. "Move up" and "Move down" reorder the routine at once through a database function. "Remove step" removes it after a confirmation step; the product stays on the shelf.
+- **Edit step:** tapping a step on Routines opens Edit step to change its days, time, wait, note and the Important switch. "Move up" and "Move down" reorder the routine at once through a database function. "Remove step" removes it after a confirmation step; the product stays on the shelf.
 - **Untick:** tapping a ticked step on Today deletes that day's completion. If saving a tick or an untick fails, only that step flips back and an error explains why.
 - After each change, the product, routine and completion queries are refreshed so every screen shows the latest data. Deleting a step or its product also deletes its ticks.
 
@@ -292,7 +293,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 
 - **Auth form** (Sign up / Log in): name (sign-up only), email and password.
 - **Product form** (New product / Edit product): status (I own it / Wishlist, new products only), photo, product name, brand, type, opened on, use within, key ingredients and notes.
-- **Step form** (New step / Edit step): product (new steps only), days (seven day buttons), time (a slider from 10 seconds to 10 minutes), wait before the next step and a note.
+- **Step form** (New step / Edit step): product (new steps only), days (seven day buttons), time (a slider from 10 seconds to 10 minutes), wait before the next step, a note and an Important switch (greyed out until the note has text).
 
 #### Validation Rules
 
@@ -310,9 +311,9 @@ All three forms use React Hook Form with Zod schemas.
 - **Notes:** up to 500 characters.
 - **Step product:** one of your owned products must be picked.
 - **Days:** at least one day must be ticked.
-- **Step note:** optional, up to 80 characters.
+- **Step note:** optional, up to 80 characters. A step without a note is never saved as Important.
 
-Database CHECK constraints back up the product rules on the server: name 2–80 characters, brand up to 60, one of the eight types, an opened date from 2000 on (with one day of slack for time zones), "Use within" required once an opened date is set, up to 20 ingredients (1,000 characters in total) and notes up to 500. The profile name is capped at 40 characters. A routine step needs at least one day (Monday to Sunday), a time of 10 seconds to 30 minutes, a wait of 1 to 60 minutes or none, a note of up to 80 characters, and one of the same user's products, at most once per routine. A tick belongs to one of the same user's steps, at most once per day. Supabase Auth checks the email and password.
+Database CHECK constraints back up the product rules on the server: name 2–80 characters, brand up to 60, one of the eight types, an opened date from 2000 on (with one day of slack for time zones), "Use within" required once an opened date is set, up to 20 ingredients (1,000 characters in total) and notes up to 500. The profile name is capped at 40 characters. A routine step needs at least one day (Monday to Sunday), a time of 10 seconds to 30 minutes, a wait of 1 to 60 minutes or none, a note of up to 80 characters, and one of the same user's products, at most once per routine. A step marked Important needs a note; when an older app version clears the note, the database turns Important off instead of rejecting the save. A tick belongs to one of the same user's steps, at most once per day. Supabase Auth checks the email and password.
 
 ### Native Device Features
 
@@ -341,8 +342,8 @@ Database CHECK constraints back up the product rules on the server: name 2–80 
 5. Check the name and brand, pick a type, keep today as the opened date, pick a "Use within" period, add ingredients and notes, then tap "Save to shelf".
 6. Open the Shelf tab. The new card shows the photo and how long the product has left. Try the category chips and pull to refresh.
 7. Open the Routines tab, pick Morning and tap "Add a step". Pick the product, keep every day ticked and tap "Add to ritual". Back on the Shelf, the card now carries an "AM" tag. Tap it: its details show "Morning · step 1", and that chip opens your morning ritual on the Routines tab.
-8. Tap the centre "+" and save a second owned product. On the Routines tab, tap "Add a step from your shelf", pick that product, leave only Monday, Wednesday and Friday ticked, slide the time, type a note such as "Skip exfoliating acids today", and tap "Add to ritual". Tap the new step to change its note or move it up.
-9. Open the Today tab and pick Evening, then Morning: the whole app changes colour with the switch. On a Monday, Wednesday or Friday the note of the step from step 8 shows in a banner above the morning steps. Tap a step to tick it off: the arc, its dot, the count and the minutes left update. Close and reopen Dewy, and the tick is still there.
+8. Tap the centre "+" and save a second owned product. On the Routines tab, tap "Add a step from your shelf", pick that product, leave only Monday, Wednesday and Friday ticked, slide the time, type a note such as "Skip exfoliating acids today", switch Important on, and tap "Add to ritual". Tap the new step to change its note or move it up.
+9. Open the Today tab and pick Evening, then Morning: the whole app changes colour with the switch. On a Monday, Wednesday or Friday the important note from step 8 shows in a banner above the morning steps; with two or more banners, "Hide notes" folds them and "Show" opens them again. Tap a step to tick it off: the arc, its dot, the count and the minutes left update. Close and reopen Dewy, and the tick is still there.
 10. Add a product with "Wishlist" selected. It appears on the Wishlist side.
 11. Tap a card to open its details, and tap the heart to mark it as a favourite.
 12. Open More options to edit the product, move a wishlist product to your shelf, or delete a product. Deleting a product also removes its routine steps and their ticks.
