@@ -5,7 +5,6 @@ import Svg, { Ellipse } from 'react-native-svg';
 import { BottleIllustration } from '@/components/BottleIllustration';
 import { ProductPhoto } from '@/features/products/components/ProductPhoto';
 import { ShelfLifeBar } from '@/features/products/components/ShelfLifeCard';
-import { categoryDetails } from '@/features/products/constants';
 import type { Product } from '@/features/products/types';
 import { getShelfLife, savedLabel } from '@/features/products/utils/shelfLife';
 import { describeRoutines, routineTag } from '@/features/routines/utils/routineMembership';
@@ -32,11 +31,7 @@ export function ProductCard({ product, routinePeriods, width, today, onPress }: 
   const routineTagText = isWish ? null : routineTag(routinePeriods);
   const bottle = (
     <>
-      <BottleIllustration
-        shape={categoryDetails[product.category].bottle}
-        colors={colors}
-        size="card"
-      />
+      <BottleIllustration shape={product.packaging} colors={colors} size="card" />
       <Svg width={60} height={6} style={styles.ground}>
         <Ellipse cx={30} cy={3} rx={30} ry={3} fill={palette.tileGroundShadow} />
       </Svg>

@@ -1,23 +1,32 @@
 import { StyleSheet, View } from 'react-native';
 
+import { BottleIllustration, type BottleShape } from '@/components/BottleIllustration';
 import { ProductPhoto } from '@/features/products/components/ProductPhoto';
 import { bottleColorsFor } from '@/theme/bottleColors';
 
 type StepTileProps = {
   productId: string;
   photoPath: string | null;
-  // 40 in routine rows (Builder artboard), 44 in Today's rows (Main and Evening artboards).
+  // 40 in routine rows and the step picker, 44 in Today's rows (Main and Evening artboards).
   size?: 40 | 44;
+  // Today and the step picker draw the product's packaging; Routines rows keep the two-part bottle.
+  shape?: BottleShape;
 };
 
-// The product's photo, or the small two-part bottle the artboards draw in step rows.
-export function StepTile({ productId, photoPath, size = 40 }: StepTileProps) {
+// The product's photo, or a small bottle when there is none.
+export function StepTile({ productId, photoPath, size = 40, shape }: StepTileProps) {
   const colors = bottleColorsFor(productId);
-  const shape = size === 44 ? large : small;
+  const sized = size === 44 ? large : small;
   const bottle = (
-    <View style={[shape.tile, { backgroundColor: colors.tile }]}>
-      <View style={[shape.cap, { backgroundColor: colors.cap }]} />
-      <View style={[shape.body, { backgroundColor: colors.body }]} />
+    <View style={[sized.tile, { backgroundColor: colors.tile }]}>
+      {shape ? (
+        <BottleIllustration shape={shape} colors={colors} size="tile" />
+      ) : (
+        <>
+          <View style={[sized.cap, { backgroundColor: colors.cap }]} />
+          <View style={[sized.body, { backgroundColor: colors.body }]} />
+        </>
+      )}
     </View>
   );
 
@@ -27,7 +36,7 @@ export function StepTile({ productId, photoPath, size = 40 }: StepTileProps) {
   return (
     <ProductPhoto
       path={photoPath}
-      style={shape.tile}
+      style={sized.tile}
       placeholderColor={colors.tile}
       fallback={bottle}
     />

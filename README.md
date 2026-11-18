@@ -58,6 +58,7 @@ On Windows, if PowerShell refuses to run `npm` or `npx` because running scripts 
    5. `005_routine_steps.sql`
    6. `006_routine_completions.sql`
    7. `007_step_note_important.sql`
+   8. `008_product_packaging.sql`
 
    Run each file once, before anyone signs up. `003_product_photos_storage.sql` creates the private `product-photos` bucket itself, so don't create it by hand.
 
@@ -238,7 +239,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 #### List / Overview Screen
 
 - The Shelf lists the user's products, newest first, in a two-column grid.
-- Each card shows the photo or a bottle illustration, the brand, the name and a status line. For owned products that line is the shelf life (for example "5 months left", or "Unopened"). For wishlist products it is the date the product was saved.
+- Each card shows the photo or, without one, a drawing of the product's packaging (dropper, pump, jar, tube or spray), the brand, the name and a status line. For owned products that line is the shelf life (for example "5 months left", or "Unopened"). For wishlist products it is the date the product was saved.
 - A tag on the picture shows which routines an owned product is in ("AM", "PM" or "AM · PM"). Wishlist products show "Wish".
 - The user switches between Owned and Wishlist, filters by category (Cleanser, Exfoliant, Toner, Mist, Serum, Moisturizer, SPF, Mask) and pulls down to refresh.
 
@@ -292,7 +293,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 #### Forms Used
 
 - **Auth form** (Sign up / Log in): name (sign-up only), email and password.
-- **Product form** (New product / Edit product): status (I own it / Wishlist, new products only), photo, product name, brand, type, opened on, use within, key ingredients and notes.
+- **Product form** (New product / Edit product): status (I own it / Wishlist, new products only), photo, product name, brand, type, packaging (five tiles: dropper, pump, jar, tube and spray; a new product takes its type's usual bottle until one is tapped), opened on, use within, key ingredients and notes.
 - **Step form** (New step / Edit step): product (new steps only), days (seven day buttons), time (a slider from 10 seconds to 10 minutes), wait before the next step, a note and an Important switch (greyed out until the note has text).
 
 #### Validation Rules
@@ -305,6 +306,7 @@ All three forms use React Hook Form with Zod schemas.
 - **Product name:** required, at least 2 and up to 80 characters (multiple rules).
 - **Brand:** optional, up to 60 characters.
 - **Type:** one of the eight categories must be picked.
+- **Packaging:** one of the five bottles; a new product without a pick saves its type's usual one.
 - **Opened on:** for owned products, a date from 2000 onward and not in the future.
 - **Use within:** required once an opened date is set.
 - **Key ingredients:** up to 20, each up to 50 characters.
@@ -313,7 +315,7 @@ All three forms use React Hook Form with Zod schemas.
 - **Days:** at least one day must be ticked.
 - **Step note:** optional, up to 80 characters. A step without a note is never saved as Important.
 
-Database CHECK constraints back up the product rules on the server: name 2–80 characters, brand up to 60, one of the eight types, an opened date from 2000 on (with one day of slack for time zones), "Use within" required once an opened date is set, up to 20 ingredients (1,000 characters in total) and notes up to 500. The profile name is capped at 40 characters. A routine step needs at least one day (Monday to Sunday), a time of 10 seconds to 30 minutes, a wait of 1 to 60 minutes or none, a note of up to 80 characters, and one of the same user's products, at most once per routine. A step marked Important needs a note; when an older app version clears the note, the database turns Important off instead of rejecting the save. A tick belongs to one of the same user's steps, at most once per day. Supabase Auth checks the email and password.
+Database CHECK constraints back up the product rules on the server: name 2–80 characters, brand up to 60, one of the eight types, one of the five packagings (filled from the type when an older app version doesn't send one), an opened date from 2000 on (with one day of slack for time zones), "Use within" required once an opened date is set, up to 20 ingredients (1,000 characters in total) and notes up to 500. The profile name is capped at 40 characters. A routine step needs at least one day (Monday to Sunday), a time of 10 seconds to 30 minutes, a wait of 1 to 60 minutes or none, a note of up to 80 characters, and one of the same user's products, at most once per routine. A step marked Important needs a note; when an older app version clears the note, the database turns Important off instead of rejecting the save. A tick belongs to one of the same user's steps, at most once per day. Supabase Auth checks the email and password.
 
 ### Native Device Features
 

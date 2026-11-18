@@ -18,11 +18,12 @@ import { Screen } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { CategoryChips, categoryOptions } from '@/features/products/components/CategoryChips';
 import { IngredientChips } from '@/features/products/components/IngredientChips';
+import { PackagingPicker } from '@/features/products/components/PackagingPicker';
 import {
   ProductPhotoField,
   type LabelStatus,
 } from '@/features/products/components/ProductPhotoField';
-import { paoMonthsOptions, type Category } from '@/features/products/constants';
+import { categoryDetails, paoMonthsOptions, type Category } from '@/features/products/constants';
 import {
   useCreateProduct,
   useReadProductLabel,
@@ -166,6 +167,7 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
           name: '',
           brand: '',
           category,
+          packaging: null,
           openedOn: todayLocalDate(),
           paoMonths: null,
           ingredients: '',
@@ -175,6 +177,7 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
   });
   const status = useWatch({ control, name: 'status' });
   const openedOn = useWatch({ control, name: 'openedOn' });
+  const pickedCategory = useWatch({ control, name: 'category' });
   const ingredientPreview = parseIngredients(useWatch({ control, name: 'ingredients' }));
   const isOwned = status === 'owned';
   // Stays busy after a successful save too, so a tap during the closing animation can't save twice.
@@ -403,6 +406,27 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
           />
         </View>
 
+        <View style={[styles.inset, styles.packaging]}>
+          <Text style={[styles.label, { color: palette.text }]}>
+            Packaging
+            <Text style={[styles.labelHint, { color: palette.textMuted }]}>
+              {" · shown when there's no photo"}
+            </Text>
+          </Text>
+          <Controller
+            control={control}
+            name="packaging"
+            render={({ field }) => (
+              <PackagingPicker
+                value={
+                  field.value ?? (pickedCategory ? categoryDetails[pickedCategory].bottle : null)
+                }
+                onChange={field.onChange}
+              />
+            )}
+          />
+        </View>
+
         {isOwned ? (
           <View style={styles.inset}>
             <View style={styles.openedRow}>
@@ -581,6 +605,12 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSizes.meta,
+  },
+  labelHint: {
+    fontFamily: fonts.bodyMedium,
+  },
+  packaging: {
+    gap: spacing.xs,
   },
   chips: {
     marginTop: spacing.xs,

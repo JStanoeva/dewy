@@ -1,4 +1,4 @@
-// Bottle colours stay the same in both palettes, like the artboards.
+// Bottle colours stay the same in both palettes, like the artboards (except one Packaging-tile cap).
 const peach = '#ffcdb2';
 const salmon = '#ffb4a2';
 const rose = '#e5989b';
@@ -25,6 +25,9 @@ export type BottleColors = BottleColorSet & {
   statusBar: 'light' | 'dark';
 };
 
+// What BottleIllustration paints; the tile and status bar belong to whatever holds it.
+export type BottlePaint = Pick<BottleColors, 'body' | 'cap' | 'label' | 'heroLabel'>;
+
 // The tile, body and cap combinations drawn in the approved artboards.
 const bottleColorSets: readonly BottleColorSet[] = [
   { tile: rose, body: peach, cap: plum, label: labelOnColour },
@@ -39,6 +42,13 @@ const bottleColorSets: readonly BottleColorSet[] = [
   { tile: peach, body: mauve, cap: plum, label: labelOnColour },
   { tile: salmon, body: cream, cap: plum, label: labelOnLight },
 ];
+
+// The form's Packaging tiles draw fixed colours, not a product's own; plum vanishes on Evening's dark tile.
+export const packagingTileBottles = {
+  selected: { body: white, cap: plum, label: labelOnLight, heroLabel: labelOnLight },
+  unselected: { body: peach, cap: plum, label: labelOnColour, heroLabel: labelOnColour },
+  unselectedEvening: { body: peach, cap: mauve, label: labelOnColour, heroLabel: labelOnColour },
+} as const satisfies Record<string, BottlePaint>;
 
 export function bottleColorsFor(productId: string): BottleColors {
   let hash = 0;

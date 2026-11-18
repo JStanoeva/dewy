@@ -1,13 +1,13 @@
 import { z } from 'zod';
 
-import { categories } from '@/features/products/constants';
+import { categories, packagings } from '@/features/products/constants';
 import type { RoutineStepInput } from '@/features/routines/schemas/routineStepSchema';
 import type { RoutineStep } from '@/features/routines/types';
 import { supabase } from '@/lib/supabase';
 import type { Period } from '@/theme/period';
 
 const stepColumns =
-  'id, product_id, period, position, weekdays, duration_seconds, wait_minutes, note, note_important, created_at, product:products(name, brand, category, photo_path)';
+  'id, product_id, period, position, weekdays, duration_seconds, wait_minutes, note, note_important, created_at, product:products(name, brand, category, packaging, photo_path)';
 
 // Generated types only say "string" and "number[]", so rows are parsed before use.
 const stepRowSchema = z.object({
@@ -25,6 +25,7 @@ const stepRowSchema = z.object({
     name: z.string(),
     brand: z.string().nullable(),
     category: z.enum(categories),
+    packaging: z.enum(packagings),
     photo_path: z.string().nullable(),
   }),
 });
@@ -45,6 +46,7 @@ function toRoutineStep(row: z.infer<typeof stepRowSchema>): RoutineStep {
       name: row.product.name,
       brand: row.product.brand,
       category: row.product.category,
+      packaging: row.product.packaging,
       photoPath: row.product.photo_path,
     },
   };

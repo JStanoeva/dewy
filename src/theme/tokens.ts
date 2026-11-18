@@ -61,6 +61,7 @@ export const radii = {
   productCard: 24,
   card: 22,
   detailCard: 20,
+  option: 18,
   input: 16,
   banner: 16,
   tile: 14,

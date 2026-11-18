@@ -124,7 +124,13 @@ describe('toRoutineStepFormValues', () => {
     note: 'Skip acids tonight',
     noteImportant: true,
     createdAt: '2026-11-15T10:00:00Z',
-    product: { name: 'Retinal Serum', brand: null, category: 'serum', photoPath: null },
+    product: {
+      name: 'Retinal Serum',
+      brand: null,
+      category: 'serum',
+      packaging: 'dropper',
+      photoPath: null,
+    },
   };
 
   it('prefills the stored values, even ones the controls cannot show', () => {

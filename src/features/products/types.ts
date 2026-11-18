@@ -1,3 +1,4 @@
+import type { BottleShape } from '@/components/BottleIllustration';
 import type { Category, productStatuses } from '@/features/products/constants';
 
 export type ProductStatus = (typeof productStatuses)[number];
@@ -11,6 +12,8 @@ export type Product = {
   name: string;
   brand: string | null;
   category: Category;
+  // The bottle drawn when there's no photo.
+  packaging: BottleShape;
   photoPath: string | null;
   openedOn: string | null;
   paoMonths: number | null;

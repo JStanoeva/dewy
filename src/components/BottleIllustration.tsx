@@ -1,10 +1,10 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import type { BottleColors } from '@/theme/bottleColors';
+import type { BottlePaint } from '@/theme/bottleColors';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import { fonts } from '@/theme/tokens';
 
-export type BottleShape = 'dropper' | 'pump' | 'jar' | 'tube';
+export type BottleShape = 'dropper' | 'pump' | 'jar' | 'tube' | 'spray';
 
 type Part = {
   width: number;
@@ -35,17 +35,24 @@ const shapes: Record<BottleShape, readonly Part[]> = {
     { width: 40, height: 66, radii: [4, 4, 14, 14], color: 'body' },
     { width: 24, height: 14, radii: [3, 3, 7, 7], color: 'cap' },
   ],
+  spray: [
+    { width: 24, height: 14, radii: [8, 8, 3, 3], color: 'cap' },
+    { width: 30, height: 6, radii: [2, 2, 2, 2], color: 'cap' },
+    { width: 40, height: 60, radii: [14, 14, 14, 14], color: 'body' },
+  ],
 };
 
-// The card bottle (Shelf) and the large hero bottle (Product details), as drawn in the artboards.
+// Step rows (tile), the form's Packaging tiles (option), Shelf cards (card) and Product details (hero).
 const sizes = {
+  tile: { scale: 0.4, labelRadius: 1 },
+  option: { scale: 0.55, labelRadius: 2 },
   card: { scale: 0.9, labelRadius: 3 },
   hero: { scale: 2.4, labelRadius: 6 },
 } as const;
 
 type BottleIllustrationProps = {
   shape: BottleShape;
-  colors: BottleColors;
+  colors: BottlePaint;
   size: keyof typeof sizes;
   monogram?: string;
 };

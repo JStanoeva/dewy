@@ -1,3 +1,4 @@
+import type { BottleShape } from '@/components/BottleIllustration';
 import type { Category } from '@/features/products/constants';
 import type { Period } from '@/theme/period';
 
@@ -18,6 +19,7 @@ export type RoutineStep = {
     name: string;
     brand: string | null;
     category: Category;
+    packaging: BottleShape;
     photoPath: string | null;
   };
 };

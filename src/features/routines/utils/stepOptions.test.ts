@@ -16,6 +16,7 @@ function product(overrides: Partial<Product>): Product {
     name: 'Product',
     brand: null,
     category: 'serum',
+    packaging: 'dropper',
     photoPath: null,
     openedOn: null,
     paoMonths: null,

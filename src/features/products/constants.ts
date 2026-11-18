@@ -17,6 +17,23 @@ export type Category = (typeof categories)[number];
 
 export const paoMonthsOptions = [3, 6, 12, 24] as const;
 
+// The Packaging tiles in form order; the database checks the same five values.
+export const packagings = [
+  'dropper',
+  'pump',
+  'jar',
+  'tube',
+  'spray',
+] as const satisfies readonly BottleShape[];
+
+export const packagingLabels: Record<BottleShape, string> = {
+  dropper: 'Dropper',
+  pump: 'Pump',
+  jar: 'Jar',
+  tube: 'Tube',
+  spray: 'Spray',
+};
+
 type CategoryDetails = {
   label: string;
   stepKind: string;
@@ -24,6 +41,7 @@ type CategoryDetails = {
   defaultDurationSeconds: number;
 };
 
+// `bottle` is a new product's default packaging; 008's trigger repeats this mapping for older app versions.
 export const categoryDetails: Record<Category, CategoryDetails> = {
   cleanser: { label: 'Cleanser', stepKind: 'Cleanse', bottle: 'pump', defaultDurationSeconds: 60 },
   exfoliant: {
@@ -33,7 +51,7 @@ export const categoryDetails: Record<Category, CategoryDetails> = {
     defaultDurationSeconds: 30,
   },
   toner: { label: 'Toner', stepKind: 'Tone', bottle: 'pump', defaultDurationSeconds: 20 },
-  mist: { label: 'Mist', stepKind: 'Refresh', bottle: 'pump', defaultDurationSeconds: 10 },
+  mist: { label: 'Mist', stepKind: 'Refresh', bottle: 'spray', defaultDurationSeconds: 10 },
   serum: { label: 'Serum', stepKind: 'Treat', bottle: 'dropper', defaultDurationSeconds: 60 },
   moisturizer: {
     label: 'Moisturizer',

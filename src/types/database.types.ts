@@ -25,6 +25,7 @@ export type Database = {
           name: string
           notes: string | null
           opened_on: string | null
+          packaging: string
           pao_months: number | null
           photo_path: string | null
           status: string
@@ -41,6 +42,7 @@ export type Database = {
           name: string
           notes?: string | null
           opened_on?: string | null
+          packaging: string
           pao_months?: number | null
           photo_path?: string | null
           status: string
@@ -57,6 +59,7 @@ export type Database = {
           name?: string
           notes?: string | null
           opened_on?: string | null
+          packaging?: string
           pao_months?: number | null
           photo_path?: string | null
           status?: string

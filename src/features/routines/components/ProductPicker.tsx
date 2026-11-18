@@ -41,7 +41,11 @@ export function ProductPicker({ products, value, onChange, disabled }: ProductPi
               },
             ]}
           >
-            <StepTile productId={product.id} photoPath={product.photoPath} />
+            <StepTile
+              productId={product.id}
+              photoPath={product.photoPath}
+              shape={product.packaging}
+            />
             <View style={styles.text}>
               <Text numberOfLines={2} style={[styles.name, { color: palette.text }]}>
                 {product.name}

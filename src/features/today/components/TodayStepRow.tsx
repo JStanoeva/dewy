@@ -48,7 +48,12 @@ export function TodayStepRow({ item, localDate, onOpenProduct }: TodayStepRowPro
         },
       ]}
     >
-      <StepTile productId={step.productId} photoPath={step.product.photoPath} size={44} />
+      <StepTile
+        productId={step.productId}
+        photoPath={step.product.photoPath}
+        size={44}
+        shape={step.product.packaging}
+      />
       <View style={styles.text}>
         <Text style={[styles.kind, { color: palette.stepLabel }]}>
           Step {number} · {kind}

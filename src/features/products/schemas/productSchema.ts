@@ -1,6 +1,12 @@
 import { z } from 'zod';
 
-import { categories, paoMonthsOptions, productStatuses } from '@/features/products/constants';
+import {
+  categories,
+  categoryDetails,
+  packagings,
+  paoMonthsOptions,
+  productStatuses,
+} from '@/features/products/constants';
 import type { Product } from '@/features/products/types';
 import { isValidLocalDate, todayLocalDate } from '@/utils/localDate';
 
@@ -43,6 +49,8 @@ export const productFormSchema = z
       .refine((value) => charLength(value) <= 60, 'Up to 60 characters')
       .transform((value) => value || null),
     category: z.enum(categories, { error: 'Pick a type' }),
+    // Null until a tile is tapped: the product then takes its Type's usual bottle.
+    packaging: z.enum(packagings).nullable(),
     openedOn: z.string().nullable(),
     paoMonths: z.literal(paoMonthsOptions).nullable(),
     ingredients: z
@@ -85,9 +93,10 @@ export const productFormSchema = z
     { when: () => true },
   )
   // RHF keeps hidden values, so a wishlist product drops the opened date and PAO here.
-  .transform(({ status, openedOn, paoMonths, ...rest }) => ({
+  .transform(({ status, packaging, openedOn, paoMonths, ...rest }) => ({
     ...rest,
     status,
+    packaging: packaging ?? categoryDetails[rest.category].bottle,
     openedOn: status === 'owned' ? openedOn : null,
     paoMonths: status === 'owned' ? paoMonths : null,
   }));
@@ -121,6 +130,7 @@ export function toProductFormValues(product: Product): ProductFormValues {
     name: product.name,
     brand: product.brand ?? '',
     category: product.category,
+    packaging: product.packaging,
     openedOn: product.openedOn,
     paoMonths: paoMonthsOptions.find((months) => months === product.paoMonths) ?? null,
     ingredients: product.ingredients.join(', '),

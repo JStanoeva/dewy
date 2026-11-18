@@ -111,7 +111,7 @@ function ProductDetailsContent({ product, today, navigation }: ProductDetailsCon
       <View style={[styles.heroCircle, { backgroundColor: palette.peach }]} />
       <View style={styles.bottle}>
         <BottleIllustration
-          shape={category.bottle}
+          shape={product.packaging}
           colors={colors}
           size="hero"
           monogram={productInitials(product.name)}

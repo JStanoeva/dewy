@@ -21,7 +21,13 @@ function step(id: string, overrides: Partial<RoutineStep> = {}): RoutineStep {
     note: null,
     noteImportant: false,
     createdAt: '2026-11-15T08:00:00Z',
-    product: { name: `Product ${id}`, brand: null, category: 'cleanser', photoPath: null },
+    product: {
+      name: `Product ${id}`,
+      brand: null,
+      category: 'cleanser',
+      packaging: 'pump',
+      photoPath: null,
+    },
     ...overrides,
   };
 }

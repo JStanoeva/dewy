@@ -1,13 +1,13 @@
 import { z } from 'zod';
 
-import { categories, productStatuses } from '@/features/products/constants';
+import { categories, packagings, productStatuses } from '@/features/products/constants';
 import type { ProductInput } from '@/features/products/schemas/productSchema';
 import { removeProductPhoto } from '@/features/products/services/productPhotoService';
 import type { Product } from '@/features/products/types';
 import { supabase } from '@/lib/supabase';
 
 const productColumns =
-  'id, status, name, brand, category, photo_path, opened_on, pao_months, ingredients, notes, is_favorite, created_at, updated_at';
+  'id, status, name, brand, category, packaging, photo_path, opened_on, pao_months, ingredients, notes, is_favorite, created_at, updated_at';
 
 // The generated types only say "string" for status and category, so rows are parsed before use.
 const productRowSchema = z.object({
@@ -16,6 +16,7 @@ const productRowSchema = z.object({
   name: z.string(),
   brand: z.string().nullable(),
   category: z.enum(categories),
+  packaging: z.enum(packagings),
   photo_path: z.string().nullable(),
   opened_on: z.string().nullable(),
   pao_months: z.number().nullable(),
@@ -33,6 +34,7 @@ function toProduct(row: z.infer<typeof productRowSchema>): Product {
     name: row.name,
     brand: row.brand,
     category: row.category,
+    packaging: row.packaging,
     photoPath: row.photo_path,
     openedOn: row.opened_on,
     paoMonths: row.pao_months,
@@ -56,6 +58,7 @@ export async function createProduct(
       name: input.name,
       brand: input.brand,
       category: input.category,
+      packaging: input.packaging,
       photo_path: photoPath,
       opened_on: input.openedOn,
       pao_months: input.paoMonths,
@@ -82,6 +85,7 @@ export async function updateProduct(
       name: input.name,
       brand: input.brand,
       category: input.category,
+      packaging: input.packaging,
       photo_path: photoPath,
       ingredients: input.ingredients,
       notes: input.notes,

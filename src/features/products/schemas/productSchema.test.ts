@@ -13,6 +13,7 @@ const valid: ProductFormValues = {
   name: 'Hydrating Toner',
   brand: 'Dewy Lab',
   category: 'toner',
+  packaging: null,
   openedOn: '2026-11-03',
   paoMonths: 12,
   ingredients: '',
@@ -46,10 +47,41 @@ describe('productFormSchema', () => {
       name: 'Hydrating Toner',
       brand: null,
       category: 'toner',
+      packaging: 'pump',
       openedOn: '2026-11-03',
       paoMonths: 12,
       ingredients: ['Niacinamide', 'Ceramides'],
       notes: 'Use after cleansing',
+    });
+  });
+
+  describe('packaging', () => {
+    // Written out, not read from categoryDetails, so it also pins the mapping 008's trigger repeats.
+    it.each([
+      ['cleanser', 'pump'],
+      ['exfoliant', 'tube'],
+      ['toner', 'pump'],
+      ['mist', 'spray'],
+      ['serum', 'dropper'],
+      ['moisturizer', 'jar'],
+      ['spf', 'tube'],
+      ['mask', 'jar'],
+    ] as const)('takes a %s’s usual %s until a tile is picked', (category, bottle) => {
+      expect(productFormSchema.parse({ ...valid, category }).packaging).toBe(bottle);
+    });
+
+    it('keeps a picked tile, whatever the type', () => {
+      expect(productFormSchema.parse({ ...valid, packaging: 'tube' }).packaging).toBe('tube');
+    });
+
+    it('asks only for the type while neither a type nor a tile is picked', () => {
+      expect(errorsFor({ category: undefined, packaging: null })).toEqual({
+        category: 'Pick a type',
+      });
+    });
+
+    it('rejects a packaging the tiles do not offer', () => {
+      expect(productFormSchema.safeParse({ ...valid, packaging: 'bottle' }).success).toBe(false);
     });
   });
 
@@ -169,6 +201,7 @@ describe('toProductFormValues', () => {
     name: 'Retinal 0.1% Serum',
     brand: 'Nightjar',
     category: 'serum',
+    packaging: 'dropper',
     photoPath: null,
     openedOn: '2026-05-25',
     paoMonths: 6,
@@ -189,6 +222,7 @@ describe('toProductFormValues', () => {
       name: 'Retinal 0.1% Serum',
       brand: 'Nightjar',
       category: 'serum',
+      packaging: 'dropper',
       openedOn: '2026-05-25',
       paoMonths: 6,
       ingredients: ['Retinal', 'Squalane'],
@@ -221,6 +255,14 @@ describe('toProductFormValues', () => {
 
   it('drops a use-within value the form does not offer', () => {
     expect(toProductFormValues({ ...stored, paoMonths: 9 }).paoMonths).toBeNull();
+  });
+
+  it('keeps the saved packaging, even when the type changes', () => {
+    const pumpSerum = { ...stored, packaging: 'pump' as const };
+    expect(toProductFormValues(pumpSerum).packaging).toBe('pump');
+    expect(
+      productFormSchema.parse({ ...toProductFormValues(pumpSerum), category: 'moisturizer' }),
+    ).toMatchObject({ category: 'moisturizer', packaging: 'pump' });
   });
 });
 
