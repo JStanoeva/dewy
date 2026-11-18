@@ -12,7 +12,7 @@ Dewy keeps a shelf of the skincare products you own and the ones on your wishlis
 
 - Sign up and log in with email and password. The session survives app restarts.
 - Keep your products on a shelf with Owned and Wishlist sides, category filters and pull to refresh.
-- Open a product to see its shelf life, key ingredients and notes.
+- Open a product to see its shelf life, key actives and notes.
 - Add, edit, favourite and delete products, and move wishlist products to your shelf.
 - Track shelf life: the opened date and the "use within" period show how long each opened product has left.
 - Take or choose a product photo, stored privately for your account.
@@ -59,6 +59,7 @@ On Windows, if PowerShell refuses to run `npm` or `npx` because running scripts 
    6. `006_routine_completions.sql`
    7. `007_step_note_important.sql`
    8. `008_product_packaging.sql`
+   9. `009_product_amount_actives.sql`
 
    Run each file once, before anyone signs up. `003_product_photos_storage.sql` creates the private `product-photos` bucket itself, so don't create it by hand.
 
@@ -247,7 +248,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 
 - Tapping a card calls `navigation.navigate('ProductDetails', { productId })`.
 - The screen receives only `productId` through route params. It shows the cached product at once, then loads the latest version of it from Supabase.
-- It shows the photo, category and brand, a shelf-life card, key ingredients and notes, plus the favourite and More options buttons.
+- It shows the photo, category and brand, a shelf-life card, key actives and notes, plus the favourite and More options buttons.
 - A chip for each routine the product is in shows its place there, for example "Morning · step 1". Tapping it opens the Routines tab on that routine.
 
 ### Data Source & Backend
@@ -293,7 +294,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 #### Forms Used
 
 - **Auth form** (Sign up / Log in): name (sign-up only), email and password.
-- **Product form** (New product / Edit product): status (I own it / Wishlist, new products only), photo, product name, brand, type, packaging (five tiles: dropper, pump, jar, tube and spray; a new product takes its type's usual bottle until one is tapped), opened on, use within, key ingredients and notes.
+- **Product form** (New product / Edit product): status (I own it / Wishlist, new products only), photo, product name, brand, type, packaging (five tiles: dropper, pump, jar, tube and spray; a new product takes its type's usual bottle until one is tapped), opened on, use within, size in ml and how full it is (owned products only; a card estimates the uses it holds as you type), key actives (any of Retinoid, Vitamin C, AHA / BHA and Benzoyl peroxide) and notes.
 - **Step form** (New step / Edit step): product (new steps only), days (seven day buttons), time (a slider from 10 seconds to 10 minutes), wait before the next step, a note and an Important switch (greyed out until the note has text).
 
 #### Validation Rules
@@ -309,13 +310,15 @@ All three forms use React Hook Form with Zod schemas.
 - **Packaging:** one of the five bottles; a new product without a pick saves its type's usual one.
 - **Opened on:** for owned products, a date from 2000 onward and not in the future.
 - **Use within:** required once an opened date is set.
-- **Key ingredients:** up to 20, each up to 50 characters.
+- **Size:** optional; for owned products, a whole number of ml from 1 to 1000 (multiple rules: "Whole numbers only", "From 1 to 1000 ml"). A wishlist product saves no size.
+- **How full is it?:** one of Full, ¾, ½ or ¼. When editing a product that already has a size, no tile is picked: leaving it keeps the count, and picking one restarts it from today.
+- **Key actives:** any of the four, each at most once.
 - **Notes:** up to 500 characters.
 - **Step product:** one of your owned products must be picked.
 - **Days:** at least one day must be ticked.
 - **Step note:** optional, up to 80 characters. A step without a note is never saved as Important.
 
-Database CHECK constraints back up the product rules on the server: name 2–80 characters, brand up to 60, one of the eight types, one of the five packagings (filled from the type when an older app version doesn't send one), an opened date from 2000 on (with one day of slack for time zones), "Use within" required once an opened date is set, up to 20 ingredients (1,000 characters in total) and notes up to 500. The profile name is capped at 40 characters. A routine step needs at least one day (Monday to Sunday), a time of 10 seconds to 30 minutes, a wait of 1 to 60 minutes or none, a note of up to 80 characters, and one of the same user's products, at most once per routine. A step marked Important needs a note; when an older app version clears the note, the database turns Important off instead of rejecting the save. A tick belongs to one of the same user's steps, at most once per day. Supabase Auth checks the email and password.
+Database CHECK constraints back up the product rules on the server: name 2–80 characters, brand up to 60, one of the eight types, one of the five packagings (filled from the type when an older app version doesn't send one), an opened date from 2000 on (with one day of slack for time zones), "Use within" required once an opened date is set, key actives from the four offered (each once), a size of 1 to 1000 ml, a fullness of full, ¾, ½ or ¼, a count start date from 2000 on, and notes up to 500. The profile name is capped at 40 characters. A routine step needs at least one day (Monday to Sunday), a time of 10 seconds to 30 minutes, a wait of 1 to 60 minutes or none, a note of up to 80 characters, and one of the same user's products, at most once per routine. A step marked Important needs a note; when an older app version clears the note, the database turns Important off instead of rejecting the save. A tick belongs to one of the same user's steps, at most once per day. Supabase Auth checks the email and password.
 
 ### Native Device Features
 
@@ -341,7 +344,7 @@ Database CHECK constraints back up the product rules on the server: name 2–80 
 2. You land on Today, which greets you by name and asks you to add your first product.
 3. Tap the centre "+" to open New product and keep "I own it" selected.
 4. Tap "Take photo" or "Choose photo". If label reading is set up, empty fields are filled in from the label.
-5. Check the name and brand, pick a type, keep today as the opened date, pick a "Use within" period, add ingredients and notes, then tap "Save to shelf".
+5. Check the name and brand, pick a type, keep today as the opened date, pick a "Use within" period, type the size in ml and watch the estimate card, tick its key actives, add notes, then tap "Save to shelf".
 6. Open the Shelf tab. The new card shows the photo and how long the product has left. Try the category chips and pull to refresh.
 7. Open the Routines tab, pick Morning and tap "Add a step". Pick the product, keep every day ticked and tap "Add to ritual". Back on the Shelf, the card now carries an "AM" tag. Tap it: its details show "Morning · step 1", and that chip opens your morning ritual on the Routines tab.
 8. Tap the centre "+" and save a second owned product. On the Routines tab, tap "Add a step from your shelf", pick that product, leave only Monday, Wednesday and Friday ticked, slide the time, type a note such as "Skip exfoliating acids today", switch Important on, and tap "Add to ritual". Tap the new step to change its note or move it up.

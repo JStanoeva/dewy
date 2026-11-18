@@ -1,5 +1,6 @@
 import type { BottleShape } from '@/components/BottleIllustration';
-import type { Category, productStatuses } from '@/features/products/constants';
+import type { Active, Category, Fullness, productStatuses } from '@/features/products/constants';
+import type { LocalDate } from '@/utils/localDate';
 
 export type ProductStatus = (typeof productStatuses)[number];
 
@@ -17,7 +18,11 @@ export type Product = {
   photoPath: string | null;
   openedOn: string | null;
   paoMonths: number | null;
-  ingredients: string[];
+  actives: Active[];
+  sizeMl: number | null;
+  // How full the bottle was on trackedFrom, the ritual day the uses-left count starts from.
+  startFraction: Fullness;
+  trackedFrom: LocalDate;
   notes: string | null;
   isFavorite: boolean;
   createdAt: string;

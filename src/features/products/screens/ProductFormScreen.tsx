@@ -16,13 +16,16 @@ import { FormTextField } from '@/components/FormTextField';
 import { LoadingState } from '@/components/LoadingState';
 import { Screen } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
+import { ActivePicker } from '@/features/products/components/ActivePicker';
+import { AmountEstimateCard } from '@/features/products/components/AmountEstimateCard';
 import { CategoryChips, categoryOptions } from '@/features/products/components/CategoryChips';
-import { IngredientChips } from '@/features/products/components/IngredientChips';
+import { FullnessTiles } from '@/features/products/components/FullnessTiles';
 import { PackagingPicker } from '@/features/products/components/PackagingPicker';
 import {
   ProductPhotoField,
   type LabelStatus,
 } from '@/features/products/components/ProductPhotoField';
+import { SizeField } from '@/features/products/components/SizeField';
 import { categoryDetails, paoMonthsOptions, type Category } from '@/features/products/constants';
 import {
   useCreateProduct,
@@ -33,15 +36,17 @@ import {
 import { useProduct } from '@/features/products/hooks/useProducts';
 import {
   earliestOpenedOn,
-  parseIngredients,
   productFormSchema,
   toProductFormValues,
+  toSizeMl,
   type LabelReading,
   type ProductFormValues,
   type ProductInput,
 } from '@/features/products/schemas/productSchema';
 import type { Product, ProductPhotoValue, ProductStatus } from '@/features/products/types';
+import { restartsCount } from '@/features/products/utils/usesLeft';
 import type { RootStackParamList } from '@/navigation/types';
+import { getRitualDate } from '@/theme/period';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import { fonts, fontSizes, letterSpacings, minTouchTarget, radii, spacing } from '@/theme/tokens';
 import { parseLocalDate, todayLocalDate } from '@/utils/localDate';
@@ -59,7 +64,7 @@ const fieldOrder = [
   'category',
   'openedOn',
   'paoMonths',
-  'ingredients',
+  'sizeMl',
   'notes',
 ] as const;
 
@@ -170,7 +175,9 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
           packaging: null,
           openedOn: todayLocalDate(),
           paoMonths: null,
-          ingredients: '',
+          sizeMl: '',
+          startFraction: 1,
+          actives: [],
           notes: '',
         },
     shouldFocusError: false,
@@ -178,7 +185,10 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
   const status = useWatch({ control, name: 'status' });
   const openedOn = useWatch({ control, name: 'openedOn' });
   const pickedCategory = useWatch({ control, name: 'category' });
-  const ingredientPreview = parseIngredients(useWatch({ control, name: 'ingredients' }));
+  const typedSize = toSizeMl(useWatch({ control, name: 'sizeMl' }));
+  // In Edit with no tile picked, the estimate uses the saved fullness.
+  const estimateFullness =
+    useWatch({ control, name: 'startFraction' }) ?? product?.startFraction ?? 1;
   const isOwned = status === 'owned';
   // Stays busy after a successful save too, so a tap during the closing animation can't save twice.
   const saving = isSubmitting || createProduct.isSuccess || updateProduct.isSuccess;
@@ -245,6 +255,8 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
   async function onSubmit(values: ProductInput) {
     // Runs only after validation passes, so a read still going can't change the form while it saves.
     readLabel.reset();
+    // Taken at save time, so a save just after the 05:00 rollover counts from the new ritual day.
+    const ritualDate = getRitualDate();
     try {
       const photoPath = await photoPathToSave();
       if (product) {
@@ -253,9 +265,10 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
           input: values,
           photoPath,
           previousPhotoPath: product.photoPath,
+          trackedFrom: restartsCount(values) ? ritualDate : null,
         });
       } else {
-        await createProduct.mutateAsync({ input: values, photoPath });
+        await createProduct.mutateAsync({ input: values, photoPath, trackedFrom: ritualDate });
       }
     } catch {
       setError('root.server', {
@@ -271,7 +284,7 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
   // Text fields take focus on error; the type, date and PAO controls can't, so scroll up to them.
   function onInvalid(fieldErrors: FieldErrors<ProductFormValues>) {
     const first = fieldOrder.find((name) => fieldErrors[name]);
-    if (first === 'name' || first === 'brand' || first === 'ingredients' || first === 'notes') {
+    if (first === 'name' || first === 'brand' || first === 'sizeMl' || first === 'notes') {
       // Android's back key hides the keyboard but keeps focus, and focusing a focused field does nothing.
       Keyboard.dismiss();
       setFocus(first);
@@ -374,7 +387,7 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
                 onChangeText={field.onChange}
                 onBlur={field.onBlur}
                 onFocus={revealFocusedField}
-                onSubmitEditing={() => setFocus('ingredients')}
+                onSubmitEditing={() => setFocus(isOwned ? 'sizeMl' : 'notes')}
                 error={fieldState.error?.message}
               />
             )}
@@ -503,29 +516,68 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
           </View>
         ) : null}
 
-        <View style={styles.inset}>
+        {isOwned ? (
+          <View style={styles.inset}>
+            <View style={styles.openedRow}>
+              <Controller
+                control={control}
+                name="sizeMl"
+                render={({ field, fieldState }) => (
+                  <SizeField
+                    ref={field.ref}
+                    style={styles.sizeColumn}
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    onBlur={field.onBlur}
+                    onFocus={revealFocusedField}
+                    onSubmitEditing={() => setFocus('notes')}
+                    invalid={fieldState.error !== undefined}
+                  />
+                )}
+              />
+              <View style={styles.fullnessColumn}>
+                <Text style={[styles.label, { color: palette.text }]}>How full is it?</Text>
+                <Controller
+                  control={control}
+                  name="startFraction"
+                  render={({ field }) => (
+                    <FullnessTiles
+                      value={field.value}
+                      onChange={field.onChange}
+                      hitSlop={paoTileSlop}
+                    />
+                  )}
+                />
+              </View>
+            </View>
+            {errors.sizeMl ? (
+              <FieldError style={styles.rowError}>{errors.sizeMl.message}</FieldError>
+            ) : null}
+          </View>
+        ) : null}
+
+        {isOwned ? (
+          <View style={styles.inset}>
+            <AmountEstimateCard
+              sizeMl={typedSize}
+              fullness={estimateFullness}
+              category={pickedCategory}
+            />
+          </View>
+        ) : null}
+
+        <View style={[styles.inset, styles.actives]}>
+          <Text style={[styles.label, { color: palette.text }]}>
+            Key actives
+            <Text style={[styles.labelHint, { color: palette.textMuted }]}>
+              {' · pick any it contains'}
+            </Text>
+          </Text>
           <Controller
             control={control}
-            name="ingredients"
-            render={({ field, fieldState }) => (
-              <FormTextField
-                ref={field.ref}
-                label="Key ingredients"
-                placeholder="Niacinamide, ceramides"
-                returnKeyType="next"
-                submitBehavior="submit"
-                value={field.value}
-                onChangeText={field.onChange}
-                onBlur={field.onBlur}
-                onFocus={revealFocusedField}
-                onSubmitEditing={() => setFocus('notes')}
-                error={fieldState.error?.message}
-              />
-            )}
+            name="actives"
+            render={({ field }) => <ActivePicker value={field.value} onChange={field.onChange} />}
           />
-          {ingredientPreview.length > 0 ? (
-            <IngredientChips ingredients={ingredientPreview} />
-          ) : null}
         </View>
 
         <View style={styles.inset}>
@@ -629,6 +681,17 @@ const styles = StyleSheet.create({
   paoColumn: {
     flex: 1,
     gap: spacing.snug,
+  },
+  sizeColumn: {
+    width: 128,
+  },
+  fullnessColumn: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.snug,
+  },
+  actives: {
+    gap: spacing.xs,
   },
   paoGrid: {
     flexDirection: 'row',

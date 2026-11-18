@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       products: {
         Row: {
+          actives: string[]
           brand: string | null
           category: string
           created_at: string
@@ -28,11 +29,15 @@ export type Database = {
           packaging: string
           pao_months: number | null
           photo_path: string | null
+          size_ml: number | null
+          start_fraction: number
           status: string
+          tracked_from: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          actives?: string[]
           brand?: string | null
           category: string
           created_at?: string
@@ -45,11 +50,15 @@ export type Database = {
           packaging: string
           pao_months?: number | null
           photo_path?: string | null
+          size_ml?: number | null
+          start_fraction?: number
           status: string
+          tracked_from?: string
           updated_at?: string
           user_id?: string
         }
         Update: {
+          actives?: string[]
           brand?: string | null
           category?: string
           created_at?: string
@@ -62,7 +71,10 @@ export type Database = {
           packaging?: string
           pao_months?: number | null
           photo_path?: string | null
+          size_ml?: number | null
+          start_fraction?: number
           status?: string
+          tracked_from?: string
           updated_at?: string
           user_id?: string
         }

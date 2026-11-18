@@ -11,7 +11,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { LoadingState } from '@/components/LoadingState';
 import { Screen } from '@/components/Screen';
-import { IngredientChips } from '@/features/products/components/IngredientChips';
+import { ActiveChips } from '@/features/products/components/ActiveChips';
 import { ProductActionsSheet } from '@/features/products/components/ProductActionsSheet';
 import { ProductPhoto } from '@/features/products/components/ProductPhoto';
 import { ShelfLifeCard } from '@/features/products/components/ShelfLifeCard';
@@ -266,15 +266,15 @@ function ProductDetailsContent({ product, today, navigation }: ProductDetailsCon
               }
             />
 
-            {product.ingredients.length > 0 ? (
+            {product.actives.length > 0 ? (
               <View>
                 <Text
                   accessibilityRole="header"
                   style={[styles.sectionLabel, { color: palette.textMuted }]}
                 >
-                  Key ingredients
+                  Key actives
                 </Text>
-                <IngredientChips ingredients={product.ingredients} />
+                <ActiveChips values={product.actives} />
               </View>
             ) : null}
 

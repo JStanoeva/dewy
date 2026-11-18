@@ -1,8 +1,9 @@
 import {
   labelReadingSchema,
-  parseIngredients,
   productFormSchema,
+  sizeMlError,
   toProductFormValues,
+  toSizeMl,
   type ProductFormValues,
 } from '@/features/products/schemas/productSchema';
 import type { Product } from '@/features/products/types';
@@ -16,7 +17,9 @@ const valid: ProductFormValues = {
   packaging: null,
   openedOn: '2026-11-03',
   paoMonths: 12,
-  ingredients: '',
+  sizeMl: '',
+  startFraction: 1,
+  actives: [],
   notes: '',
 };
 
@@ -39,7 +42,9 @@ describe('productFormSchema', () => {
         ...valid,
         name: '  Hydrating Toner ',
         brand: '  ',
-        ingredients: 'Niacinamide, , Ceramides ,niacinamide',
+        sizeMl: ' 100 ',
+        startFraction: 0.5,
+        actives: ['retinoid', 'acids'],
         notes: '  Use after cleansing \n',
       }),
     ).toEqual({
@@ -50,7 +55,9 @@ describe('productFormSchema', () => {
       packaging: 'pump',
       openedOn: '2026-11-03',
       paoMonths: 12,
-      ingredients: ['Niacinamide', 'Ceramides'],
+      sizeMl: 100,
+      startFraction: 0.5,
+      actives: ['retinoid', 'acids'],
       notes: 'Use after cleansing',
     });
   });
@@ -85,10 +92,11 @@ describe('productFormSchema', () => {
     });
   });
 
-  it('sends empty brand, notes and ingredients as null, null and []', () => {
+  it('sends empty brand, notes, size and actives as null, null, null and []', () => {
     const result = productFormSchema.parse(valid);
     expect(result.notes).toBeNull();
-    expect(result.ingredients).toEqual([]);
+    expect(result.sizeMl).toBeNull();
+    expect(result.actives).toEqual([]);
     expect(productFormSchema.parse({ ...valid, brand: '' }).brand).toBeNull();
   });
 
@@ -166,17 +174,76 @@ describe('productFormSchema', () => {
     });
   });
 
-  describe('ingredients', () => {
-    it('allows 20 entries and rejects 21', () => {
-      const list = (count: number) => Array.from({ length: count }, (_, i) => `i${i}`).join(',');
-      expect(errorsFor({ ingredients: list(20) }).ingredients).toBeUndefined();
-      expect(errorsFor({ ingredients: list(21) }).ingredients).toBe('Up to 20 ingredients');
+  describe('size', () => {
+    it('is optional', () => {
+      expect(errorsFor({ sizeMl: '' })).toEqual({});
+      expect(errorsFor({ sizeMl: '   ' })).toEqual({});
     });
 
-    it('caps each entry at 50 characters, which keeps the total within 1000', () => {
-      expect(errorsFor({ ingredients: 'x'.repeat(50) }).ingredients).toBeUndefined();
-      expect(errorsFor({ ingredients: 'x'.repeat(51) }).ingredients).toBe(
-        'Up to 50 characters each',
+    it('takes whole numbers from 1 to 1000', () => {
+      expect(errorsFor({ sizeMl: '1' }).sizeMl).toBeUndefined();
+      expect(errorsFor({ sizeMl: '1000' }).sizeMl).toBeUndefined();
+      expect(errorsFor({ sizeMl: '0' }).sizeMl).toBe('From 1 to 1000 ml');
+      expect(errorsFor({ sizeMl: '1001' }).sizeMl).toBe('From 1 to 1000 ml');
+      expect(errorsFor({ sizeMl: '99999999999999999999' }).sizeMl).toBe('From 1 to 1000 ml');
+    });
+
+    it.each(['12.5', 'abc', '-5', '1e3', '3 0', '٣٠'])(
+      'rejects %s as not a whole number',
+      (sizeMl) => {
+        expect(errorsFor({ sizeMl }).sizeMl).toBe('Whole numbers only');
+      },
+    );
+
+    it('reports the size together with other field errors', () => {
+      const errors = errorsFor({ sizeMl: '0', name: '', paoMonths: null });
+      expect(Object.keys(errors).sort()).toEqual(['name', 'paoMonths', 'sizeMl']);
+    });
+
+    it('is checked on an unopened product too', () => {
+      expect(errorsFor({ openedOn: null, paoMonths: null, sizeMl: '0' })).toEqual({
+        sizeMl: 'From 1 to 1000 ml',
+      });
+    });
+
+    it('ignores whatever was typed for a wishlist product, which saves no size and Full', () => {
+      const result = productFormSchema.safeParse({
+        ...valid,
+        status: 'wishlist',
+        sizeMl: 'abc',
+        startFraction: 0.25,
+      });
+      expect(result.success).toBe(true);
+      expect(result.data).toMatchObject({ sizeMl: null, startFraction: 1 });
+    });
+  });
+
+  describe('fullness', () => {
+    it('keeps an unpicked fullness as null, so an edit leaves the count alone', () => {
+      expect(
+        productFormSchema.parse({ ...valid, sizeMl: '30', startFraction: null }),
+      ).toMatchObject({ sizeMl: 30, startFraction: null });
+    });
+
+    it('rejects a fullness the tiles do not offer', () => {
+      expect(productFormSchema.safeParse({ ...valid, startFraction: 0.33 }).success).toBe(false);
+    });
+  });
+
+  describe('actives', () => {
+    it('keeps the picked actives, for a wishlist product too', () => {
+      expect(productFormSchema.parse({ ...valid, actives: ['vitc', 'bpo'] }).actives).toEqual([
+        'vitc',
+        'bpo',
+      ]);
+      expect(
+        productFormSchema.parse({ ...valid, status: 'wishlist', actives: ['retinoid'] }).actives,
+      ).toEqual(['retinoid']);
+    });
+
+    it('rejects an active the chips do not offer', () => {
+      expect(productFormSchema.safeParse({ ...valid, actives: ['niacinamide'] }).success).toBe(
+        false,
       );
     });
   });
@@ -187,10 +254,16 @@ describe('productFormSchema', () => {
   });
 });
 
-describe('parseIngredients', () => {
-  it('splits on commas and new lines, trims, and drops blanks and repeats', () => {
-    expect(parseIngredients(' Retinal ,\nSqualane,, retinal ')).toEqual(['Retinal', 'Squalane']);
-    expect(parseIngredients('')).toEqual([]);
+describe('sizeMlError and toSizeMl', () => {
+  it('agree on what counts as a size', () => {
+    expect(toSizeMl(' 50 ')).toBe(50);
+    expect(sizeMlError(' 50 ')).toBeUndefined();
+    expect(toSizeMl('')).toBeNull();
+    expect(sizeMlError('')).toBeUndefined();
+    expect(toSizeMl('0')).toBeNull();
+    expect(sizeMlError('0')).toBe('From 1 to 1000 ml');
+    expect(toSizeMl('12.5')).toBeNull();
+    expect(sizeMlError('12.5')).toBe('Whole numbers only');
   });
 });
 
@@ -205,7 +278,10 @@ describe('toProductFormValues', () => {
     photoPath: null,
     openedOn: '2026-05-25',
     paoMonths: 6,
-    ingredients: ['Retinal', 'Squalane'],
+    actives: ['retinoid'],
+    sizeMl: 30,
+    startFraction: 0.75,
+    trackedFrom: '2026-11-01',
     notes: 'Evenings only\nFollow with SPF',
     isFavorite: true,
     createdAt: '2026-11-07T09:00:00Z',
@@ -225,7 +301,9 @@ describe('toProductFormValues', () => {
       packaging: 'dropper',
       openedOn: '2026-05-25',
       paoMonths: 6,
-      ingredients: ['Retinal', 'Squalane'],
+      sizeMl: 30,
+      startFraction: null,
+      actives: ['retinoid'],
       notes: 'Evenings only\nFollow with SPF',
     });
   });
@@ -248,9 +326,22 @@ describe('toProductFormValues', () => {
     expect(roundTrip(plain)).toMatchObject({ brand: null, notes: null });
   });
 
-  it('keeps 20 ingredients in order', () => {
-    const ingredients = Array.from({ length: 20 }, (_, i) => `Ingredient ${i + 1}`);
-    expect(roundTrip({ ...stored, ingredients }).ingredients).toEqual(ingredients);
+  it('starts a product with a size with no fullness picked (decision 5)', () => {
+    expect(toProductFormValues(stored)).toMatchObject({ sizeMl: '30', startFraction: null });
+  });
+
+  it('starts a product without a size at Full, so adding one restarts the count', () => {
+    const noSize = { ...stored, sizeMl: null };
+    expect(toProductFormValues(noSize)).toMatchObject({ sizeMl: '', startFraction: 1 });
+    expect(productFormSchema.parse({ ...toProductFormValues(noSize), sizeMl: '50' })).toMatchObject(
+      { sizeMl: 50, startFraction: 1 },
+    );
+  });
+
+  it('clears a saved size when the box is emptied', () => {
+    expect(
+      productFormSchema.parse({ ...toProductFormValues(stored), sizeMl: '' }).sizeMl,
+    ).toBeNull();
   });
 
   it('drops a use-within value the form does not offer', () => {

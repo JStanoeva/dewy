@@ -1,8 +1,10 @@
 import { z } from 'zod';
 
 import {
+  actives,
   categories,
   categoryDetails,
+  fullnessValues,
   packagings,
   paoMonthsOptions,
   productStatuses,
@@ -12,26 +14,28 @@ import { isValidLocalDate, todayLocalDate } from '@/utils/localDate';
 
 export const earliestOpenedOn = '2000-01-01';
 
-const maxIngredients = 20;
-const maxIngredientLength = 50;
-
 // Postgres char_length counts code points, so an emoji counts once here too.
 function charLength(value: string) {
   return Array.from(value).length;
 }
 
-export function parseIngredients(text: string): string[] {
-  const seen = new Set<string>();
-  const ingredients: string[] = [];
-  for (const part of text.split(/[,\n]/)) {
-    const ingredient = part.trim();
-    const key = ingredient.toLocaleLowerCase();
-    if (ingredient && !seen.has(key)) {
-      seen.add(key);
-      ingredients.push(ingredient);
-    }
+// The Size box's rules; an empty box means no size. Shared with the estimate card, so both agree.
+export function sizeMlError(text: string): string | undefined {
+  const trimmed = text.trim();
+  if (trimmed === '') {
+    return undefined;
   }
-  return ingredients;
+  if (!/^\d+$/.test(trimmed)) {
+    return 'Whole numbers only';
+  }
+  const sizeMl = Number(trimmed);
+  return sizeMl < 1 || sizeMl > 1000 ? 'From 1 to 1000 ml' : undefined;
+}
+
+// The typed size in ml, or null when the box is empty or invalid.
+export function toSizeMl(text: string): number | null {
+  const trimmed = text.trim();
+  return trimmed !== '' && sizeMlError(trimmed) === undefined ? Number(trimmed) : null;
 }
 
 export const productFormSchema = z
@@ -53,14 +57,10 @@ export const productFormSchema = z
     packaging: z.enum(packagings).nullable(),
     openedOn: z.string().nullable(),
     paoMonths: z.literal(paoMonthsOptions).nullable(),
-    ingredients: z
-      .string()
-      .transform(parseIngredients)
-      .refine((list) => list.length <= maxIngredients, 'Up to 20 ingredients')
-      .refine(
-        (list) => list.every((ingredient) => charLength(ingredient) <= maxIngredientLength),
-        'Up to 50 characters each',
-      ),
+    sizeMl: z.string(),
+    // Null in Edit until a tile is picked: the saved fullness and count then stay as they are.
+    startFraction: z.literal(fullnessValues).nullable(),
+    actives: z.array(z.enum(actives)),
     notes: z
       .string()
       .trim()
@@ -68,8 +68,15 @@ export const productFormSchema = z
       .transform((value) => value || null),
   })
   .superRefine(
-    ({ status, openedOn, paoMonths }, ctx) => {
-      if (status !== 'owned' || openedOn === null) {
+    ({ status, openedOn, paoMonths, sizeMl }, ctx) => {
+      if (status !== 'owned') {
+        return;
+      }
+      const sizeError = sizeMlError(sizeMl);
+      if (sizeError) {
+        ctx.addIssue({ code: 'custom', path: ['sizeMl'], message: sizeError });
+      }
+      if (openedOn === null) {
         return;
       }
       if (!isValidLocalDate(openedOn) || openedOn < earliestOpenedOn) {
@@ -92,14 +99,19 @@ export const productFormSchema = z
     // Show these with the field errors instead of only after every other field is valid.
     { when: () => true },
   )
-  // RHF keeps hidden values, so a wishlist product drops the opened date and PAO here.
-  .transform(({ status, packaging, openedOn, paoMonths, ...rest }) => ({
-    ...rest,
-    status,
-    packaging: packaging ?? categoryDetails[rest.category].bottle,
-    openedOn: status === 'owned' ? openedOn : null,
-    paoMonths: status === 'owned' ? paoMonths : null,
-  }));
+  // RHF keeps hidden values, so a wishlist product drops the opened date, PAO, size and fullness here.
+  .transform(({ status, packaging, openedOn, paoMonths, sizeMl, startFraction, ...rest }) => {
+    const owned = status === 'owned';
+    return {
+      ...rest,
+      status,
+      packaging: packaging ?? categoryDetails[rest.category].bottle,
+      openedOn: owned ? openedOn : null,
+      paoMonths: owned ? paoMonths : null,
+      sizeMl: owned ? toSizeMl(sizeMl) : null,
+      startFraction: owned ? startFraction : 1,
+    };
+  });
 
 export type ProductFormValues = z.input<typeof productFormSchema>;
 export type ProductInput = z.output<typeof productFormSchema>;
@@ -133,7 +145,10 @@ export function toProductFormValues(product: Product): ProductFormValues {
     packaging: product.packaging,
     openedOn: product.openedOn,
     paoMonths: paoMonthsOptions.find((months) => months === product.paoMonths) ?? null,
-    ingredients: product.ingredients.join(', '),
+    sizeMl: product.sizeMl === null ? '' : String(product.sizeMl),
+    // A saved size starts unpicked (its fullness was at the start of the count); no size starts at Full.
+    startFraction: product.sizeMl === null ? 1 : null,
+    actives: product.actives,
     notes: product.notes ?? '',
   };
 }

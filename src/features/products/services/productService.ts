@@ -1,13 +1,20 @@
 import { z } from 'zod';
 
-import { categories, packagings, productStatuses } from '@/features/products/constants';
+import {
+  actives,
+  categories,
+  fullnessValues,
+  packagings,
+  productStatuses,
+} from '@/features/products/constants';
 import type { ProductInput } from '@/features/products/schemas/productSchema';
 import { removeProductPhoto } from '@/features/products/services/productPhotoService';
 import type { Product } from '@/features/products/types';
 import { supabase } from '@/lib/supabase';
+import type { LocalDate } from '@/utils/localDate';
 
 const productColumns =
-  'id, status, name, brand, category, packaging, photo_path, opened_on, pao_months, ingredients, notes, is_favorite, created_at, updated_at';
+  'id, status, name, brand, category, packaging, photo_path, opened_on, pao_months, actives, size_ml, start_fraction, tracked_from, notes, is_favorite, created_at, updated_at';
 
 // The generated types only say "string" for status and category, so rows are parsed before use.
 const productRowSchema = z.object({
@@ -20,7 +27,10 @@ const productRowSchema = z.object({
   photo_path: z.string().nullable(),
   opened_on: z.string().nullable(),
   pao_months: z.number().nullable(),
-  ingredients: z.array(z.string()),
+  actives: z.array(z.enum(actives)),
+  size_ml: z.number().nullable(),
+  start_fraction: z.literal(fullnessValues),
+  tracked_from: z.string(),
   notes: z.string().nullable(),
   is_favorite: z.boolean(),
   created_at: z.string(),
@@ -38,7 +48,10 @@ function toProduct(row: z.infer<typeof productRowSchema>): Product {
     photoPath: row.photo_path,
     openedOn: row.opened_on,
     paoMonths: row.pao_months,
-    ingredients: row.ingredients,
+    actives: row.actives,
+    sizeMl: row.size_ml,
+    startFraction: row.start_fraction,
+    trackedFrom: row.tracked_from,
     notes: row.notes,
     isFavorite: row.is_favorite,
     createdAt: row.created_at,
@@ -50,6 +63,7 @@ function toProduct(row: z.infer<typeof productRowSchema>): Product {
 export async function createProduct(
   input: ProductInput,
   photoPath: string | null,
+  trackedFrom: LocalDate,
 ): Promise<Product> {
   const { data, error } = await supabase
     .from('products')
@@ -62,7 +76,10 @@ export async function createProduct(
       photo_path: photoPath,
       opened_on: input.openedOn,
       pao_months: input.paoMonths,
-      ingredients: input.ingredients,
+      actives: input.actives,
+      size_ml: input.sizeMl,
+      start_fraction: input.startFraction ?? 1,
+      tracked_from: trackedFrom,
       notes: input.notes,
     })
     .select(productColumns)
@@ -73,11 +90,12 @@ export async function createProduct(
   return toProduct(productRowSchema.parse(data));
 }
 
-// Status and favourite never change here; a wishlist edit leaves the opened date alone.
+// Status and favourite never change here; fullness and the count's start change only on a restart (trackedFrom).
 export async function updateProduct(
   id: string,
   input: ProductInput,
   photoPath: string | null,
+  trackedFrom: LocalDate | null,
 ): Promise<Product> {
   const { data, error } = await supabase
     .from('products')
@@ -87,10 +105,13 @@ export async function updateProduct(
       category: input.category,
       packaging: input.packaging,
       photo_path: photoPath,
-      ingredients: input.ingredients,
+      actives: input.actives,
       notes: input.notes,
       ...(input.status === 'owned'
-        ? { opened_on: input.openedOn, pao_months: input.paoMonths }
+        ? { opened_on: input.openedOn, pao_months: input.paoMonths, size_ml: input.sizeMl }
+        : {}),
+      ...(trackedFrom && input.startFraction !== null
+        ? { start_fraction: input.startFraction, tracked_from: trackedFrom }
         : {}),
     })
     .eq('id', id)

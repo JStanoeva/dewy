@@ -14,13 +14,15 @@ import {
   updateProduct,
 } from '@/features/products/services/productService';
 import type { Product } from '@/features/products/types';
+import type { LocalDate } from '@/utils/localDate';
 
-type CreateVariables = { input: ProductInput; photoPath: string | null };
+type CreateVariables = { input: ProductInput; photoPath: string | null; trackedFrom: LocalDate };
 
 export function useCreateProduct() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ input, photoPath }: CreateVariables) => createProduct(input, photoPath),
+    mutationFn: ({ input, photoPath, trackedFrom }: CreateVariables) =>
+      createProduct(input, photoPath, trackedFrom),
     // Returning the refetch keeps the mutation pending until the Shelf list is fresh.
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['products'] }),
   });
@@ -48,12 +50,15 @@ type UpdateVariables = {
   input: ProductInput;
   photoPath: string | null;
   previousPhotoPath: string | null;
+  // The ritual day the count restarts from, or null to keep the count.
+  trackedFrom: LocalDate | null;
 };
 
 export function useUpdateProduct() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, input, photoPath }: UpdateVariables) => updateProduct(id, input, photoPath),
+    mutationFn: ({ id, input, photoPath, trackedFrom }: UpdateVariables) =>
+      updateProduct(id, input, photoPath, trackedFrom),
     // The replaced or removed photo goes only once the product no longer points to it.
     onSuccess: (product, { photoPath, previousPhotoPath }) => {
       storeProduct(queryClient, product);
