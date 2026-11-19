@@ -7,6 +7,7 @@ import { ProductPhoto } from '@/features/products/components/ProductPhoto';
 import { ShelfLifeBar } from '@/features/products/components/ShelfLifeCard';
 import type { Product } from '@/features/products/types';
 import { getShelfLife, savedLabel } from '@/features/products/utils/shelfLife';
+import { getAmountProgress, isRunningLow } from '@/features/products/utils/usesLeft';
 import { describeRoutines, routineTag } from '@/features/routines/utils/routineMembership';
 import { bottleColorsFor } from '@/theme/bottleColors';
 import type { Period } from '@/theme/period';
@@ -17,17 +18,44 @@ import type { LocalDate } from '@/utils/localDate';
 type ProductCardProps = {
   product: Product;
   routinePeriods: readonly Period[];
+  // Null without a size, on the wishlist, or while the use counts aren't loaded.
+  usesLeft: number | null;
   width: number;
   today: LocalDate;
   onPress: () => void;
 };
 
-export function ProductCard({ product, routinePeriods, width, today, onPress }: ProductCardProps) {
+export function ProductCard({
+  product,
+  routinePeriods,
+  usesLeft,
+  width,
+  today,
+  onPress,
+}: ProductCardProps) {
   const { palette } = useDewyTheme();
   const colors = bottleColorsFor(product.id);
   const isWish = product.status === 'wishlist';
   const shelfLife = isWish ? null : getShelfLife(product.openedOn, product.paoMonths, today);
-  const status = isWish ? savedLabel(product.createdAt, today) : (shelfLife?.label ?? 'Unopened');
+  const isExpired = shelfLife !== null && shelfLife.daysLeft < 0;
+  // Expired outranks running low, which outranks the other shelf-life statuses.
+  const lowUsesLeft = !isExpired && usesLeft !== null && isRunningLow(usesLeft) ? usesLeft : null;
+  const lowLabel =
+    lowUsesLeft === null ? null : `${lowUsesLeft} ${lowUsesLeft === 1 ? 'use' : 'uses'} left`;
+  const status = isWish
+    ? savedLabel(product.createdAt, today)
+    : lowLabel
+      ? `≈ ${lowLabel}`
+      : (shelfLife?.label ?? 'Unopened');
+  const bar =
+    lowUsesLeft !== null && product.sizeMl !== null
+      ? {
+          progress: getAmountProgress(product.sizeMl, product.category, lowUsesLeft),
+          highlight: true,
+        }
+      : shelfLife
+        ? { progress: shelfLife.progress, highlight: shelfLife.isExpiringSoon }
+        : null;
   const routineTagText = isWish ? null : routineTag(routinePeriods);
   const bottle = (
     <>
@@ -41,7 +69,7 @@ export function ProductCard({ product, routinePeriods, width, today, onPress }: 
     product.name,
     product.brand,
     isWish ? 'on your wishlist' : describeRoutines(routinePeriods),
-    status,
+    lowLabel ? `About ${lowLabel}` : status,
   ]
     .filter(Boolean)
     .join(', ');
@@ -90,21 +118,14 @@ export function ProductCard({ product, routinePeriods, width, today, onPress }: 
         <Text numberOfLines={2} style={[styles.name, { color: palette.text }]}>
           {product.name}
         </Text>
-        {shelfLife ? (
+        {bar ? (
           <View style={styles.bar}>
-            <ShelfLifeBar
-              progress={shelfLife.progress}
-              highlight={shelfLife.isExpiringSoon}
-              height={5}
-            />
+            <ShelfLifeBar progress={bar.progress} highlight={bar.highlight} height={5} />
           </View>
         ) : null}
         <Text
           numberOfLines={2}
-          style={[
-            styles.status,
-            { color: shelfLife?.isExpiringSoon ? palette.warning : palette.textMuted },
-          ]}
+          style={[styles.status, { color: bar?.highlight ? palette.warning : palette.textMuted }]}
         >
           {status}
         </Text>

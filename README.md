@@ -190,7 +190,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 
 - **Main sections:** four bottom tabs (Today, Shelf, Routines, Me) and a raised centre "+" button that opens the New product form.
   - **Today:** the date, a "Good morning" or "Good evening" greeting with the user's name, a Morning / Evening switch, a progress arc with one dot per step and a sun or moon where the progress ends ("2 of 5 steps done · 4 min to go"), and the checklist of that routine's steps for today's weekday. A step's note shows in a banner above the list when it is marked Important. With two or more banners, "Hide notes" folds them into one line ("3 notes for today · Show"); they stay folded until Show is tapped, and open again by themselves when that routine gets a new important note. Tapping a step ticks or unticks it; a long press opens its product. The switch also changes the whole app between the light morning and the plum evening colours; the choice holds until the other half of the day (morning is 05:00–16:59). The day turns over at 05:00, so evening steps ticked after midnight count for that evening.
-  - **Shelf:** the user's products in a two-column grid, with Owned and Wishlist sides and category chips. Products in a routine carry an AM, PM or AM · PM tag.
+  - **Shelf:** the user's products in a two-column grid, with Owned and Wishlist sides and category chips. Products in a routine carry an AM, PM or AM · PM tag, and products with 5 or fewer uses left say so ("≈ 5 uses left").
   - **Routines:** "Your rituals" with Morning and Evening. It opens on the routine Today shows, then keeps its own choice; its switch changes only its list, not the colours. Each routine shows a week strip, the number of steps and the time they take, and the ordered steps with their days and waits. Tapping a step opens the step editor, and "Add a step from your shelf" adds one.
   - **Me:** the user's initial, name, "Glowing with Dewy since" with the month they joined, and Log out.
 - **Details screen:** Product details, opened by tapping a product card on the Shelf. For an owned product with a size it shows how many uses are left ("≈ 42 uses"), a bar of how full the bottle is, and how long that lasts at the product's routine days ("30 ml · about 6 weeks at 1 use a day"). "Feels off? Adjust" restarts the count from how full it is now.
@@ -241,7 +241,8 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 #### List / Overview Screen
 
 - The Shelf lists the user's products, newest first, in a two-column grid.
-- Each card shows the photo or, without one, a drawing of the product's packaging (dropper, pump, jar, tube or spray), the brand, the name and a status line. For owned products that line is the shelf life (for example "5 months left", or "Unopened"). For wishlist products it is the date the product was saved.
+- Each card shows the photo or, without one, a drawing of the product's packaging (dropper, pump, jar, tube or spray), the brand, the name and a status line. For owned products that line is the shelf life (for example "5 months left", or "Unopened"). An owned product with 5 or fewer uses left shows "≈ 5 uses left" in the warning colour instead, with a bar of how full it is, unless it has expired ("Expired" always wins). For wishlist products it is the date the product was saved.
+- Under the title, a summary counts the owned products and how many of them are expiring or running low, leaving out any part that is 0 ("7 products · 1 expiring · 1 running low").
 - A tag on the picture shows which routines an owned product is in ("AM", "PM" or "AM · PM"). Wishlist products show "Wish".
 - The user switches between Owned and Wishlist, filters by category (Cleanser, Exfoliant, Toner, Mist, Serum, Moisturizer, SPF, Mask) and pulls down to refresh.
 
@@ -266,7 +267,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 
 #### Read (GET)
 
-- The Shelf fetches all of the user's products with TanStack Query and shows them in the grid.
+- The Shelf fetches all of the user's products with TanStack Query and shows them in the grid. It also reads the use counts from `product_uses()` to flag products running low; pull to refresh fetches them again.
 - Product details fetches one product by its id, and every product's use count in one call to the database function `product_uses()` (its ticks since the count started).
 - Routines fetches the user's routine steps for both routines, each with its product. The Shelf tags and the Product details chips use the same cached list.
 - Edit step fetches one step by its id.

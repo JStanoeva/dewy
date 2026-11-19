@@ -20,9 +20,10 @@ import {
   type CategoryFilter,
 } from '@/features/products/components/CategoryChips';
 import { ProductCard } from '@/features/products/components/ProductCard';
-import { useProducts } from '@/features/products/hooks/useProducts';
-import type { ProductStatus } from '@/features/products/types';
+import { useProducts, useProductUses } from '@/features/products/hooks/useProducts';
+import type { Product, ProductStatus } from '@/features/products/types';
 import { getShelfLife } from '@/features/products/utils/shelfLife';
+import { getUsesLeft, isRunningLow } from '@/features/products/utils/usesLeft';
 import { useRoutineSteps } from '@/features/routines/hooks/useRoutineSteps';
 import { useLocalToday } from '@/hooks/useLocalToday';
 import { useDewyTheme } from '@/theme/ThemeProvider';
@@ -41,6 +42,8 @@ export function ShelfScreen() {
   const products = useProducts();
   // Only feeds the AM / PM tags, so the shelf shows no loading or error state for it.
   const routineSteps = useRoutineSteps();
+  // Like the tags, a failed count just shows no running low.
+  const productUses = useProductUses();
   const [status, setStatus] = useState<ProductStatus>('owned');
   const [category, setCategory] = useState<CategoryFilter>('all');
   const [refreshing, setRefreshing] = useState(false);
@@ -52,6 +55,25 @@ export function ShelfScreen() {
   const expiringCount = owned.filter(
     (product) => getShelfLife(product.openedOn, product.paoMonths, today)?.isExpiringSoon,
   ).length;
+
+  function usesLeftOf(product: Product) {
+    if (product.status !== 'owned' || !productUses.data) {
+      return null;
+    }
+    return getUsesLeft(product, productUses.data[product.id] ?? 0);
+  }
+
+  const lowCount = owned.filter((product) => {
+    const usesLeft = usesLeftOf(product);
+    return usesLeft !== null && isRunningLow(usesLeft);
+  }).length;
+  const ownedSummary = [
+    countLabel(ownedCount),
+    expiringCount > 0 ? `${expiringCount} expiring` : null,
+    lowCount > 0 ? `${lowCount} running low` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
   const visible = (products.data ?? []).filter(
     (product) => product.status === status && (category === 'all' || product.category === category),
   );
@@ -68,7 +90,7 @@ export function ShelfScreen() {
   // Local state, so the spinner only shows for a pull and not for background refetches.
   async function handleRefresh() {
     setRefreshing(true);
-    await Promise.all([products.refetch(), routineSteps.refetch()]);
+    await Promise.all([products.refetch(), routineSteps.refetch(), productUses.refetch()]);
     setRefreshing(false);
   }
 
@@ -84,9 +106,7 @@ export function ShelfScreen() {
             <Text style={[styles.summary, { color: palette.textMuted }]}>
               {status === 'wishlist'
                 ? `${countLabel(wishlistCount)} you have your eye on`
-                : expiringCount > 0
-                  ? `${countLabel(ownedCount)} · ${expiringCount} expiring soon`
-                  : countLabel(ownedCount)}
+                : ownedSummary}
             </Text>
             <View style={styles.segmented}>
               <SegmentedControl
@@ -128,12 +148,13 @@ export function ShelfScreen() {
                 ?.filter((step) => step.productId === item.id)
                 .map((step) => step.period) ?? []
             }
+            usesLeft={usesLeftOf(item)}
             width={cardWidth}
             today={today}
             onPress={() => navigation.navigate('ProductDetails', { productId: item.id })}
           />
         )}
-        extraData={[today, routineSteps.data]}
+        extraData={[today, routineSteps.data, productUses.data]}
         ListHeaderComponent={header}
         ListEmptyComponent={
           <View style={styles.inset}>
