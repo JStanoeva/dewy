@@ -206,8 +206,8 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
     if (!reading) {
       return null;
     }
-    const { name, brand, category } = reading;
-    if (!name && !brand && !category) {
+    const { name, brand, category, packaging, sizeMl } = reading;
+    if (!name && !brand && !category && !packaging && sizeMl === null && !reading.actives.length) {
       return 'unread';
     }
     let filled = false;
@@ -221,6 +221,19 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
     }
     if (category && !getValues('category')) {
       setValue('category', category, { shouldValidate: true });
+      filled = true;
+    }
+    // A filled packaging counts as picked, so a later Type change keeps it.
+    if (packaging && getValues('packaging') === null) {
+      setValue('packaging', packaging);
+      filled = true;
+    }
+    if (sizeMl !== null && getValues('status') === 'owned' && !getValues('sizeMl').trim()) {
+      setValue('sizeMl', String(sizeMl), { shouldValidate: true });
+      filled = true;
+    }
+    if (reading.actives.length && !getValues('actives').length) {
+      setValue('actives', reading.actives);
       filled = true;
     }
     return filled ? 'filled' : null;

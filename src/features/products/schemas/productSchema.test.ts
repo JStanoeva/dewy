@@ -358,14 +358,57 @@ describe('toProductFormValues', () => {
 });
 
 describe('labelReadingSchema', () => {
+  const nothingElse = { packaging: null, sizeMl: null, actives: [] };
+
   it('keeps a full reading, trimmed', () => {
     expect(
       labelReadingSchema.parse({
         name: ' Vitamin C 15% Serum ',
         brand: 'Brightside',
         category: 'serum',
+        packaging: 'dropper',
+        sizeMl: 30,
+        actives: ['vitc'],
       }),
-    ).toEqual({ name: 'Vitamin C 15% Serum', brand: 'Brightside', category: 'serum' });
+    ).toEqual({
+      name: 'Vitamin C 15% Serum',
+      brand: 'Brightside',
+      category: 'serum',
+      packaging: 'dropper',
+      sizeMl: 30,
+      actives: ['vitc'],
+    });
+  });
+
+  it('keeps every packaging and drops an unknown one', () => {
+    for (const packaging of ['dropper', 'pump', 'jar', 'tube', 'spray']) {
+      expect(labelReadingSchema.parse({ packaging }).packaging).toBe(packaging);
+    }
+    expect(labelReadingSchema.parse({ packaging: 'box' }).packaging).toBeNull();
+    expect(labelReadingSchema.parse({ packaging: 'Pump' }).packaging).toBeNull();
+  });
+
+  it('keeps a whole size from 1 to 1000 ml and drops the rest', () => {
+    expect(labelReadingSchema.parse({ sizeMl: 1 }).sizeMl).toBe(1);
+    expect(labelReadingSchema.parse({ sizeMl: 1000 }).sizeMl).toBe(1000);
+    for (const sizeMl of [0, 1001, 29.5, -30, '30', Number.NaN]) {
+      expect(labelReadingSchema.parse({ sizeMl }).sizeMl).toBeNull();
+    }
+  });
+
+  it('keeps known actives once each, in the chips order', () => {
+    expect(
+      labelReadingSchema.parse({ actives: ['bpo', 'acids', 'vitc', 'acids', 'retinoid'] }).actives,
+    ).toEqual(['retinoid', 'vitc', 'acids', 'bpo']);
+    expect(
+      labelReadingSchema.parse({ actives: ['niacinamide', 7, null, 'acids'] }).actives,
+    ).toEqual(['acids']);
+  });
+
+  it('turns missing or malformed actives into an empty list', () => {
+    expect(labelReadingSchema.parse({}).actives).toEqual([]);
+    expect(labelReadingSchema.parse({ actives: 'vitc' }).actives).toEqual([]);
+    expect(labelReadingSchema.parse({ actives: null }).actives).toEqual([]);
   });
 
   it('keeps an exfoliant or mist type and drops an unknown one', () => {
@@ -384,13 +427,13 @@ describe('labelReadingSchema', () => {
   it('keeps nulls for anything the label did not show', () => {
     expect(
       labelReadingSchema.parse({ name: 'Clay Detox Mask', brand: null, category: null }),
-    ).toEqual({ name: 'Clay Detox Mask', brand: null, category: null });
+    ).toEqual({ name: 'Clay Detox Mask', brand: null, category: null, ...nothingElse });
   });
 
   it('drops names and brands the form would reject instead of cutting them', () => {
     expect(
       labelReadingSchema.parse({ name: 'x'.repeat(81), brand: 'b'.repeat(61), category: null }),
-    ).toEqual({ name: null, brand: null, category: null });
+    ).toEqual({ name: null, brand: null, category: null, ...nothingElse });
     expect(labelReadingSchema.parse({ name: 'x', brand: '   ', category: null })).toMatchObject({
       name: null,
       brand: null,
@@ -408,8 +451,29 @@ describe('labelReadingSchema', () => {
       name: null,
       brand: null,
       category: null,
+      ...nothingElse,
     });
-    expect(labelReadingSchema.parse({})).toEqual({ name: null, brand: null, category: null });
+    expect(labelReadingSchema.parse({})).toEqual({
+      name: null,
+      brand: null,
+      category: null,
+      ...nothingElse,
+    });
+  });
+
+  it('reads an older function answer with only name, brand and type', () => {
+    expect(
+      labelReadingSchema.parse({
+        name: 'Barrier Cream',
+        brand: 'Mellow Lab',
+        category: 'moisturizer',
+      }),
+    ).toEqual({
+      name: 'Barrier Cream',
+      brand: 'Mellow Lab',
+      category: 'moisturizer',
+      ...nothingElse,
+    });
   });
 
   it('rejects an answer that is not an object', () => {

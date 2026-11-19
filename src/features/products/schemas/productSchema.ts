@@ -131,6 +131,13 @@ export const labelReadingSchema = z.object({
     .nullable()
     .catch(null),
   category: z.enum(categories).nullable().catch(null),
+  packaging: z.enum(packagings).nullable().catch(null),
+  sizeMl: z.number().int().min(1).max(1000).nullable().catch(null),
+  // Known actives only, once each, in the chips' order; an older function sends none.
+  actives: z
+    .array(z.unknown())
+    .catch([])
+    .transform((values) => actives.filter((active) => values.includes(active))),
 });
 
 export type LabelReading = z.output<typeof labelReadingSchema>;

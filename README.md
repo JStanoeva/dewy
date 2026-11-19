@@ -16,7 +16,7 @@ Dewy keeps a shelf of the skincare products you own and the ones on your wishlis
 - Add, edit, favourite and delete products, and move wishlist products to your shelf.
 - Track shelf life: the opened date and the "use within" period show how long each opened product has left.
 - Take or choose a product photo, stored privately for your account.
-- Optionally fill in a new product's name, brand and type from the label in its photo.
+- Optionally fill in a new product's name, brand, type, packaging, size and key actives from the label in its photo.
 
 - Build morning and evening routines from the products you own: pick each step's days, time, wait and note, then edit, reorder or remove steps on the Routines tab. Switch a step's note to Important to see it on Today.
 - Tick off today's morning or evening steps on the Today tab. Ticks are saved per day, so they survive a restart and start fresh the next morning.
@@ -107,7 +107,7 @@ If you aren't logged in to an Expo account, the terminal asks you to log in when
 
 ## Optional: reading labels from photos
 
-When you add a photo to a new product, Dewy can read the product's name, brand and type from its label and fill in the fields that are still empty. This uses a Supabase Edge Function that calls Anthropic's Claude API. The app works fully without it: the fields simply stay empty for you to fill in.
+When you add a photo to a new product, Dewy can read the product's name, brand, type, packaging, size in ml and key actives from its label and fill in the fields that are still empty. The key actives come only from a visible ingredient list, so a photo of the back fills the most; a second photo fills only what is still empty. This uses a Supabase Edge Function that calls Anthropic's Claude API. The app works fully without it: the fields simply stay empty for you to fill in.
 
 To turn it on for your own Supabase project, you need an [Anthropic API key](https://console.anthropic.com/). Then run these commands from the repository root, one at a time:
 
@@ -334,7 +334,7 @@ Database CHECK constraints back up the product rules on the server: name 2–80 
 - In the product form, "Take photo" opens the camera and "Choose photo" opens the photo library. Both crop the photo to a square.
 - Camera permission is requested when the user taps "Take photo", never at startup. If it is denied, the app explains how to turn it on and offers to open Settings.
 - Each photo is resized and saved as a JPEG, then uploaded to the user's private Storage folder when the product is saved.
-- In New product, a new photo can also be used to fill in the name, brand and type from its label (see the optional label reading section).
+- In New product, a new photo can also be used to fill in the name, brand, type, packaging, size and key actives from its label (see the optional label reading section). Anything already typed, tapped or ticked stays as it is.
 - The "Opened on" field opens the Android date dialog.
 - expo-secure-store holds the key that encrypts the saved session.
 
