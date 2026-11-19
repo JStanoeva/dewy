@@ -94,7 +94,7 @@ export function ProductCard({ product, routinePeriods, width, today, onPress }: 
           <View style={styles.bar}>
             <ShelfLifeBar
               progress={shelfLife.progress}
-              isExpiringSoon={shelfLife.isExpiringSoon}
+              highlight={shelfLife.isExpiringSoon}
               height={5}
             />
           </View>

@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 
+import type { Fullness } from '@/features/products/constants';
 import type { ProductInput } from '@/features/products/schemas/productSchema';
 import {
   readProductLabel,
@@ -7,8 +8,10 @@ import {
   uploadProductPhoto,
 } from '@/features/products/services/productPhotoService';
 import {
+  adjustAmount,
   createProduct,
   deleteProduct,
+  isProductGoneError,
   moveProductToShelf,
   setProductFavorite,
   updateProduct,
@@ -70,6 +73,28 @@ export function useUpdateProduct() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['routineSteps'] });
+      queryClient.invalidateQueries({ queryKey: ['completions', 'productUses'] });
+    },
+  });
+}
+
+type AdjustVariables = { id: string; startFraction: Fullness; trackedFrom: LocalDate };
+
+// A product deleted elsewhere turns Details into its not-found state.
+export function useAdjustAmount() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, startFraction, trackedFrom }: AdjustVariables) =>
+      adjustAmount(id, startFraction, trackedFrom),
+    onSuccess: (product) => storeProduct(queryClient, product),
+    onError: (error, { id }) => {
+      if (isProductGoneError(error)) {
+        queryClient.setQueryData(['products', id], null);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'], exact: true });
+      queryClient.invalidateQueries({ queryKey: ['completions', 'productUses'] });
     },
   });
 }
@@ -129,7 +154,7 @@ export function useDeleteProduct() {
     onError: (_error, _id, context) => {
       queryClient.setQueryData(['products'], context?.previous);
     },
-    // The database deletes the product's routine steps, and their ticks, with it.
+    // The database deletes the product's routine steps and ticks with it; the day's done stamps stay.
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'], exact: true });
       queryClient.invalidateQueries({ queryKey: ['routineSteps'] });

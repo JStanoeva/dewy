@@ -64,6 +64,18 @@ export function buildTodayRoutine(
   };
 }
 
+// The rituals whose every step due that day is ticked; a ritual with nothing due isn't finished.
+export function finishedRituals(
+  steps: readonly RoutineStep[],
+  completedStepIds: readonly string[],
+  date: LocalDate,
+): Period[] {
+  const periods: Period[] = ['morning', 'evening'];
+  return periods.filter(
+    (period) => buildTodayRoutine(steps, completedStepIds, period, date).isComplete,
+  );
+}
+
 export type TodayState = 'loading' | 'error' | 'list' | 'dayOff' | 'emptyRitual' | 'noProducts';
 
 type TodayStateInput = {

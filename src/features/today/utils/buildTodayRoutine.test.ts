@@ -1,6 +1,7 @@
 import type { RoutineStep } from '@/features/routines/types';
 import {
   buildTodayRoutine,
+  finishedRituals,
   todayState,
   type TodayRoutine,
 } from '@/features/today/utils/buildTodayRoutine';
@@ -169,5 +170,29 @@ describe('todayState', () => {
     expect(todayState({ ...base, routine: empty, productsFailed: true })).toBe('error');
     expect(todayState({ ...base, routine: empty, hasOwnedProducts: true })).toBe('emptyRitual');
     expect(todayState({ ...base, routine: empty, hasOwnedProducts: false })).toBe('noProducts');
+  });
+});
+
+describe('finishedRituals', () => {
+  it('lists each ritual whose steps due that day are all ticked', () => {
+    const steps = [step('a'), step('b'), step('c', { period: 'evening' })];
+    expect(finishedRituals(steps, ['a', 'b', 'c'], tuesday)).toEqual(['morning', 'evening']);
+    expect(finishedRituals(steps, ['a', 'c'], tuesday)).toEqual(['evening']);
+    expect(finishedRituals(steps, [], tuesday)).toEqual([]);
+  });
+
+  it('ignores steps due on other days, so they never block a stamp', () => {
+    const steps = [step('a'), step('b', { weekdays: [1, 3] })];
+    expect(finishedRituals(steps, ['a'], tuesday)).toEqual(['morning']);
+  });
+
+  it('finishes a ritual once its last unticked step is removed', () => {
+    expect(finishedRituals([step('a'), step('b')], ['a'], tuesday)).toEqual([]);
+    expect(finishedRituals([step('a')], ['a'], tuesday)).toEqual(['morning']);
+  });
+
+  it("doesn't finish a ritual with nothing due that day", () => {
+    expect(finishedRituals([step('a', { weekdays: [1] })], [], tuesday)).toEqual([]);
+    expect(finishedRituals([], [], tuesday)).toEqual([]);
   });
 });

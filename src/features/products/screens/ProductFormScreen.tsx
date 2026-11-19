@@ -33,7 +33,7 @@ import {
   useUpdateProduct,
   useUploadProductPhoto,
 } from '@/features/products/hooks/useProductMutations';
-import { useProduct } from '@/features/products/hooks/useProducts';
+import { useProduct, useProductUses } from '@/features/products/hooks/useProducts';
 import {
   earliestOpenedOn,
   productFormSchema,
@@ -186,9 +186,18 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
   const openedOn = useWatch({ control, name: 'openedOn' });
   const pickedCategory = useWatch({ control, name: 'category' });
   const typedSize = toSizeMl(useWatch({ control, name: 'sizeMl' }));
-  // In Edit with no tile picked, the estimate uses the saved fullness.
-  const estimateFullness =
-    useWatch({ control, name: 'startFraction' }) ?? product?.startFraction ?? 1;
+  const pickedFraction = useWatch({ control, name: 'startFraction' });
+  const productUses = useProductUses();
+  // In Edit with no tile picked the count carries on: the saved fullness, minus the uses already ticked.
+  const estimateFullness = pickedFraction ?? product?.startFraction ?? 1;
+  let countedUses: number | 'counting' | 'failed' | undefined;
+  if (product && pickedFraction === null) {
+    if (productUses.data) {
+      countedUses = productUses.data[product.id] ?? 0;
+    } else {
+      countedUses = productUses.isError ? 'failed' : 'counting';
+    }
+  }
   const isOwned = status === 'owned';
   // Stays busy after a successful save too, so a tap during the closing animation can't save twice.
   const saving = isSubmitting || createProduct.isSuccess || updateProduct.isSuccess;
@@ -557,6 +566,7 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
                     <FullnessTiles
                       value={field.value}
                       onChange={field.onChange}
+                      unselectedColor={palette.surface}
                       hitSlop={paoTileSlop}
                     />
                   )}
@@ -575,6 +585,7 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
               sizeMl={typedSize}
               fullness={estimateFullness}
               category={pickedCategory}
+              counted={countedUses}
             />
           </View>
         ) : null}

@@ -1,14 +1,27 @@
-import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import {
+  useIsMutating,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { Alert } from 'react-native';
 
 import { useRoutineSteps } from '@/features/routines/hooks/useRoutineSteps';
 import {
   completeStep,
+  isOutsideDayError,
   isStepGoneError,
   listCompletedStepIds,
   uncompleteStep,
 } from '@/features/today/services/completionService';
-import { buildTodayRoutine } from '@/features/today/utils/buildTodayRoutine';
+import {
+  clearRitualDone,
+  listDonePeriods,
+  markRitualDone,
+} from '@/features/today/services/ritualDayService';
+import { buildTodayRoutine, finishedRituals } from '@/features/today/utils/buildTodayRoutine';
 import type { Period } from '@/theme/period';
 import type { LocalDate } from '@/utils/localDate';
 
@@ -30,6 +43,45 @@ export function useTodayRoutine(period: Period, localDate: LocalDate) {
   return { steps, completions, routine };
 }
 
+// Ticks and stamp writes reach the server one at a time, in order, so an untick's stamp delete can't overtake a stamp write.
+const ritualDayScope = { id: 'ritualDay' };
+
+// Stamps each ritual its saved ticks finish, both rituals, also when a delete finished it, and retries on every refetch.
+export function useRitualStamps(localDate: LocalDate) {
+  const queryClient = useQueryClient();
+  const steps = useRoutineSteps();
+  const completions = useCompletions(localDate);
+  const stamps = useQuery({
+    queryKey: ['completions', 'ritualDays', localDate],
+    queryFn: () => listDonePeriods(localDate),
+  });
+  const ticking = useIsMutating({ mutationKey: ['toggleCompletion'] }) > 0;
+  // Only server data counts: a tick shown before it saved could fail and leave a stamp behind.
+  const settled = !ticking && !steps.isFetching && !completions.isFetching;
+  const toStamp =
+    settled && steps.data && completions.data && stamps.data
+      ? finishedRituals(steps.data, completions.data, localDate).filter(
+          (period) => !stamps.data.includes(period),
+        )
+      : [];
+  const pending = toStamp.join(',');
+  // A failed write is tried again after the next refetch, while the day is still open.
+  const { mutate: stamp } = useMutation({
+    scope: ritualDayScope,
+    mutationFn: (period: Period) => markRitualDone(localDate, period),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ['completions', 'ritualDays', localDate] }),
+  });
+
+  useEffect(() => {
+    if (pending) {
+      for (const period of pending.split(',') as Period[]) {
+        stamp(period);
+      }
+    }
+  }, [pending, stamp, stamps.dataUpdatedAt]);
+}
+
 type ToggleVariables = { stepId: string; localDate: LocalDate; wasDone: boolean };
 
 function setDone(queryClient: QueryClient, stepId: string, localDate: LocalDate, done: boolean) {
@@ -42,14 +94,24 @@ function setDone(queryClient: QueryClient, stepId: string, localDate: LocalDate,
   });
 }
 
+// An untick removes the ritual's stamp first, so a failure can't leave a stamp on an unfinished ritual.
+async function toggleStep(period: Period, { stepId, localDate, wasDone }: ToggleVariables) {
+  if (wasDone) {
+    await clearRitualDone(localDate, period);
+    await uncompleteStep(stepId, localDate);
+  } else {
+    await completeStep(stepId, localDate);
+  }
+}
+
 // One per row. Everything after the tap reads the variables, so a new day mid-save can't move the tick.
-export function useToggleCompletion(stepId: string) {
+export function useToggleCompletion(stepId: string, period: Period) {
   const queryClient = useQueryClient();
   const mutationKey = ['toggleCompletion', stepId];
   const mutation = useMutation({
     mutationKey,
-    mutationFn: ({ stepId: id, localDate, wasDone }: ToggleVariables) =>
-      wasDone ? uncompleteStep(id, localDate) : completeStep(id, localDate),
+    scope: ritualDayScope,
+    mutationFn: (variables: ToggleVariables) => toggleStep(period, variables),
     onMutate: async ({ stepId: id, localDate, wasDone }: ToggleVariables) => {
       await queryClient.cancelQueries({ queryKey: ['completions', localDate], exact: true });
       setDone(queryClient, id, localDate, !wasDone);
@@ -60,6 +122,8 @@ export function useToggleCompletion(stepId: string) {
       if (isStepGoneError(error)) {
         queryClient.invalidateQueries({ queryKey: ['routineSteps'], exact: true });
         Alert.alert('This step is no longer in your routine.');
+      } else if (isOutsideDayError(error)) {
+        Alert.alert("Couldn't save this step", "Check your phone's date and time, then try again.");
       } else {
         Alert.alert("Couldn't save this step", 'Check your connection and try again.');
       }

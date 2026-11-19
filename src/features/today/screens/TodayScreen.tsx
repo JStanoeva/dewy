@@ -24,7 +24,7 @@ import { RitualProgressArc } from '@/features/today/components/RitualProgressArc
 import { TodayNoteBanner } from '@/features/today/components/TodayNoteBanner';
 import { TodayNotesFolded } from '@/features/today/components/TodayNotesFolded';
 import { TodayStepRow } from '@/features/today/components/TodayStepRow';
-import { useTodayRoutine } from '@/features/today/hooks/useTodayRoutine';
+import { useRitualStamps, useTodayRoutine } from '@/features/today/hooks/useTodayRoutine';
 import { loadHiddenNotes, saveHiddenNotes } from '@/features/today/services/todayNotesService';
 import { todayState, type TodayRoutine } from '@/features/today/utils/buildTodayRoutine';
 import { foldChanges, importantNoteIds, isFolded } from '@/features/today/utils/noteFold';
@@ -70,6 +70,7 @@ export function TodayScreen({ navigation }: TodayScreenProps) {
   const profile = useProfile();
   const products = useProducts();
   const { steps, completions, routine } = useTodayRoutine(period, date);
+  useRitualStamps(date);
   const [refreshing, setRefreshing] = useState(false);
   // The important notes each ritual had when folded (null when shown); undefined until read.
   const [hiddenNotes, setHiddenNotes] = useState<Record<Period, string[] | null>>();

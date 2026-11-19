@@ -14,6 +14,7 @@ import { Screen } from '@/components/Screen';
 import { ActiveChips } from '@/features/products/components/ActiveChips';
 import { ProductActionsSheet } from '@/features/products/components/ProductActionsSheet';
 import { ProductPhoto } from '@/features/products/components/ProductPhoto';
+import { AmountLeft } from '@/features/products/components/AmountLeft';
 import { ShelfLifeCard } from '@/features/products/components/ShelfLifeCard';
 import { categoryDetails } from '@/features/products/constants';
 import {
@@ -24,6 +25,7 @@ import {
 import { useProduct } from '@/features/products/hooks/useProducts';
 import type { Product } from '@/features/products/types';
 import { noteLines, productInitials, splitLastWord } from '@/features/products/utils/productLabels';
+import { usesPerWeek } from '@/features/products/utils/usesLeft';
 import { useRoutineSteps } from '@/features/routines/hooks/useRoutineSteps';
 import { routineMemberships } from '@/features/routines/utils/routineMembership';
 import { useLocalToday } from '@/hooks/useLocalToday';
@@ -264,7 +266,17 @@ function ProductDetailsContent({ product, today, navigation }: ProductDetailsCon
               onAddOpenedDate={
                 product.status === 'owned' && !product.openedOn && !deleting ? openEdit : undefined
               }
-            />
+            >
+              {product.status === 'owned' ? (
+                <AmountLeft
+                  product={product}
+                  perWeek={usesPerWeek(
+                    routineSteps.data?.filter((step) => step.productId === product.id) ?? [],
+                  )}
+                  canAdjust={!deleting}
+                />
+              ) : null}
+            </ShelfLifeCard>
 
             {product.actives.length > 0 ? (
               <View>

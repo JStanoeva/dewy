@@ -4,6 +4,7 @@ import {
   actives,
   categories,
   fullnessValues,
+  type Fullness,
   packagings,
   productStatuses,
 } from '@/features/products/constants';
@@ -121,6 +122,42 @@ export async function updateProduct(
     throw error;
   }
   return toProduct(productRowSchema.parse(data));
+}
+
+// "Feels off? Adjust": how full it is now, counted from the ritual day it was picked.
+export async function adjustAmount(
+  id: string,
+  startFraction: Fullness,
+  trackedFrom: LocalDate,
+): Promise<Product> {
+  const { data, error } = await supabase
+    .from('products')
+    .update({ start_fraction: startFraction, tracked_from: trackedFrom })
+    .eq('id', id)
+    .select(productColumns)
+    .single();
+  if (error) {
+    throw error;
+  }
+  return toProduct(productRowSchema.parse(data));
+}
+
+const productUsesSchema = z.array(z.object({ product_id: z.string(), uses: z.number() }));
+
+// Each product's ticks since its tracked_from; a product with none is left out, so it reads as 0.
+export async function listProductUses(): Promise<Record<string, number>> {
+  const { data, error } = await supabase.rpc('product_uses');
+  if (error) {
+    throw error;
+  }
+  return Object.fromEntries(productUsesSchema.parse(data).map((row) => [row.product_id, row.uses]));
+}
+
+// An update or a single-row select that found no row: the product was deleted elsewhere.
+export function isProductGoneError(error: unknown): boolean {
+  return (
+    typeof error === 'object' && error !== null && 'code' in error && error.code === 'PGRST116'
+  );
 }
 
 // Products only ever move wishlist → owned, and arrive unopened.

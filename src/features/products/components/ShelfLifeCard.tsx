@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { Product } from '@/features/products/types';
@@ -8,12 +9,13 @@ import { formatLocalDate, toLocalDate, type LocalDate } from '@/utils/localDate'
 
 type ShelfLifeBarProps = {
   progress: number;
-  isExpiringSoon: boolean;
+  // Rose instead of mauve: an expiring shelf life, or the amount left.
+  highlight: boolean;
   height: number;
 };
 
 // Decorative: the status text next to it says the same thing, so screen readers skip it.
-export function ShelfLifeBar({ progress, isExpiringSoon, height }: ShelfLifeBarProps) {
+export function ShelfLifeBar({ progress, highlight, height }: ShelfLifeBarProps) {
   const { palette } = useDewyTheme();
 
   return (
@@ -27,7 +29,7 @@ export function ShelfLifeBar({ progress, isExpiringSoon, height }: ShelfLifeBarP
           styles.fill,
           {
             width: `${progress * 100}%`,
-            backgroundColor: isExpiringSoon ? palette.rose : palette.mauve,
+            backgroundColor: highlight ? palette.rose : palette.mauve,
           },
         ]}
       />
@@ -39,11 +41,13 @@ type ShelfLifeCardProps = {
   product: Product;
   today: LocalDate;
   onAddOpenedDate?: () => void;
+  // The Amount left block, below the shelf life.
+  children?: ReactNode;
 };
 
 const addDateSlop = { top: spacing.sm, bottom: spacing.xl, left: spacing.xl, right: spacing.xl };
 
-export function ShelfLifeCard({ product, today, onAddOpenedDate }: ShelfLifeCardProps) {
+export function ShelfLifeCard({ product, today, onAddOpenedDate, children }: ShelfLifeCardProps) {
   const { palette } = useDewyTheme();
   const shelfLife = getShelfLife(product.openedOn, product.paoMonths, today);
 
@@ -87,7 +91,7 @@ export function ShelfLifeCard({ product, today, onAddOpenedDate }: ShelfLifeCard
         {shelfLife ? (
           <ShelfLifeBar
             progress={shelfLife.progress}
-            isExpiringSoon={shelfLife.isExpiringSoon}
+            highlight={shelfLife.isExpiringSoon}
             height={8}
           />
         ) : null}
@@ -122,6 +126,7 @@ export function ShelfLifeCard({ product, today, onAddOpenedDate }: ShelfLifeCard
           </Text>
         </Pressable>
       ) : null}
+      {children}
     </View>
   );
 }

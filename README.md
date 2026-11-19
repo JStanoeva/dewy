@@ -60,6 +60,7 @@ On Windows, if PowerShell refuses to run `npm` or `npx` because running scripts 
    7. `007_step_note_important.sql`
    8. `008_product_packaging.sql`
    9. `009_product_amount_actives.sql`
+   10. `010_product_uses.sql`
 
    Run each file once, before anyone signs up. `003_product_photos_storage.sql` creates the private `product-photos` bucket itself, so don't create it by hand.
 
@@ -192,7 +193,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
   - **Shelf:** the user's products in a two-column grid, with Owned and Wishlist sides and category chips. Products in a routine carry an AM, PM or AM · PM tag.
   - **Routines:** "Your rituals" with Morning and Evening. It opens on the routine Today shows, then keeps its own choice; its switch changes only its list, not the colours. Each routine shows a week strip, the number of steps and the time they take, and the ordered steps with their days and waits. Tapping a step opens the step editor, and "Add a step from your shelf" adds one.
   - **Me:** the user's initial, name, "Glowing with Dewy since" with the month they joined, and Log out.
-- **Details screen:** Product details, opened by tapping a product card on the Shelf.
+- **Details screen:** Product details, opened by tapping a product card on the Shelf. For an owned product with a size it shows how many uses are left ("≈ 42 uses"), a bar of how full the bottle is, and how long that lasts at the product's routine days ("30 ml · about 6 weeks at 1 use a day"). "Feels off? Adjust" restarts the count from how full it is now.
 - **Create:** add a product, with an optional photo, or add a routine step.
 - **Edit:** edit a product, mark it as a favourite, or move a wishlist product to the shelf. Edit a routine step, or move it up or down.
 - **Delete:** delete a product after a confirmation step (its photo is removed too), or remove a routine step.
@@ -257,7 +258,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 
 - A real backend: Supabase, used through `@supabase/supabase-js`.
 - **Supabase Auth** handles email and password accounts.
-- **Postgres** holds four tables, `profiles`, `products`, `routine_steps` and `routine_completions` (one row per ticked step and day). Row level security limits every row to its owner, a routine step can only point to its owner's own product, and a tick can only point to its owner's own step.
+- **Postgres** holds five tables, `profiles`, `products`, `routine_steps`, `routine_completions` (one row per ticked step and day, which also records the step's product) and `ritual_days` (one row per finished routine and day). Row level security limits every row to its owner, a routine step can only point to its owner's own product, and a tick can only point to its owner's own step. Ticks and finished-routine rows can be added or removed only for days around today, so past days stay as they were.
 - **Storage** holds product photos in a private bucket, one folder per user. Photos are shown through signed links that expire after an hour.
 - **Edge Functions** run the optional label reading, which calls Anthropic's Claude API.
 
@@ -266,7 +267,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 #### Read (GET)
 
 - The Shelf fetches all of the user's products with TanStack Query and shows them in the grid.
-- Product details fetches one product by its id.
+- Product details fetches one product by its id, and every product's use count in one call to the database function `product_uses()` (its ticks since the count started).
 - Routines fetches the user's routine steps for both routines, each with its product. The Shelf tags and the Product details chips use the same cached list.
 - Edit step fetches one step by its id.
 - Today reads the cached routine steps and the day's ticks, and keeps only the steps whose days include today's weekday. It also reads the products, which it uses to tell an empty shelf from an empty routine.
@@ -277,17 +278,18 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 - The user taps "+" (or "Add a product" on an empty screen), fills in the New product form and taps "Save to shelf" or "Save to wishlist".
 - A chosen photo is uploaded to Storage first, then the product row is inserted. The shelf is refetched and the form closes.
 - On Routines, "Add a step from your shelf" opens New step: the user picks an owned product that isn't in that routine yet, its days, time, wait and note (and whether the note is Important), and taps "Add to ritual". The step is inserted at the end of the routine.
-- On Today, ticking a step inserts a completion for that step and day. The tick shows at once and is saved in the background; a tick already saved from another device is ignored instead of failing.
+- On Today, ticking a step inserts a completion for that step and day. The tick shows at once and is saved in the background; a tick already saved from another device is ignored instead of failing. Once every step of a routine due today is saved as ticked, Today also saves a row for that finished routine and day.
 
 #### Update / Delete (Mutation)
 
 - **Edit product:** saves the changes, then puts the saved product straight into the cached details and list. A replaced or removed photo is deleted from Storage.
 - **Favourite:** the heart updates at once and rolls back if saving fails.
 - **Move to shelf:** turns a wishlist product into an owned, unopened one.
+- **Adjust the amount:** on Product details, "Feels off? Adjust" opens "How full is it now?". Picking Full, ¾, ½ or ¼ saves it and restarts the use count from today; the tiles are disabled while it saves, and an error shows under them if it fails.
 - **Delete product:** after confirmation, the product disappears from the shelf at once and comes back if the delete fails. Its photo is removed from Storage.
 - **Edit step:** tapping a step on Routines opens Edit step to change its days, time, wait, note and the Important switch. "Move up" and "Move down" reorder the routine at once through a database function. "Remove step" removes it after a confirmation step; the product stays on the shelf.
-- **Untick:** tapping a ticked step on Today deletes that day's completion. If saving a tick or an untick fails, only that step flips back and an error explains why.
-- After each change, the product, routine and completion queries are refreshed so every screen shows the latest data. Deleting a step or its product also deletes its ticks.
+- **Untick:** tapping a ticked step on Today deletes that day's completion, and the routine's finished row for that day if it had one. If saving a tick or an untick fails, only that step flips back and an error explains why.
+- After each change, the product, routine and completion queries are refreshed so every screen shows the latest data. Removing a step keeps its ticks, so its product keeps its use count; deleting a product deletes its steps and ticks. A finished routine's row stays either way.
 
 ### Forms & Validation
 
@@ -295,6 +297,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 
 - **Auth form** (Sign up / Log in): name (sign-up only), email and password.
 - **Product form** (New product / Edit product): status (I own it / Wishlist, new products only), photo, product name, brand, type, packaging (five tiles: dropper, pump, jar, tube and spray; a new product takes its type's usual bottle until one is tapped), opened on, use within, size in ml and how full it is (owned products only; a card estimates the uses it holds as you type), key actives (any of Retinoid, Vitamin C, AHA / BHA and Benzoyl peroxide) and notes.
+- **Adjust** (Product details): "How full is it now?" with the four fullness tiles.
 - **Step form** (New step / Edit step): product (new steps only), days (seven day buttons), time (a slider from 10 seconds to 10 minutes), wait before the next step, a note and an Important switch (greyed out until the note has text).
 
 #### Validation Rules

@@ -18,7 +18,7 @@ type TodayStepRowProps = {
 
 export function TodayStepRow({ item, localDate, onOpenProduct }: TodayStepRowProps) {
   const { palette } = useDewyTheme();
-  const toggle = useToggleCompletion(item.step.id);
+  const toggle = useToggleCompletion(item.step.id, item.step.period);
   const { step, number, done } = item;
   const kind = categoryDetails[step.product.category].stepKind;
   const time = formatDuration(step.durationSeconds);

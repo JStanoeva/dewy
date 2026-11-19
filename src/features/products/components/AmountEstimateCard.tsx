@@ -11,9 +11,11 @@ type AmountEstimateCardProps = {
   sizeMl: number | null;
   fullness: Fullness;
   category: Category | undefined;
+  // Edit with no tile picked: the uses ticked since the count started, still loading, or not loaded.
+  counted?: number | 'counting' | 'failed';
 };
 
-function estimateCopy({ sizeMl, fullness, category }: AmountEstimateCardProps) {
+function estimateCopy({ sizeMl, fullness, category, counted = 0 }: AmountEstimateCardProps) {
   if (sizeMl === null) {
     return {
       title: 'Not tracking the amount yet',
@@ -23,12 +25,19 @@ function estimateCopy({ sizeMl, fullness, category }: AmountEstimateCardProps) {
   if (!category) {
     return { title: 'Not tracking the amount yet', body: 'Pick a type to estimate the uses.' };
   }
-  const uses = getStartingUses(sizeMl, fullness, category);
   const { label, doseMl } = categoryDetails[category];
   const type = category === 'spf' ? label : label.toLowerCase();
+  const body = `A typical ${type} use is about ${doseMl} ml. Dewy counts down as you tick it off.`;
+  if (counted === 'counting') {
+    return { title: 'Counting uses…', body };
+  }
+  if (counted === 'failed') {
+    return { title: "Couldn't count the uses right now", body };
+  }
+  const uses = Math.max(0, getStartingUses(sizeMl, fullness, category) - counted);
   return {
     title: `≈ ${uses} ${uses === 1 ? 'use' : 'uses'} left`,
-    body: `A typical ${type} use is about ${doseMl} ml. Dewy counts down as you tick it off.`,
+    body,
     accessibilityTitle: `About ${uses} ${uses === 1 ? 'use' : 'uses'} left`,
   };
 }

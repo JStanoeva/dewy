@@ -134,29 +134,60 @@ export type Database = {
         }
         Relationships: []
       }
+      ritual_days: {
+        Row: {
+          completed_at: string
+          local_date: string
+          period: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          local_date: string
+          period: string
+          user_id?: string
+        }
+        Update: {
+          completed_at?: string
+          local_date?: string
+          period?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       routine_completions: {
         Row: {
           completed_at: string
           id: string
           local_date: string
-          routine_step_id: string
+          product_id: string | null
+          routine_step_id: string | null
           user_id: string
         }
         Insert: {
           completed_at?: string
           id?: string
           local_date: string
-          routine_step_id: string
+          product_id?: string | null
+          routine_step_id?: string | null
           user_id?: string
         }
         Update: {
           completed_at?: string
           id?: string
           local_date?: string
-          routine_step_id?: string
+          product_id?: string | null
+          routine_step_id?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "routine_completions_product_fkey"
+            columns: ["product_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id", "user_id"]
+          },
           {
             foreignKeyName: "routine_completions_step_fkey"
             columns: ["routine_step_id", "user_id"]
@@ -221,6 +252,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      product_uses: {
+        Args: never
+        Returns: {
+          product_id: string
+          uses: number
+        }[]
+      }
       reorder_routine_steps: {
         Args: { p_period: string; p_step_ids: string[] }
         Returns: undefined

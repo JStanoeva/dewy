@@ -5,14 +5,23 @@ import { useDewyTheme } from '@/theme/ThemeProvider';
 import { fonts, fontSizes, minTouchTarget, radii, spacing } from '@/theme/tokens';
 
 type FullnessTilesProps = {
-  // Null while no tile is picked (Edit with a saved size).
+  // Null while no tile is picked (Edit with a saved size, and Adjust).
   value: Fullness | null;
   onChange: (value: Fullness) => void;
+  // The form's tiles sit on the screen, Adjust's on the white card.
+  unselectedColor: string;
   hitSlop?: Insets;
+  disabled?: boolean;
 };
 
 // "How full is it?": Full, ¾, ½ and ¼.
-export function FullnessTiles({ value, onChange, hitSlop }: FullnessTilesProps) {
+export function FullnessTiles({
+  value,
+  onChange,
+  unselectedColor,
+  hitSlop,
+  disabled = false,
+}: FullnessTilesProps) {
   const { palette } = useDewyTheme();
 
   return (
@@ -24,10 +33,15 @@ export function FullnessTiles({ value, onChange, hitSlop }: FullnessTilesProps) 
             key={fullness}
             accessibilityRole="button"
             accessibilityLabel={fullnessLabels[fullness].accessibilityLabel}
-            accessibilityState={{ selected }}
+            accessibilityState={{ selected, disabled }}
+            disabled={disabled}
             hitSlop={hitSlop}
             onPress={() => onChange(fullness)}
-            style={[styles.tile, { backgroundColor: selected ? palette.rose : palette.surface }]}
+            style={[
+              styles.tile,
+              { backgroundColor: selected ? palette.rose : unselectedColor },
+              disabled && styles.disabled,
+            ]}
           >
             <Text style={[styles.label, { color: selected ? palette.onAccent : palette.text }]}>
               {fullnessLabels[fullness].label}
@@ -50,6 +64,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radii.tile,
+  },
+  disabled: {
+    opacity: 0.6,
   },
   label: {
     fontFamily: fonts.bodyBold,

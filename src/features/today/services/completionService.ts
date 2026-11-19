@@ -5,12 +5,13 @@ import type { LocalDate } from '@/utils/localDate';
 
 const completionRowSchema = z.object({ routine_step_id: z.string() });
 
-// The ids of the steps ticked on that ritual day.
+// The ids of the steps ticked on that ritual day; a tick whose step was removed only counts its product's use.
 export async function listCompletedStepIds(localDate: LocalDate): Promise<string[]> {
   const { data, error } = await supabase
     .from('routine_completions')
     .select('routine_step_id')
-    .eq('local_date', localDate);
+    .eq('local_date', localDate)
+    .not('routine_step_id', 'is', null);
   if (error) {
     throw error;
   }
@@ -47,4 +48,9 @@ export async function uncompleteStep(stepId: string, localDate: LocalDate): Prom
 // A tick refused because its step was removed (on another phone) in the meantime.
 export function isStepGoneError(error: unknown): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === '23503';
+}
+
+// A tick refused by the database because its day is more than a day from today's date, e.g. a wrong phone clock.
+export function isOutsideDayError(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === '42501';
 }
