@@ -1,5 +1,5 @@
 import type { BottleShape } from '@/components/BottleIllustration';
-import type { Category } from '@/features/products/constants';
+import type { Active, Category } from '@/features/products/constants';
 import type { Period } from '@/theme/period';
 
 export type RoutineStep = {
@@ -11,9 +11,6 @@ export type RoutineStep = {
   weekdays: number[];
   durationSeconds: number;
   waitMinutes: number | null;
-  note: string | null;
-  // Shown as a banner on Today; never true without a note.
-  noteImportant: boolean;
   createdAt: string;
   product: {
     name: string;
@@ -21,5 +18,7 @@ export type RoutineStep = {
     category: Category;
     packaging: BottleShape;
     photoPath: string | null;
+    // The ritual tips are made from these.
+    actives: Active[];
   };
 };

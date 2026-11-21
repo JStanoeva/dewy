@@ -1,13 +1,13 @@
 import { z } from 'zod';
 
-import { categories, packagings } from '@/features/products/constants';
+import { actives, categories, packagings } from '@/features/products/constants';
 import type { RoutineStepInput } from '@/features/routines/schemas/routineStepSchema';
 import type { RoutineStep } from '@/features/routines/types';
 import { supabase } from '@/lib/supabase';
 import type { Period } from '@/theme/period';
 
 const stepColumns =
-  'id, product_id, period, position, weekdays, duration_seconds, wait_minutes, note, note_important, created_at, product:products(name, brand, category, packaging, photo_path)';
+  'id, product_id, period, position, weekdays, duration_seconds, wait_minutes, created_at, product:products(name, brand, category, packaging, photo_path, actives)';
 
 // Generated types only say "string" and "number[]", so rows are parsed before use.
 const stepRowSchema = z.object({
@@ -18,8 +18,6 @@ const stepRowSchema = z.object({
   weekdays: z.array(z.number().int().min(1).max(7)).min(1),
   duration_seconds: z.number(),
   wait_minutes: z.number().nullable(),
-  note: z.string().nullable(),
-  note_important: z.boolean(),
   created_at: z.string(),
   product: z.object({
     name: z.string(),
@@ -27,6 +25,7 @@ const stepRowSchema = z.object({
     category: z.enum(categories),
     packaging: z.enum(packagings),
     photo_path: z.string().nullable(),
+    actives: z.array(z.enum(actives)),
   }),
 });
 
@@ -39,8 +38,6 @@ function toRoutineStep(row: z.infer<typeof stepRowSchema>): RoutineStep {
     weekdays: row.weekdays,
     durationSeconds: row.duration_seconds,
     waitMinutes: row.wait_minutes,
-    note: row.note,
-    noteImportant: row.note_important,
     createdAt: row.created_at,
     product: {
       name: row.product.name,
@@ -48,6 +45,7 @@ function toRoutineStep(row: z.infer<typeof stepRowSchema>): RoutineStep {
       category: row.product.category,
       packaging: row.product.packaging,
       photoPath: row.product.photo_path,
+      actives: row.product.actives,
     },
   };
 }
@@ -87,8 +85,6 @@ export async function createRoutineStep(period: Period, input: RoutineStepInput)
     weekdays: input.weekdays,
     duration_seconds: input.durationSeconds,
     wait_minutes: input.waitMinutes,
-    note: input.note,
-    note_important: input.noteImportant,
   });
   if (error) {
     throw error;
@@ -115,8 +111,6 @@ export async function updateRoutineStep(
       weekdays: input.weekdays,
       duration_seconds: input.durationSeconds,
       wait_minutes: input.waitMinutes,
-      note: input.note,
-      note_important: input.noteImportant,
     })
     .eq('id', id)
     .select(stepColumns)

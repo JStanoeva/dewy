@@ -1,4 +1,5 @@
 import type { RoutineStep } from '@/features/routines/types';
+import { getRitualTips, type RitualTip } from '@/features/routines/utils/ritualTips';
 import type { Period } from '@/theme/period';
 import { isoWeekday, type LocalDate } from '@/utils/localDate';
 
@@ -9,16 +10,10 @@ export type TodayStep = {
   done: boolean;
 };
 
-export type TodayNote = {
-  stepId: string;
-  productName: string;
-  note: string;
-};
-
 export type TodayRoutine = {
   steps: TodayStep[];
-  // The banners: today's steps whose note is marked important, ticked or not.
-  notes: TodayNote[];
+  // The banners: the ritual tips of today's steps, ticked or not.
+  tips: RitualTip[];
   done: number;
   total: number;
   minutesLeft: number;
@@ -47,15 +42,9 @@ export function buildTodayRoutine(
     0,
   );
 
-  const notes = todaySteps.flatMap(({ step }) =>
-    step.note && step.noteImportant
-      ? [{ stepId: step.id, productName: step.product.name, note: step.note }]
-      : [],
-  );
-
   return {
     steps: todaySteps,
-    notes,
+    tips: getRitualTips(steps, { period, weekday }),
     done,
     total: todaySteps.length,
     minutesLeft: Math.max(1, Math.ceil(secondsLeft / 60)),

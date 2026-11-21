@@ -4,7 +4,7 @@ import Slider from '@react-native-community/slider';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useRef, useState } from 'react';
 import { Controller, useForm, type FieldErrors } from 'react-hook-form';
-import { Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton } from '@/components/AppButton';
@@ -13,14 +13,12 @@ import { ErrorState } from '@/components/ErrorState';
 import { FieldError } from '@/components/FieldError';
 import { FormHeader, formHeaderBottom } from '@/components/FormHeader';
 import { FormScrollView, type FormScrollViewHandle } from '@/components/FormScrollView';
-import { FormTextField } from '@/components/FormTextField';
 import { LoadingState } from '@/components/LoadingState';
 import { Screen } from '@/components/Screen';
 import { categoryDetails } from '@/features/products/constants';
 import { useProducts } from '@/features/products/hooks/useProducts';
 import type { Product } from '@/features/products/types';
 import { splitLastWord } from '@/features/products/utils/productLabels';
-import { ImportantNoteRow } from '@/features/routines/components/ImportantNoteRow';
 import { ProductPicker } from '@/features/routines/components/ProductPicker';
 import { RemoveStepSheet } from '@/features/routines/components/RemoveStepSheet';
 import { WeekdaySelector } from '@/features/routines/components/WeekdaySelector';
@@ -220,7 +218,6 @@ function RoutineStepForm({ navigation, period, step, products, steps }: RoutineS
     getValues,
     setValue,
     setError,
-    setFocus,
     trigger,
     formState: { errors, isSubmitting, isSubmitted },
   } = useForm<RoutineStepFormValues, unknown, RoutineStepInput>({
@@ -232,8 +229,6 @@ function RoutineStepForm({ navigation, period, step, products, steps }: RoutineS
           weekdays: everyDay,
           durationSeconds: defaultDurationSeconds,
           waitMinutes: null,
-          note: '',
-          noteImportant: false,
         },
     shouldFocusError: false,
   });
@@ -253,19 +248,11 @@ function RoutineStepForm({ navigation, period, step, products, steps }: RoutineS
     errors.root?.server?.message ??
     (isSubmitted ? (errors.productId?.message ?? errors.weekdays?.message) : undefined);
 
-  function revealFocusedField() {
-    formRef.current?.revealFocusedField();
-  }
-
   // Reads the form's current days, so quick taps that land before a re-render all count.
   function setWeekdays(next: (current: number[]) => number[]) {
     setValue('weekdays', next(getValues('weekdays')), { shouldDirty: true });
     // Shows "Pick at least one day" as soon as the last day is turned off.
     trigger('weekdays');
-  }
-
-  function toggleImportant() {
-    setValue('noteImportant', !getValues('noteImportant'), { shouldDirty: true });
   }
 
   function pickProduct(product: Product, onChange: (productId: string) => void) {
@@ -323,10 +310,6 @@ function RoutineStepForm({ navigation, period, step, products, steps }: RoutineS
   function onInvalid(fieldErrors: FieldErrors<RoutineStepFormValues>) {
     if (fieldErrors.productId) {
       formRef.current?.scrollToTop();
-    } else if (fieldErrors.note && !fieldErrors.weekdays) {
-      // Android's back key hides the keyboard but keeps focus, and focusing a focused field does nothing.
-      Keyboard.dismiss();
-      setFocus('note');
     }
   }
 
@@ -570,27 +553,6 @@ function RoutineStepForm({ navigation, period, step, products, steps }: RoutineS
               </View>
             )}
           />
-        </View>
-
-        <View style={styles.inset}>
-          <Controller
-            control={control}
-            name="note"
-            render={({ field, fieldState }) => (
-              <FormTextField
-                ref={field.ref}
-                label="Note"
-                placeholder="Skip exfoliating acids tonight"
-                returnKeyType="done"
-                value={field.value}
-                onChangeText={field.onChange}
-                onBlur={field.onBlur}
-                onFocus={revealFocusedField}
-                error={fieldState.error?.message}
-              />
-            )}
-          />
-          <ImportantNoteRow control={control} onToggle={toggleImportant} disabled={saving} />
         </View>
 
         {step ? (

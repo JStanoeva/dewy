@@ -14,6 +14,7 @@ import { Screen } from '@/components/Screen';
 import { ActiveChips } from '@/features/products/components/ActiveChips';
 import { ProductActionsSheet } from '@/features/products/components/ProductActionsSheet';
 import { ProductPhoto } from '@/features/products/components/ProductPhoto';
+import { RitualTips } from '@/features/products/components/RitualTips';
 import { AmountLeft } from '@/features/products/components/AmountLeft';
 import { ShelfLifeCard } from '@/features/products/components/ShelfLifeCard';
 import { categoryDetails } from '@/features/products/constants';
@@ -28,6 +29,7 @@ import { noteLines, productInitials, splitLastWord } from '@/features/products/u
 import { usesPerWeek } from '@/features/products/utils/usesLeft';
 import { useRoutineSteps } from '@/features/routines/hooks/useRoutineSteps';
 import { routineMemberships } from '@/features/routines/utils/routineMembership';
+import { getProductTips } from '@/features/routines/utils/ritualTips';
 import { useLocalToday } from '@/hooks/useLocalToday';
 import { MoonIcon, SunIcon } from '@/navigation/TabIcons';
 import type { RootStackParamList } from '@/navigation/types';
@@ -104,6 +106,7 @@ function ProductDetailsContent({ product, today, navigation }: ProductDetailsCon
   const routineSteps = useRoutineSteps();
   const memberships = routineSteps.data && routineMemberships(routineSteps.data, product.id);
   const inRoutine = memberships && memberships.length > 0;
+  const tips = routineSteps.data ? getProductTips(routineSteps.data, product.id) : [];
   const colors = bottleColorsFor(product.id);
   const category = categoryDetails[product.category];
   const title = splitLastWord(product.name);
@@ -289,6 +292,8 @@ function ProductDetailsContent({ product, today, navigation }: ProductDetailsCon
                 <ActiveChips values={product.actives} />
               </View>
             ) : null}
+
+            {tips.length > 0 ? <RitualTips tips={tips} /> : null}
 
             {notes.length > 0 ? (
               <View

@@ -602,6 +602,10 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
             name="actives"
             render={({ field }) => <ActivePicker value={field.value} onChange={field.onChange} />}
           />
+          <Text style={[styles.activesHelp, { color: palette.textMuted }]}>
+            Dewy uses these to flag clashes in your rituals, like a retinoid and acids on the same
+            night.
+          </Text>
         </View>
 
         <View style={styles.inset}>
@@ -716,6 +720,11 @@ const styles = StyleSheet.create({
   },
   actives: {
     gap: spacing.xs,
+  },
+  activesHelp: {
+    fontFamily: fonts.body,
+    fontSize: fontSizes.meta,
+    lineHeight: 18.2,
   },
   paoGrid: {
     flexDirection: 'row',

@@ -1,25 +1,25 @@
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
-import type { TodayNote } from '@/features/today/utils/buildTodayRoutine';
+import type { RitualTip } from '@/features/routines/utils/ritualTips';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import { fonts, fontSizes, radii, spacing } from '@/theme/tokens';
 
-export function TodayNoteBanner({ note }: { note: TodayNote }) {
+export function TodayTipBanner({ tip }: { tip: RitualTip }) {
   const { palette } = useDewyTheme();
 
   return (
     <View style={[bannerStyles.banner, { backgroundColor: palette.bannerBg }]}>
-      <NoteInfoIcon />
+      <TipInfoIcon />
       <Text style={[bannerStyles.text, { color: palette.bannerText }]}>
-        <Text style={bannerStyles.name}>{note.productName}</Text> — {note.note}
+        <Text style={bannerStyles.name}>{tip.productName}</Text> — {tip.text}
       </Text>
     </View>
   );
 }
 
-// The banner's 18 info icon, also on the folded notes row.
-export function NoteInfoIcon() {
+// The banner's 18 info icon, also on the folded tips row.
+export function TipInfoIcon() {
   const { palette } = useDewyTheme();
   return (
     <Svg

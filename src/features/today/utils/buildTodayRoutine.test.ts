@@ -1,3 +1,4 @@
+import type { Active } from '@/features/products/constants';
 import type { RoutineStep } from '@/features/routines/types';
 import {
   buildTodayRoutine,
@@ -19,8 +20,6 @@ function step(id: string, overrides: Partial<RoutineStep> = {}): RoutineStep {
     weekdays: daily,
     durationSeconds: 60,
     waitMinutes: null,
-    note: null,
-    noteImportant: false,
     createdAt: '2026-11-15T08:00:00Z',
     product: {
       name: `Product ${id}`,
@@ -28,9 +27,15 @@ function step(id: string, overrides: Partial<RoutineStep> = {}): RoutineStep {
       category: 'cleanser',
       packaging: 'pump',
       photoPath: null,
+      actives: [],
     },
     ...overrides,
   };
+}
+
+function withActives(id: string, actives: Active[], overrides: Partial<RoutineStep> = {}) {
+  const base = step(id, overrides);
+  return { ...base, product: { ...base.product, actives } };
 }
 
 describe('buildTodayRoutine', () => {
@@ -91,53 +96,33 @@ describe('buildTodayRoutine', () => {
     expect(buildTodayRoutine(steps, [], 'morning', '2026-11-22').total).toBe(1);
   });
 
-  it('lists the important notes of today steps, every-day steps too, in order', () => {
+  it("lists the tips of today's steps only, in step order", () => {
     const steps = [
-      step('daily', { note: 'Every day note', noteImportant: true }),
-      step('plain', { weekdays: [2, 4] }),
-      step('quiet', { weekdays: [2, 4], note: 'Not important' }),
-      step('tue', { weekdays: [2, 4], note: 'Skip acids tonight', noteImportant: true }),
-      step('mon', { weekdays: [1], note: 'Not today', noteImportant: true }),
-      step('evening', { period: 'evening', note: 'Other ritual', noteImportant: true }),
-      step('weekdays', { weekdays: [1, 2, 3, 4, 5], note: 'Mask after', noteImportant: true }),
+      withActives('retinol', ['retinoid'], { period: 'evening', weekdays: [2, 6] }),
+      withActives('peel', ['acids'], { period: 'evening', weekdays: [5] }),
+      withActives('acid-toner', ['acids'], { period: 'evening' }),
+      withActives('vitc', ['vitc']),
     ];
-    const routine = buildTodayRoutine(steps, [], 'morning', tuesday);
-    expect(routine.notes).toEqual([
-      { stepId: 'daily', productName: 'Product daily', note: 'Every day note' },
-      { stepId: 'tue', productName: 'Product tue', note: 'Skip acids tonight' },
-      { stepId: 'weekdays', productName: 'Product weekdays', note: 'Mask after' },
+    const routine = buildTodayRoutine(steps, [], 'evening', tuesday);
+    expect(routine.tips.map((tip) => tip.id)).toEqual([
+      'retinoid-acids:product-retinol',
+      'night-spf:product-retinol',
+      'night-spf:product-acid-toner',
+    ]);
+    // The morning vitamin C clashes with the evening ritual's products, whatever their days.
+    expect(buildTodayRoutine(steps, [], 'morning', tuesday).tips.map((tip) => tip.text)).toEqual([
+      'Keep it for mornings and your retinoid for nights',
+      'Both are acidic, so alternate days if your skin feels tingly',
     ]);
   });
 
-  it('never shows a note that is not important, on any day', () => {
-    const steps = [
-      step('daily', { note: 'Every day note' }),
-      step('tue', { weekdays: [2], note: 'Skip acids tonight' }),
-    ];
-    expect(buildTodayRoutine(steps, [], 'morning', tuesday).notes).toEqual([]);
+  it('has no tips for products without actives', () => {
+    expect(buildTodayRoutine([step('plain')], [], 'morning', tuesday).tips).toEqual([]);
   });
 
-  it('gives each ritual its own note for the same product', () => {
-    const steps = [
-      step('am', { productId: 'product-1', note: 'SPF after', noteImportant: true }),
-      step('pm', {
-        productId: 'product-1',
-        period: 'evening',
-        note: 'Skip acids tonight',
-        noteImportant: true,
-      }),
-    ];
-    expect(buildTodayRoutine(steps, [], 'morning', tuesday).notes.map((n) => n.note)).toEqual([
-      'SPF after',
-    ]);
-    expect(buildTodayRoutine(steps, [], 'evening', tuesday).notes.map((n) => n.note)).toEqual([
-      'Skip acids tonight',
-    ]);
-  });
-
-  it('keeps a note after its step is ticked', () => {
-    const steps = [step('tue', { weekdays: [2], note: 'Skip acids tonight', noteImportant: true })];
-    expect(buildTodayRoutine(steps, ['tue'], 'morning', tuesday).notes).toHaveLength(1);
+  it('keeps a tip after its step is ticked', () => {
+    const steps = [withActives('retinol', ['retinoid'], { period: 'evening' })];
+    expect(buildTodayRoutine(steps, ['retinol'], 'evening', tuesday).tips).toHaveLength(2);
   });
 });
 

@@ -10,8 +10,6 @@ const valid: RoutineStepFormValues = {
   weekdays: [1, 2, 3, 4, 5, 6, 7],
   durationSeconds: 60,
   waitMinutes: null,
-  note: '',
-  noteImportant: false,
 };
 
 function errorsFor(values: Partial<RoutineStepFormValues>) {
@@ -27,16 +25,12 @@ function errorsFor(values: Partial<RoutineStepFormValues>) {
 }
 
 describe('routineStepFormSchema', () => {
-  it('maps a valid step to the insert shape', () => {
-    expect(
-      routineStepFormSchema.parse({ ...valid, waitMinutes: 10, note: '  Skip acids tonight ' }),
-    ).toEqual({
+  it('maps a valid step to the insert shape, with no note fields', () => {
+    expect(routineStepFormSchema.parse({ ...valid, waitMinutes: 10 })).toEqual({
       productId: 'product-1',
       weekdays: [1, 2, 3, 4, 5, 6, 7],
       durationSeconds: 60,
       waitMinutes: 10,
-      note: 'Skip acids tonight',
-      noteImportant: false,
     });
   });
 
@@ -77,37 +71,10 @@ describe('routineStepFormSchema', () => {
     expect(errorsFor({ waitMinutes: 61 })).toHaveProperty('waitMinutes');
   });
 
-  it('sends a blank note as null', () => {
-    expect(routineStepFormSchema.parse({ ...valid, note: ' \n\t ' }).note).toBeNull();
-  });
-
-  it('keeps a note important only while the note has text', () => {
-    expect(
-      routineStepFormSchema.parse({ ...valid, note: 'Skip acids', noteImportant: true }),
-    ).toMatchObject({
-      note: 'Skip acids',
-      noteImportant: true,
-    });
-    expect(routineStepFormSchema.parse({ ...valid, note: '', noteImportant: true })).toMatchObject({
-      note: null,
-      noteImportant: false,
-    });
-    expect(
-      routineStepFormSchema.parse({ ...valid, note: ' \n\t ', noteImportant: true }),
-    ).toMatchObject({ note: null, noteImportant: false });
-  });
-
-  it('counts the note in code points, like Postgres', () => {
-    expect(errorsFor({ note: '🌙'.repeat(80) })).toEqual({});
-    expect(errorsFor({ note: '🌙'.repeat(81) })).toEqual({ note: 'Up to 80 characters' });
-    expect(errorsFor({ note: 'a'.repeat(81) })).toEqual({ note: 'Up to 80 characters' });
-  });
-
   it('reports every error together', () => {
-    expect(errorsFor({ productId: undefined, weekdays: [], note: 'a'.repeat(81) })).toEqual({
+    expect(errorsFor({ productId: undefined, weekdays: [] })).toEqual({
       productId: 'Pick a product',
       weekdays: 'Pick at least one day',
-      note: 'Up to 80 characters',
     });
   });
 });
@@ -121,8 +88,6 @@ describe('toRoutineStepFormValues', () => {
     weekdays: [1, 3, 5],
     durationSeconds: 900,
     waitMinutes: 3,
-    note: 'Skip acids tonight',
-    noteImportant: true,
     createdAt: '2026-11-15T10:00:00Z',
     product: {
       name: 'Retinal Serum',
@@ -130,6 +95,7 @@ describe('toRoutineStepFormValues', () => {
       category: 'serum',
       packaging: 'dropper',
       photoPath: null,
+      actives: ['retinoid'],
     },
   };
 
@@ -139,8 +105,6 @@ describe('toRoutineStepFormValues', () => {
       weekdays: [1, 3, 5],
       durationSeconds: 900,
       waitMinutes: 3,
-      note: 'Skip acids tonight',
-      noteImportant: true,
     });
   });
 
@@ -150,14 +114,6 @@ describe('toRoutineStepFormValues', () => {
       weekdays: [1, 3, 5],
       durationSeconds: 900,
       waitMinutes: 3,
-      note: 'Skip acids tonight',
-      noteImportant: true,
     });
-  });
-
-  it('starts a step without a note with an empty, unimportant note', () => {
-    const plain = toRoutineStepFormValues({ ...step, note: null, noteImportant: false });
-    expect(plain).toMatchObject({ note: '', noteImportant: false });
-    expect(routineStepFormSchema.parse(plain)).toMatchObject({ note: null, noteImportant: false });
   });
 });

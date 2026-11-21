@@ -21,20 +21,20 @@ import { SegmentedControl } from '@/components/SegmentedControl';
 import { useProducts } from '@/features/products/hooks/useProducts';
 import { useProfile } from '@/features/profile/hooks/useProfile';
 import { RitualProgressArc } from '@/features/today/components/RitualProgressArc';
-import { TodayNoteBanner } from '@/features/today/components/TodayNoteBanner';
-import { TodayNotesFolded } from '@/features/today/components/TodayNotesFolded';
 import { TodayStepRow } from '@/features/today/components/TodayStepRow';
+import { TodayTipBanner } from '@/features/today/components/TodayTipBanner';
+import { TodayTipsFolded } from '@/features/today/components/TodayTipsFolded';
 import { useRitualStamps, useTodayRoutine } from '@/features/today/hooks/useTodayRoutine';
-import { loadHiddenNotes, saveHiddenNotes } from '@/features/today/services/todayNotesService';
+import { loadHiddenTips, saveHiddenTips } from '@/features/today/services/todayTipsService';
 import { todayState, type TodayRoutine } from '@/features/today/utils/buildTodayRoutine';
-import { foldChanges, importantNoteIds, isFolded } from '@/features/today/utils/noteFold';
+import { foldChanges, isFolded, ritualTipIds } from '@/features/today/utils/tipFold';
 import { useRitualDate } from '@/hooks/useLocalToday';
 import { MoonIcon, SunIcon } from '@/navigation/TabIcons';
 import type { MainTabParamList, RootStackParamList } from '@/navigation/types';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import type { Period } from '@/theme/period';
 import { fonts, fontSizes, letterSpacings, minTouchTarget, radii, spacing } from '@/theme/tokens';
-import { formatWeekdayDayMonth } from '@/utils/localDate';
+import { formatWeekdayDayMonth, isoWeekday } from '@/utils/localDate';
 
 type TodayScreenProps = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'TodayTab'>,
@@ -55,7 +55,7 @@ const periodOptions = [
 ] as const;
 
 // A 44 target around the 18-high link that stays clear of the first row below.
-const hideNotesSlop = { top: 16, bottom: 10, left: 12, right: 12 };
+const hideTipsSlop = { top: 16, bottom: 10, left: 12, right: 12 };
 
 function progressLine(routine: TodayRoutine, period: Period) {
   if (routine.isComplete) {
@@ -72,8 +72,8 @@ export function TodayScreen({ navigation }: TodayScreenProps) {
   const { steps, completions, routine } = useTodayRoutine(period, date);
   useRitualStamps(date);
   const [refreshing, setRefreshing] = useState(false);
-  // The important notes each ritual had when folded (null when shown); undefined until read.
-  const [hiddenNotes, setHiddenNotes] = useState<Record<Period, string[] | null>>();
+  // The tips each ritual had when folded (null when shown); undefined until read.
+  const [hiddenTips, setHiddenTips] = useState<Record<Period, string[] | null>>();
   const [focusRequest, setFocusRequest] = useState(0);
   const foldedRef = useRef<ViewInstance>(null);
   const hideRef = useRef<ViewInstance>(null);
@@ -86,34 +86,42 @@ export function TodayScreen({ navigation }: TodayScreenProps) {
     productsFailed: products.isLoadingError,
   });
   const showRitualHeader = state === 'list' || state === 'dayOff';
-  const notes = state === 'list' && routine ? routine.notes : [];
-  const notesShown = hiddenNotes !== undefined && notes.length > 0;
+  const tips = state === 'list' && routine ? routine.tips : [];
+  const tipsShown = hiddenTips !== undefined && tips.length > 0;
   const stepList = steps.data;
-  const shownNoteIds = stepList ? importantNoteIds(stepList, period) : [];
-  const canFold = notes.length >= 2;
-  const folded = canFold && isFolded(hiddenNotes?.[period] ?? null, shownNoteIds);
+  const canFold = tips.length >= 2;
+  const folded =
+    canFold &&
+    isFolded(
+      hiddenTips?.[period] ?? null,
+      tips.map((tip) => tip.id),
+    );
 
   // Read once; until then Today shows no banner area, and a failed read counts as shown.
   useEffect(() => {
-    Promise.all([loadHiddenNotes('morning'), loadHiddenNotes('evening')]).then(
-      ([morning, evening]) => setHiddenNotes({ morning, evening }),
+    Promise.all([loadHiddenTips('morning'), loadHiddenTips('evening')]).then(([morning, evening]) =>
+      setHiddenTips({ morning, evening }),
     );
   }, []);
 
-  // Both rituals follow their notes: a new important note opens the banners, as Show does.
+  // Both rituals follow their tips: a day showing a new one among 2 or more opens them, as Show does.
   useEffect(() => {
-    if (!stepList || !hiddenNotes) {
+    if (!stepList || !hiddenTips) {
       return;
     }
-    for (const { period: ritual, stored, next } of foldChanges(hiddenNotes, stepList)) {
-      saveHiddenNotes(ritual, next).then(() =>
+    for (const { period: ritual, stored, next } of foldChanges(
+      hiddenTips,
+      stepList,
+      isoWeekday(date),
+    )) {
+      saveHiddenTips(ritual, next).then(() =>
         // Leaves a Hide or Show tapped while this write was running alone.
-        setHiddenNotes((current) =>
+        setHiddenTips((current) =>
           current?.[ritual] === stored ? { ...current, [ritual]: next } : current,
         ),
       );
     }
-  }, [stepList, hiddenNotes]);
+  }, [stepList, hiddenTips, date]);
 
   // After Hide or Show, TalkBack moves to the control that replaced the tapped one.
   useEffect(() => {
@@ -131,8 +139,8 @@ export function TodayScreen({ navigation }: TodayScreenProps) {
   }, [focusRequest]);
 
   function changeFold(hidden: string[] | null) {
-    setHiddenNotes((current) => current && { ...current, [period]: hidden });
-    saveHiddenNotes(period, hidden);
+    setHiddenTips((current) => current && { ...current, [period]: hidden });
+    saveHiddenTips(period, hidden);
     setFocusRequest((count) => count + 1);
   }
 
@@ -161,7 +169,7 @@ export function TodayScreen({ navigation }: TodayScreenProps) {
   }
 
   const header = (
-    <View style={[styles.header, state === 'list' && !notesShown && styles.headerAboveList]}>
+    <View style={[styles.header, state === 'list' && !tipsShown && styles.headerAboveList]}>
       <View
         style={[styles.circle, { backgroundColor: isMorning ? palette.peach : palette.surfaceAlt }]}
       />
@@ -233,32 +241,26 @@ export function TodayScreen({ navigation }: TodayScreenProps) {
         </View>
       ) : null}
 
-      {notesShown ? (
-        <View style={styles.notes}>
+      {tipsShown ? (
+        <View style={styles.tips}>
           {folded ? (
-            <TodayNotesFolded
-              ref={foldedRef}
-              count={notes.length}
-              onShow={() => changeFold(null)}
-            />
+            <TodayTipsFolded ref={foldedRef} count={tips.length} onShow={() => changeFold(null)} />
           ) : (
             <>
-              {notes.map((note) => (
-                <TodayNoteBanner key={note.stepId} note={note} />
+              {tips.map((tip) => (
+                <TodayTipBanner key={tip.id} tip={tip} />
               ))}
-              {canFold ? (
+              {canFold && stepList ? (
                 <Pressable
                   ref={hideRef}
                   accessibilityRole="button"
-                  accessibilityLabel="Hide notes"
+                  accessibilityLabel="Hide tips"
                   accessibilityState={{ expanded: true }}
-                  hitSlop={hideNotesSlop}
-                  onPress={() => changeFold(shownNoteIds)}
-                  style={({ pressed }) => [styles.hideNotes, { opacity: pressed ? 0.7 : 1 }]}
+                  hitSlop={hideTipsSlop}
+                  onPress={() => changeFold(ritualTipIds(stepList, period))}
+                  style={({ pressed }) => [styles.hideTips, { opacity: pressed ? 0.7 : 1 }]}
                 >
-                  <Text style={[styles.hideNotesLabel, { color: palette.emphasis }]}>
-                    Hide notes
-                  </Text>
+                  <Text style={[styles.hideTipsLabel, { color: palette.emphasis }]}>Hide tips</Text>
                 </Pressable>
               ) : null}
             </>
@@ -478,18 +480,18 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSizes.secondary,
   },
-  // The 10 above the rows is padding here, so Hide notes' touch area stays inside its parent on Android.
-  notes: {
+  // The 10 above the rows is padding here, so Hide tips' touch area stays inside its parent on Android.
+  tips: {
     marginTop: spacing.hairline,
     paddingBottom: spacing.sm,
     gap: spacing.xs,
   },
-  hideNotes: {
+  hideTips: {
     alignSelf: 'center',
     minHeight: 18,
     justifyContent: 'center',
   },
-  hideNotesLabel: {
+  hideTipsLabel: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSizes.meta,
   },
