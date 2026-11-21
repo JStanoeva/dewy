@@ -60,8 +60,9 @@ function toProduct(row: z.infer<typeof productRowSchema>): Product {
   };
 }
 
-// The database fills in id, user_id and the timestamps; clients aren't allowed to send them.
+// The form picks the id once, so a retry after a save whose answer was lost returns that saved row.
 export async function createProduct(
+  id: string,
   input: ProductInput,
   photoPath: string | null,
   trackedFrom: LocalDate,
@@ -69,6 +70,7 @@ export async function createProduct(
   const { data, error } = await supabase
     .from('products')
     .insert({
+      id,
       status: input.status,
       name: input.name,
       brand: input.brand,
@@ -86,6 +88,11 @@ export async function createProduct(
     .select(productColumns)
     .single();
   if (error) {
+    // 23505 on the id: the first try was saved, so that row is the result.
+    const saved = error.code === '23505' ? await getProduct(id) : null;
+    if (saved) {
+      return saved;
+    }
     throw error;
   }
   return toProduct(productRowSchema.parse(data));

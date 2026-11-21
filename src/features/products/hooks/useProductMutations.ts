@@ -19,15 +19,29 @@ import {
 import type { Product } from '@/features/products/types';
 import type { LocalDate } from '@/utils/localDate';
 
-type CreateVariables = { input: ProductInput; photoPath: string | null; trackedFrom: LocalDate };
+type CreateVariables = {
+  id: string;
+  input: ProductInput;
+  photoPath: string | null;
+  trackedFrom: LocalDate;
+};
 
 export function useCreateProduct() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ input, photoPath, trackedFrom }: CreateVariables) =>
-      createProduct(input, photoPath, trackedFrom),
-    // Returning the refetch keeps the mutation pending until the Shelf list is fresh.
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['products'] }),
+    mutationFn: ({ id, input, photoPath, trackedFrom }: CreateVariables) =>
+      createProduct(id, input, photoPath, trackedFrom),
+    // The Shelf lists the newest first, so the saved row goes on top and Save doesn't wait for a refetch.
+    onSuccess: (product) => {
+      queryClient.setQueryData<Product[]>(
+        ['products'],
+        (old) => old && [product, ...old.filter((item) => item.id !== product.id)],
+      );
+    },
+    // Not awaited; after a failure it shows a product that was saved but whose answer never arrived.
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
   });
 }
 

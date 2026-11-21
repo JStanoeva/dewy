@@ -1,6 +1,6 @@
 import Feather from '@expo/vector-icons/Feather';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -103,6 +103,8 @@ function ProductDetailsContent({ product, today, navigation }: ProductDetailsCon
   const setFavorite = useSetFavorite();
   const moveToShelf = useMoveToShelf();
   const deleteProduct = useDeleteProduct();
+  // isPending only changes on the next render, so two taps in one frame would both delete.
+  const deletingNow = useRef(false);
   const routineSteps = useRoutineSteps();
   const memberships = routineSteps.data && routineMemberships(routineSteps.data, product.id);
   const inRoutine = memberships && memberships.length > 0;
@@ -185,12 +187,13 @@ function ProductDetailsContent({ product, today, navigation }: ProductDetailsCon
   }
 
   function deleteForGood() {
-    if (deleting) {
+    if (deleting || deletingNow.current) {
       return;
     }
     if (moveToShelf.isError) {
       moveToShelf.reset();
     }
+    deletingNow.current = true;
     deleteProduct.mutate(product.id, {
       onSuccess: () => {
         setSheetOpen(false);
@@ -198,7 +201,10 @@ function ProductDetailsContent({ product, today, navigation }: ProductDetailsCon
           navigation.goBack();
         }
       },
-      onError: () => setSheetOpen(true),
+      onError: () => {
+        deletingNow.current = false;
+        setSheetOpen(true);
+      },
     });
   }
 

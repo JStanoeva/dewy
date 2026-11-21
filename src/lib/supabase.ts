@@ -4,6 +4,7 @@ import { AppState } from 'react-native';
 import { env } from '@/config/env';
 import type { Database } from '@/types/database.types';
 
+import { fetchWithTimeout } from './fetchWithTimeout';
 import { secureSessionStorage } from './secureSessionStorage';
 
 // The fallbacks only keep this import from throwing when env is invalid; App then shows ConfigErrorScreen.
@@ -17,6 +18,7 @@ export const supabase = createClient<Database>(
       persistSession: true,
       detectSessionInUrl: false,
     },
+    global: { fetch: fetchWithTimeout },
   },
 );
 

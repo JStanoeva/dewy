@@ -34,8 +34,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       const nextUserId = nextSession?.user.id ?? null;
-      if (userIdRef.current !== null && userIdRef.current !== nextUserId) {
+      // Clears on a sign-in too, so a request that finished after a logout can't show in the next account.
+      if (userIdRef.current !== nextUserId) {
         queryClient.clear();
+      }
+      if (userIdRef.current !== null && userIdRef.current !== nextUserId) {
         // Product photos are cached on the device too, so the next account starts without them.
         Image.clearMemoryCache();
         Image.clearDiskCache();

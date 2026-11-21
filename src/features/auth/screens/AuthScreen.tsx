@@ -26,6 +26,8 @@ export function AuthScreen() {
   const { palette } = useDewyTheme();
   const insets = useSafeAreaInsets();
   const formRef = useRef<FormScrollViewHandle>(null);
+  // isSubmitting only changes on the next render, so two taps in one frame would both send.
+  const submitting = useRef(false);
   const [mode, setMode] = useState<AuthMode>('signup');
   const [showPassword, setShowPassword] = useState(false);
   const isSignUp = mode === 'signup';
@@ -69,9 +71,13 @@ export function AuthScreen() {
   }
 
   function submit() {
-    if (!isSubmitting) {
-      handleSubmit(onSubmit)();
+    if (isSubmitting || submitting.current) {
+      return;
     }
+    submitting.current = true;
+    handleSubmit(onSubmit)().finally(() => {
+      submitting.current = false;
+    });
   }
 
   return (

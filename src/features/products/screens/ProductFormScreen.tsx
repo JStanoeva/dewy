@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { randomUUID } from 'expo-crypto';
 import { useRef, useState } from 'react';
 import { Controller, useForm, useWatch, type FieldErrors } from 'react-hook-form';
 import { Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -153,6 +154,10 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
   const [labelOutcome, setLabelOutcome] = useState<LabelOutcome>(null);
   // A retry after a failed save reuses the photo that already uploaded instead of sending it again.
   const uploaded = useRef<{ uri: string; path: string } | null>(null);
+  // isSubmitting only changes on the next render, so two taps in one frame would both save.
+  const submitting = useRef(false);
+  // Every Save of one New product form sends the same id, so a retry can't add a second product.
+  const [newProductId] = useState(randomUUID);
 
   const {
     control,
@@ -277,6 +282,8 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
   async function onSubmit(values: ProductInput) {
     // Runs only after validation passes, so a read still going can't change the form while it saves.
     readLabel.reset();
+    // The fields lock while saving, so typing can't go on in a field the save has already read.
+    Keyboard.dismiss();
     // Taken at save time, so a save just after the 05:00 rollover counts from the new ritual day.
     const ritualDate = getRitualDate();
     try {
@@ -290,7 +297,12 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
           trackedFrom: restartsCount(values) ? ritualDate : null,
         });
       } else {
-        await createProduct.mutateAsync({ input: values, photoPath, trackedFrom: ritualDate });
+        await createProduct.mutateAsync({
+          id: newProductId,
+          input: values,
+          photoPath,
+          trackedFrom: ritualDate,
+        });
       }
     } catch {
       setError('root.server', {
@@ -316,9 +328,13 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
   }
 
   function submit() {
-    if (!saving) {
-      handleSubmit(onSubmit, onInvalid)();
+    if (saving || submitting.current) {
+      return;
     }
+    submitting.current = true;
+    handleSubmit(onSubmit, onInvalid)().finally(() => {
+      submitting.current = false;
+    });
   }
 
   function markNotOpened() {
@@ -338,294 +354,296 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
         topOffset={formHeaderBottom}
         contentContainerStyle={styles.content}
       >
-        <Text
-          accessibilityRole="header"
-          style={[styles.inset, styles.title, { color: palette.text }]}
-        >
-          What&apos;s on your{' '}
-          <Text style={[styles.titleItalic, { color: palette.emphasis }]}>shelf?</Text>
-        </Text>
+        <View pointerEvents={saving ? 'none' : 'auto'} style={styles.fields}>
+          <Text
+            accessibilityRole="header"
+            style={[styles.inset, styles.title, { color: palette.text }]}
+          >
+            What&apos;s on your{' '}
+            <Text style={[styles.titleItalic, { color: palette.emphasis }]}>shelf?</Text>
+          </Text>
 
-        {/* Editing never changes the status; only Move to shelf does. */}
-        {product ? null : (
+          {/* Editing never changes the status; only Move to shelf does. */}
+          {product ? null : (
+            <View style={styles.inset}>
+              <Controller
+                control={control}
+                name="status"
+                render={({ field }) => (
+                  <SegmentedControl
+                    options={statusOptions}
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+            </View>
+          )}
+
           <View style={styles.inset}>
+            <ProductPhotoField
+              value={photo}
+              onChange={changePhoto}
+              disabled={saving}
+              labelStatus={labelStatus}
+            />
+          </View>
+
+          <View style={[styles.inset, styles.nameRow]}>
             <Controller
               control={control}
-              name="status"
-              render={({ field }) => (
-                <SegmentedControl
-                  options={statusOptions}
+              name="name"
+              render={({ field, fieldState }) => (
+                <FormTextField
+                  ref={field.ref}
+                  style={styles.half}
+                  label="Product name"
+                  placeholder="Hydrating Toner"
+                  returnKeyType="next"
+                  submitBehavior="submit"
                   value={field.value}
+                  onChangeText={field.onChange}
+                  onBlur={field.onBlur}
+                  onFocus={revealFocusedField}
+                  onSubmitEditing={() => setFocus('brand')}
+                  error={fieldState.error?.message}
+                />
+              )}
+            />
+            <Controller
+              control={control}
+              name="brand"
+              render={({ field, fieldState }) => (
+                <FormTextField
+                  ref={field.ref}
+                  style={styles.half}
+                  label="Brand"
+                  placeholder="Brand name"
+                  autoCapitalize="words"
+                  returnKeyType="next"
+                  submitBehavior="submit"
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  onBlur={field.onBlur}
+                  onFocus={revealFocusedField}
+                  onSubmitEditing={() => setFocus(isOwned ? 'sizeMl' : 'notes')}
+                  error={fieldState.error?.message}
+                />
+              )}
+            />
+          </View>
+
+          <View>
+            <Text style={[styles.inset, styles.label, { color: palette.text }]}>Type</Text>
+            <Controller
+              control={control}
+              name="category"
+              render={({ field, fieldState }) => (
+                <>
+                  <View style={styles.chips}>
+                    <CategoryChips
+                      options={categoryOptions}
+                      value={field.value}
+                      onChange={field.onChange}
+                      shadow={false}
+                    />
+                  </View>
+                  {fieldState.error ? (
+                    <FieldError style={[styles.inset, styles.chipsError]}>
+                      {fieldState.error.message}
+                    </FieldError>
+                  ) : null}
+                </>
+              )}
+            />
+          </View>
+
+          <View style={[styles.inset, styles.packaging]}>
+            <Text style={[styles.label, { color: palette.text }]}>
+              Packaging
+              <Text style={[styles.labelHint, { color: palette.textMuted }]}>
+                {" · shown when there's no photo"}
+              </Text>
+            </Text>
+            <Controller
+              control={control}
+              name="packaging"
+              render={({ field }) => (
+                <PackagingPicker
+                  value={
+                    field.value ?? (pickedCategory ? categoryDetails[pickedCategory].bottle : null)
+                  }
                   onChange={field.onChange}
                 />
               )}
             />
           </View>
-        )}
 
-        <View style={styles.inset}>
-          <ProductPhotoField
-            value={photo}
-            onChange={changePhoto}
-            disabled={saving}
-            labelStatus={labelStatus}
-          />
-        </View>
-
-        <View style={[styles.inset, styles.nameRow]}>
-          <Controller
-            control={control}
-            name="name"
-            render={({ field, fieldState }) => (
-              <FormTextField
-                ref={field.ref}
-                style={styles.half}
-                label="Product name"
-                placeholder="Hydrating Toner"
-                returnKeyType="next"
-                submitBehavior="submit"
-                value={field.value}
-                onChangeText={field.onChange}
-                onBlur={field.onBlur}
-                onFocus={revealFocusedField}
-                onSubmitEditing={() => setFocus('brand')}
-                error={fieldState.error?.message}
-              />
-            )}
-          />
-          <Controller
-            control={control}
-            name="brand"
-            render={({ field, fieldState }) => (
-              <FormTextField
-                ref={field.ref}
-                style={styles.half}
-                label="Brand"
-                placeholder="Brand name"
-                autoCapitalize="words"
-                returnKeyType="next"
-                submitBehavior="submit"
-                value={field.value}
-                onChangeText={field.onChange}
-                onBlur={field.onBlur}
-                onFocus={revealFocusedField}
-                onSubmitEditing={() => setFocus(isOwned ? 'sizeMl' : 'notes')}
-                error={fieldState.error?.message}
-              />
-            )}
-          />
-        </View>
-
-        <View>
-          <Text style={[styles.inset, styles.label, { color: palette.text }]}>Type</Text>
-          <Controller
-            control={control}
-            name="category"
-            render={({ field, fieldState }) => (
-              <>
-                <View style={styles.chips}>
-                  <CategoryChips
-                    options={categoryOptions}
-                    value={field.value}
-                    onChange={field.onChange}
-                    shadow={false}
-                  />
-                </View>
-                {fieldState.error ? (
-                  <FieldError style={[styles.inset, styles.chipsError]}>
-                    {fieldState.error.message}
-                  </FieldError>
-                ) : null}
-              </>
-            )}
-          />
-        </View>
-
-        <View style={[styles.inset, styles.packaging]}>
-          <Text style={[styles.label, { color: palette.text }]}>
-            Packaging
-            <Text style={[styles.labelHint, { color: palette.textMuted }]}>
-              {" · shown when there's no photo"}
-            </Text>
-          </Text>
-          <Controller
-            control={control}
-            name="packaging"
-            render={({ field }) => (
-              <PackagingPicker
-                value={
-                  field.value ?? (pickedCategory ? categoryDetails[pickedCategory].bottle : null)
-                }
-                onChange={field.onChange}
-              />
-            )}
-          />
-        </View>
-
-        {isOwned ? (
-          <View style={styles.inset}>
-            <View style={styles.openedRow}>
-              <Controller
-                control={control}
-                name="openedOn"
-                render={({ field, fieldState }) => (
-                  <DateField
-                    style={styles.dateColumn}
-                    label="Opened on"
-                    value={field.value}
-                    onChange={field.onChange}
-                    placeholder="Not opened"
-                    minimumDate={earliestOpenedDate}
-                    maximumDate={new Date()}
-                    invalid={fieldState.error !== undefined}
-                  />
-                )}
-              />
-              <Controller
-                control={control}
-                name="paoMonths"
-                render={({ field }) => (
-                  <View style={styles.paoColumn}>
-                    <Text style={[styles.label, { color: palette.text }]}>Use within</Text>
-                    <View style={styles.paoGrid}>
-                      {paoMonthsOptions.map((months) => {
-                        const selected = field.value === months;
-                        return (
-                          <Pressable
-                            key={months}
-                            accessibilityRole="button"
-                            hitSlop={paoTileSlop}
-                            accessibilityLabel={`Use within ${months} months`}
-                            accessibilityState={{ selected }}
-                            onPress={() => field.onChange(months)}
-                            style={[
-                              styles.paoTile,
-                              { backgroundColor: selected ? palette.rose : palette.surface },
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.paoLabel,
-                                { color: selected ? palette.onAccent : palette.text },
-                              ]}
-                            >
-                              {months}M
-                            </Text>
-                          </Pressable>
-                        );
-                      })}
-                    </View>
-                  </View>
-                )}
-              />
-            </View>
-            {errors.openedOn ? (
-              <FieldError style={styles.rowError}>{errors.openedOn.message}</FieldError>
-            ) : null}
-            {errors.paoMonths ? (
-              <FieldError style={styles.rowError}>{errors.paoMonths.message}</FieldError>
-            ) : null}
-            {openedOn ? (
-              <Pressable
-                accessibilityRole="button"
-                hitSlop={notOpenedSlop}
-                onPress={markNotOpened}
-                style={styles.notOpened}
-              >
-                <Text style={[styles.label, { color: palette.emphasis }]}>Not opened yet</Text>
-              </Pressable>
-            ) : null}
-          </View>
-        ) : null}
-
-        {isOwned ? (
-          <View style={styles.inset}>
-            <View style={styles.openedRow}>
-              <Controller
-                control={control}
-                name="sizeMl"
-                render={({ field, fieldState }) => (
-                  <SizeField
-                    ref={field.ref}
-                    style={styles.sizeColumn}
-                    value={field.value}
-                    onChangeText={field.onChange}
-                    onBlur={field.onBlur}
-                    onFocus={revealFocusedField}
-                    onSubmitEditing={() => setFocus('notes')}
-                    invalid={fieldState.error !== undefined}
-                  />
-                )}
-              />
-              <View style={styles.fullnessColumn}>
-                <Text style={[styles.label, { color: palette.text }]}>How full is it?</Text>
+          {isOwned ? (
+            <View style={styles.inset}>
+              <View style={styles.openedRow}>
                 <Controller
                   control={control}
-                  name="startFraction"
-                  render={({ field }) => (
-                    <FullnessTiles
+                  name="openedOn"
+                  render={({ field, fieldState }) => (
+                    <DateField
+                      style={styles.dateColumn}
+                      label="Opened on"
                       value={field.value}
                       onChange={field.onChange}
-                      unselectedColor={palette.surface}
-                      hitSlop={paoTileSlop}
+                      placeholder="Not opened"
+                      minimumDate={earliestOpenedDate}
+                      maximumDate={new Date()}
+                      invalid={fieldState.error !== undefined}
                     />
                   )}
                 />
+                <Controller
+                  control={control}
+                  name="paoMonths"
+                  render={({ field }) => (
+                    <View style={styles.paoColumn}>
+                      <Text style={[styles.label, { color: palette.text }]}>Use within</Text>
+                      <View style={styles.paoGrid}>
+                        {paoMonthsOptions.map((months) => {
+                          const selected = field.value === months;
+                          return (
+                            <Pressable
+                              key={months}
+                              accessibilityRole="button"
+                              hitSlop={paoTileSlop}
+                              accessibilityLabel={`Use within ${months} months`}
+                              accessibilityState={{ selected }}
+                              onPress={() => field.onChange(months)}
+                              style={[
+                                styles.paoTile,
+                                { backgroundColor: selected ? palette.rose : palette.surface },
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.paoLabel,
+                                  { color: selected ? palette.onAccent : palette.text },
+                                ]}
+                              >
+                                {months}M
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  )}
+                />
               </View>
+              {errors.openedOn ? (
+                <FieldError style={styles.rowError}>{errors.openedOn.message}</FieldError>
+              ) : null}
+              {errors.paoMonths ? (
+                <FieldError style={styles.rowError}>{errors.paoMonths.message}</FieldError>
+              ) : null}
+              {openedOn ? (
+                <Pressable
+                  accessibilityRole="button"
+                  hitSlop={notOpenedSlop}
+                  onPress={markNotOpened}
+                  style={styles.notOpened}
+                >
+                  <Text style={[styles.label, { color: palette.emphasis }]}>Not opened yet</Text>
+                </Pressable>
+              ) : null}
             </View>
-            {errors.sizeMl ? (
-              <FieldError style={styles.rowError}>{errors.sizeMl.message}</FieldError>
-            ) : null}
-          </View>
-        ) : null}
+          ) : null}
 
-        {isOwned ? (
+          {isOwned ? (
+            <View style={styles.inset}>
+              <View style={styles.openedRow}>
+                <Controller
+                  control={control}
+                  name="sizeMl"
+                  render={({ field, fieldState }) => (
+                    <SizeField
+                      ref={field.ref}
+                      style={styles.sizeColumn}
+                      value={field.value}
+                      onChangeText={field.onChange}
+                      onBlur={field.onBlur}
+                      onFocus={revealFocusedField}
+                      onSubmitEditing={() => setFocus('notes')}
+                      invalid={fieldState.error !== undefined}
+                    />
+                  )}
+                />
+                <View style={styles.fullnessColumn}>
+                  <Text style={[styles.label, { color: palette.text }]}>How full is it?</Text>
+                  <Controller
+                    control={control}
+                    name="startFraction"
+                    render={({ field }) => (
+                      <FullnessTiles
+                        value={field.value}
+                        onChange={field.onChange}
+                        unselectedColor={palette.surface}
+                        hitSlop={paoTileSlop}
+                      />
+                    )}
+                  />
+                </View>
+              </View>
+              {errors.sizeMl ? (
+                <FieldError style={styles.rowError}>{errors.sizeMl.message}</FieldError>
+              ) : null}
+            </View>
+          ) : null}
+
+          {isOwned ? (
+            <View style={styles.inset}>
+              <AmountEstimateCard
+                sizeMl={typedSize}
+                fullness={estimateFullness}
+                category={pickedCategory}
+                counted={countedUses}
+              />
+            </View>
+          ) : null}
+
+          <View style={[styles.inset, styles.actives]}>
+            <Text style={[styles.label, { color: palette.text }]}>
+              Key actives
+              <Text style={[styles.labelHint, { color: palette.textMuted }]}>
+                {' · pick any it contains'}
+              </Text>
+            </Text>
+            <Controller
+              control={control}
+              name="actives"
+              render={({ field }) => <ActivePicker value={field.value} onChange={field.onChange} />}
+            />
+            <Text style={[styles.activesHelp, { color: palette.textMuted }]}>
+              Dewy uses these to flag clashes in your rituals, like a retinoid and acids on the same
+              night.
+            </Text>
+          </View>
+
           <View style={styles.inset}>
-            <AmountEstimateCard
-              sizeMl={typedSize}
-              fullness={estimateFullness}
-              category={pickedCategory}
-              counted={countedUses}
+            <Controller
+              control={control}
+              name="notes"
+              render={({ field, fieldState }) => (
+                <FormTextField
+                  ref={field.ref}
+                  label="Notes"
+                  placeholder="One note per line"
+                  multiline
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  onBlur={field.onBlur}
+                  onFocus={revealFocusedField}
+                  error={fieldState.error?.message}
+                />
+              )}
             />
           </View>
-        ) : null}
-
-        <View style={[styles.inset, styles.actives]}>
-          <Text style={[styles.label, { color: palette.text }]}>
-            Key actives
-            <Text style={[styles.labelHint, { color: palette.textMuted }]}>
-              {' · pick any it contains'}
-            </Text>
-          </Text>
-          <Controller
-            control={control}
-            name="actives"
-            render={({ field }) => <ActivePicker value={field.value} onChange={field.onChange} />}
-          />
-          <Text style={[styles.activesHelp, { color: palette.textMuted }]}>
-            Dewy uses these to flag clashes in your rituals, like a retinoid and acids on the same
-            night.
-          </Text>
-        </View>
-
-        <View style={styles.inset}>
-          <Controller
-            control={control}
-            name="notes"
-            render={({ field, fieldState }) => (
-              <FormTextField
-                ref={field.ref}
-                label="Notes"
-                placeholder="One note per line"
-                multiline
-                value={field.value}
-                onChangeText={field.onChange}
-                onBlur={field.onBlur}
-                onFocus={revealFocusedField}
-                error={fieldState.error?.message}
-              />
-            )}
-          />
         </View>
       </FormScrollView>
 
@@ -657,9 +675,11 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
 
 const styles = StyleSheet.create({
   content: {
-    gap: 18,
     paddingTop: spacing.xxl,
     paddingBottom: spacing.screen,
+  },
+  fields: {
+    gap: 18,
   },
   inset: {
     paddingHorizontal: spacing.screen,

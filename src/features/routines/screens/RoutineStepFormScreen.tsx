@@ -192,6 +192,8 @@ function RoutineStepForm({ navigation, period, step, products }: RoutineStepForm
   const formRef = useRef<FormScrollViewHandle>(null);
   // A drag means the user chose the time, so picking a product no longer resets it.
   const timeChosen = useRef(false);
+  // isSubmitting and isPending only change on the next render, so two taps in one frame would both send.
+  const sending = useRef(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   // Both periods' steps, for the picker, the locks and the step's place; undefined while they load.
   const stepsQuery = useRoutineSteps();
@@ -353,7 +355,7 @@ function RoutineStepForm({ navigation, period, step, products }: RoutineStepForm
   }
 
   function submit() {
-    if (saving || removing) {
+    if (saving || removing || sending.current) {
       return;
     }
     if (moveStep.isError) {
@@ -363,7 +365,10 @@ function RoutineStepForm({ navigation, period, step, products }: RoutineStepForm
     if (!step) {
       setValue('lockedPeriods', productPeriods(steps ?? [], getValues('productId')));
     }
-    handleSubmit(onSubmit, onInvalid)();
+    sending.current = true;
+    handleSubmit(onSubmit, onInvalid)().finally(() => {
+      sending.current = false;
+    });
   }
 
   function move(direction: 'up' | 'down') {
@@ -388,9 +393,10 @@ function RoutineStepForm({ navigation, period, step, products }: RoutineStepForm
   }
 
   function removeForGood() {
-    if (!step || removing) {
+    if (!step || removing || sending.current) {
       return;
     }
+    sending.current = true;
     removeStep.mutate(step.id, {
       onSuccess: () => {
         setSheetOpen(false);
@@ -399,7 +405,10 @@ function RoutineStepForm({ navigation, period, step, products }: RoutineStepForm
         }
       },
       // Reopens the sheet with its error if it was closed while removing.
-      onError: () => setSheetOpen(true),
+      onError: () => {
+        sending.current = false;
+        setSheetOpen(true);
+      },
     });
   }
 

@@ -63,6 +63,7 @@ On Windows, if PowerShell refuses to run `npm` or `npx` because running scripts 
    9. `009_product_amount_actives.sql`
    10. `010_product_uses.sql`
    11. `011_add_routine_steps.sql`
+   12. `012_product_client_id.sql`
 
    Run each file once, before anyone signs up. `003_product_photos_storage.sql` creates the private `product-photos` bucket itself, so don't create it by hand.
 
@@ -364,8 +365,10 @@ Database CHECK constraints back up the product rules on the server: name 2–80 
 
 - **Authentication errors** are shown on the right field or above the button in plain language: wrong email or password, an email that already has an account, an invalid email, a weak password, too many attempts, no connection, and a general fallback.
 - **Network or data errors:** screens that load data (Shelf, Product details, Edit product, Routines, New step, Edit step, Today and Me) show "Something went wrong" with a "Try again" button. Data that is already loaded stays visible.
+- **Slow or stalled connections:** every request to the backend gives up if the server hasn't answered within 15 seconds (a photo upload within 60), so a spinner never runs forever. A screen retries its data once before it shows the error, and a save shows its error instead.
+- **Saves that may have landed:** if a new product was saved but the answer never arrived, saving again finds that product instead of adding a second copy.
 - **Failed saves:** the product form shows an error above the Save button. A failed favourite or delete shows an error and undoes the change on screen. A failed move shows an error in the More options sheet. The step form shows its own errors: a failed save above its button, a failed move under the Move buttons, and a failed remove in its confirmation sheet. If another device added the product to a ticked routine first, nothing is saved: that routine shows "Already in" with a message, and one more tap adds the rest. A failed tick on Today flips back and shows "Couldn't save this step"; a step removed on another device says it is no longer in your routine.
-- **Duplicate taps:** buttons are disabled while a request is running, so a form or action can't be sent twice. On Today, a step ignores taps while its tick is saving.
+- **Duplicate taps:** buttons are disabled while a request is running, so a form or action can't be sent twice, even with two quick taps. The product form's fields are locked while it saves. On Today, a step ignores taps while its tick is saving.
 - **Empty states:** an empty Shelf or category shows "Nothing here yet" with an "Add a product" button. Today asks for a product first, offers "Add a step" when the routine has no steps, and says "Nothing this morning" (or evening) when none of its steps fall on today. Routines asks for a product first, or, when there are products but no steps in that routine, offers "Add a step". New step says when every owned product is already in both routines.
 - **Missing data:** a product that was deleted elsewhere shows "This product is no longer on your shelf" with a Back button, and a removed step shows "This step is no longer in your routine" with a Close button.
 - **Photos:** if a photo can't load, the Shelf card and Product details show a bottle illustration instead, and the product form shows an empty photo frame.
