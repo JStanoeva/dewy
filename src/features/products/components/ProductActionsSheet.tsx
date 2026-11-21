@@ -23,16 +23,20 @@ type ProductActionsSheetProps = {
   // Its routine steps go too when it is deleted; undefined while the steps haven't loaded.
   inRoutine: boolean | undefined;
   moving: boolean;
+  adding: boolean;
   deleting: boolean;
   moveFailed: boolean;
+  addFailed: boolean;
   deleteFailed: boolean;
   onClose: () => void;
   onEdit: () => void;
   onMoveToShelf: () => void;
+  onAddToWishlist: () => void;
   onDelete: () => void;
 };
 
 const moveError = "We couldn't move this product. Check your connection and try again.";
+const addError = "We couldn't add this to your wishlist. Check your connection and try again.";
 const deleteError = "We couldn't delete this product. Check your connection and try again.";
 
 // Mounted only while open, so the delete confirmation always starts from the menu.
@@ -40,19 +44,22 @@ export function ProductActionsSheet({
   product,
   inRoutine,
   moving,
+  adding,
   deleting,
   moveFailed,
+  addFailed,
   deleteFailed,
   onClose,
   onEdit,
   onMoveToShelf,
+  onAddToWishlist,
   onDelete,
 }: ProductActionsSheetProps) {
   const { palette } = useDewyTheme();
   const insets = useSafeAreaInsets();
   const [confirming, setConfirming] = useState(false);
   const confirmTitleRef = useRef<ComponentRef<typeof Text>>(null);
-  const busy = moving || deleting;
+  const busy = moving || adding || deleting;
   // Without the steps loaded, an owned product gets wording that is true either way.
   let routinesNote = '';
   if (inRoutine) {
@@ -174,7 +181,17 @@ export function ProductActionsSheet({
                   disabled={busy}
                   onPress={onMoveToShelf}
                 />
-              ) : null}
+              ) : (
+                <SheetRow
+                  label="Add to wishlist"
+                  subline="A new, unopened copy for your next bottle"
+                  circleColor={palette.lilac}
+                  icon={<Feather name="shopping-bag" size={18} color={palette.onAccent} />}
+                  busy={adding}
+                  disabled={busy}
+                  onPress={onAddToWishlist}
+                />
+              )}
               <SheetRow
                 label="Delete product"
                 labelColor={palette.warning}
@@ -187,9 +204,11 @@ export function ProductActionsSheet({
               />
               {moveFailed
                 ? errorLine(moveError, styles.menuError)
-                : deleteFailed
-                  ? errorLine(deleteError, styles.menuError)
-                  : null}
+                : addFailed
+                  ? errorLine(addError, styles.menuError)
+                  : deleteFailed
+                    ? errorLine(deleteError, styles.menuError)
+                    : null}
               <View style={styles.menuCancel}>{cancelButton}</View>
             </>
           )}

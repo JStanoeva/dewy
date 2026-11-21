@@ -86,6 +86,16 @@ export async function uploadProductPhoto(localUri: string): Promise<string> {
   return path;
 }
 
+// A new file in the same folder, the user's own, so deleting either product never takes the other's photo.
+export async function copyProductPhoto(path: string): Promise<string> {
+  const copyPath = `${path.slice(0, path.indexOf('/'))}/${randomUUID()}.jpg`;
+  const { error } = await supabase.storage.from(bucket).copy(path, copyPath);
+  if (error) {
+    throw error;
+  }
+  return copyPath;
+}
+
 export async function getPhotoUrl(path: string): Promise<string> {
   const { data, error } = await supabase.storage
     .from(bucket)

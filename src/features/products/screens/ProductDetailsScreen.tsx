@@ -1,6 +1,8 @@
 import Feather from '@expo/vector-icons/Feather';
+import { useIsFocused } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useRef, useState, type ReactNode } from 'react';
+import { randomUUID } from 'expo-crypto';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -19,6 +21,7 @@ import { AmountLeft } from '@/features/products/components/AmountLeft';
 import { ShelfLifeCard } from '@/features/products/components/ShelfLifeCard';
 import { categoryDetails } from '@/features/products/constants';
 import {
+  useAddToWishlist,
   useDeleteProduct,
   useMoveToShelf,
   useSetFavorite,
@@ -34,7 +37,7 @@ import { useLocalToday } from '@/hooks/useLocalToday';
 import { MoonIcon, SunIcon } from '@/navigation/TabIcons';
 import type { RootStackParamList } from '@/navigation/types';
 import { bottleColorsFor, photoScrim } from '@/theme/bottleColors';
-import type { Period } from '@/theme/period';
+import { getRitualDate, type Period } from '@/theme/period';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import { fonts, fontSizes, letterSpacings, minTouchTarget, radii, spacing } from '@/theme/tokens';
 import type { LocalDate } from '@/utils/localDate';
@@ -49,6 +52,10 @@ const sheetTop = 328;
 const sheetDockTop = topRowTop + minTouchTarget + spacing.md;
 const chipHeight = 34;
 const chipHitSlop = (minTouchTarget - chipHeight) / 2;
+// Long enough for Android to take the closed sheet off the screen before its dialog opens.
+const wishlistNoticeDelayMs = 300;
+
+type WishlistNotice = { added: boolean; copyId: string; copyName: string };
 
 export function ProductDetailsScreen({ navigation, route }: ProductDetailsScreenProps) {
   const { palette } = useDewyTheme();
@@ -102,9 +109,15 @@ function ProductDetailsContent({ product, today, navigation }: ProductDetailsCon
   const [sheetOpen, setSheetOpen] = useState(false);
   const setFavorite = useSetFavorite();
   const moveToShelf = useMoveToShelf();
+  const addToWishlist = useAddToWishlist();
   const deleteProduct = useDeleteProduct();
   // isPending only changes on the next render, so two taps in one frame would both delete.
   const deletingNow = useRef(false);
+  const addingNow = useRef(false);
+  // One id per copy: a retry after a lost answer sends it again, and a success starts a new one.
+  const wishlistCopyId = useRef<string | null>(null);
+  const [wishlistNotice, setWishlistNotice] = useState<WishlistNotice | null>(null);
+  const isFocused = useIsFocused();
   const routineSteps = useRoutineSteps();
   const memberships = routineSteps.data && routineMemberships(routineSteps.data, product.id);
   const inRoutine = memberships && memberships.length > 0;
@@ -132,6 +145,31 @@ function ProductDetailsContent({ product, today, navigation }: ProductDetailsCon
 
   const deleting = deleteProduct.isPending || deleteProduct.isSuccess;
 
+  // Android's dialog opened over a sheet still on screen kept it there until OK, so it waits for the sheet to go and Details to show.
+  useEffect(() => {
+    if (!wishlistNotice || sheetOpen || !isFocused) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      setWishlistNotice(null);
+      // View it pushes the copy's Details, so Back returns here.
+      Alert.alert(
+        wishlistNotice.added ? 'Added to your wishlist' : 'Already on your wishlist',
+        wishlistNotice.added
+          ? `${wishlistNotice.copyName} is on your wishlist, unopened.`
+          : `${wishlistNotice.copyName} is on your wishlist already.`,
+        [
+          {
+            text: 'View it',
+            onPress: () => navigation.push('ProductDetails', { productId: wishlistNotice.copyId }),
+          },
+          { text: 'OK' },
+        ],
+      );
+    }, wishlistNoticeDelayMs);
+    return () => clearTimeout(timer);
+  }, [wishlistNotice, sheetOpen, isFocused, navigation]);
+
   function toggleFavorite() {
     if (setFavorite.isPending || deleting) {
       return;
@@ -149,6 +187,9 @@ function ProductDetailsContent({ product, today, navigation }: ProductDetailsCon
   function openSheet() {
     if (moveToShelf.isError) {
       moveToShelf.reset();
+    }
+    if (addToWishlist.isError) {
+      addToWishlist.reset();
     }
     if (deleteProduct.isError) {
       deleteProduct.reset();
@@ -186,12 +227,41 @@ function ProductDetailsContent({ product, today, navigation }: ProductDetailsCon
     });
   }
 
+  function addProductToWishlist() {
+    if (addToWishlist.isPending || addingNow.current) {
+      return;
+    }
+    if (deleteProduct.isError) {
+      deleteProduct.reset();
+    }
+    addingNow.current = true;
+    wishlistCopyId.current ??= randomUUID();
+    addToWishlist.mutate(
+      { id: wishlistCopyId.current, product, trackedFrom: getRitualDate() },
+      {
+        onSuccess: ({ added, product: copy }) => {
+          addingNow.current = false;
+          wishlistCopyId.current = null;
+          setSheetOpen(false);
+          setWishlistNotice({ added, copyId: copy.id, copyName: copy.name });
+        },
+        onError: () => {
+          addingNow.current = false;
+          setSheetOpen(true);
+        },
+      },
+    );
+  }
+
   function deleteForGood() {
     if (deleting || deletingNow.current) {
       return;
     }
     if (moveToShelf.isError) {
       moveToShelf.reset();
+    }
+    if (addToWishlist.isError) {
+      addToWishlist.reset();
     }
     deletingNow.current = true;
     deleteProduct.mutate(product.id, {
@@ -356,12 +426,15 @@ function ProductDetailsContent({ product, today, navigation }: ProductDetailsCon
           product={product}
           inRoutine={inRoutine}
           moving={moveToShelf.isPending}
+          adding={addToWishlist.isPending}
           deleting={deleting}
           moveFailed={moveToShelf.isError}
+          addFailed={addToWishlist.isError}
           deleteFailed={deleteProduct.isError}
           onClose={() => setSheetOpen(false)}
           onEdit={openEdit}
           onMoveToShelf={moveProductToShelf}
+          onAddToWishlist={addProductToWishlist}
           onDelete={deleteForGood}
         />
       ) : null}

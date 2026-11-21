@@ -8,6 +8,7 @@ import {
   uploadProductPhoto,
 } from '@/features/products/services/productPhotoService';
 import {
+  addToWishlist,
   adjustAmount,
   createProduct,
   deleteProduct,
@@ -121,6 +122,29 @@ export function useMoveToShelf() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['routineSteps'] });
+    },
+  });
+}
+
+type AddToWishlistVariables = { id: string; product: Product; trackedFrom: LocalDate };
+
+// The copy goes on top of the Shelf list and into its own Details, so View it opens at once.
+export function useAddToWishlist() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, product, trackedFrom }: AddToWishlistVariables) =>
+      addToWishlist(id, product, trackedFrom),
+    onSuccess: ({ added, product }) => {
+      queryClient.setQueryData(['products', product.id], product);
+      if (added) {
+        queryClient.setQueryData<Product[]>(
+          ['products'],
+          (old) => old && [product, ...old.filter((item) => item.id !== product.id)],
+        );
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'], exact: true });
     },
   });
 }

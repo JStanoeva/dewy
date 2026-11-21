@@ -9,8 +9,12 @@ import {
   productStatuses,
 } from '@/features/products/constants';
 import type { ProductInput } from '@/features/products/schemas/productSchema';
-import { removeProductPhoto } from '@/features/products/services/productPhotoService';
+import {
+  copyProductPhoto,
+  removeProductPhoto,
+} from '@/features/products/services/productPhotoService';
 import type { Product } from '@/features/products/types';
+import { findWishlistTwin, wishlistCopyOf } from '@/features/products/utils/wishlistCopy';
 import { supabase } from '@/lib/supabase';
 import type { LocalDate } from '@/utils/localDate';
 
@@ -179,6 +183,39 @@ export async function moveProductToShelf(id: string): Promise<Product> {
     throw error;
   }
   return toProduct(productRowSchema.parse(data));
+}
+
+export type WishlistCopyResult = { added: boolean; product: Product };
+
+// Read from the server each time, so the twin check works even when the Shelf hasn't loaded.
+async function listWishlist(): Promise<Product[]> {
+  const { data, error } = await supabase
+    .from('products')
+    .select(productColumns)
+    .eq('status', 'wishlist');
+  if (error) {
+    throw error;
+  }
+  return z.array(productRowSchema).parse(data).map(toProduct);
+}
+
+// A new wishlist copy of an owned product, or the one already there (added: false).
+export async function addToWishlist(
+  id: string,
+  product: Product,
+  trackedFrom: LocalDate,
+): Promise<WishlistCopyResult> {
+  const twin = findWishlistTwin(await listWishlist(), product);
+  if (twin) {
+    // A retry after a lost answer finds its own copy, which this tap did add.
+    return { added: twin.id === id, product: twin };
+  }
+  // A failed insert leaves the copied file unused rather than removed: its row may have saved anyway.
+  const photoPath = product.photoPath ? await copyProductPhoto(product.photoPath) : null;
+  return {
+    added: true,
+    product: await createProduct(id, wishlistCopyOf(product), photoPath, trackedFrom),
+  };
 }
 
 export async function setProductFavorite(id: string, isFavorite: boolean): Promise<Product> {

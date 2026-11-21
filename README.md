@@ -13,7 +13,7 @@ Dewy keeps a shelf of the skincare products you own and the ones on your wishlis
 - Sign up and log in with email and password. The session survives app restarts.
 - Keep your products on a shelf with Owned and Wishlist sides, category filters and pull to refresh.
 - Open a product to see its shelf life, key actives and notes.
-- Add, edit, favourite and delete products, and move wishlist products to your shelf.
+- Add, edit, favourite and delete products, move wishlist products to your shelf, and put a product that is running out on your wishlist for the next bottle.
 - Track shelf life: the opened date and the "use within" period show how long each opened product has left.
 - Take or choose a product photo, stored privately for your account.
 - Optionally fill in a new product's name, brand, type, packaging, size and key actives from the label in its photo.
@@ -197,7 +197,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
   - **Routines:** "Your rituals" with Morning and Evening. It opens on the routine Today shows, then keeps its own choice; its switch changes only its list, not the colours. Each routine shows a week strip, the number of steps and the time they take, and the ordered steps with their days and waits. Tapping a step opens the step editor, and "Add a step from your shelf" adds one.
   - **Me:** the user's initial, name, "Glowing with Dewy since" with the month they joined, and Log out.
 - **Details screen:** Product details, opened by tapping a product card on the Shelf. For an owned product with a size it shows how many uses are left ("≈ 42 uses"), a bar of how full the bottle is, and how long that lasts at the product's routine days ("30 ml · about 6 weeks at 1 use a day"). "Feels off? Adjust" restarts the count from how full it is now.
-- **Create:** add a product, with an optional photo, or add a routine step.
+- **Create:** add a product, with an optional photo, add an owned product to the wishlist as a new unopened copy, or add a routine step.
 - **Edit:** edit a product, mark it as a favourite, or move a wishlist product to the shelf. Edit a routine step, or move it up or down.
 - **Delete:** delete a product after a confirmation step (its photo is removed too), or remove a routine step.
 - Each user sees and changes only their own data. Row level security in Postgres and storage policies enforce this on the server.
@@ -280,7 +280,8 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 #### Create (POST)
 
 - The user taps "+" (or "Add a product" on an empty screen), fills in the New product form and taps "Save to shelf" or "Save to wishlist".
-- A chosen photo is uploaded to Storage first, then the product row is inserted. The shelf is refetched and the form closes.
+- A chosen photo is uploaded to Storage first, then the product row is inserted. The new card goes straight to the top of the shelf and the form closes.
+- **Add to wishlist:** on an owned product, More options → "Add to wishlist". Dewy first reads the wishlist from the server. If it already has a product with the same name and brand, nothing is added and a dialog says "Already on your wishlist" with "View it". Otherwise the photo is copied to its own file in Storage, a new wishlist product is inserted with the name, brand, type, packaging and key actives (no notes, dates, size or heart), and a dialog says "Added to your wishlist" with "View it". The owned product doesn't change.
 - On Routines, "Add a step from your shelf" opens "Add to your routine". The user picks an owned product that isn't in both routines yet (one already in a routine is tagged "In AM" or "In PM"). They tick Morning, Evening or both, set its days, time and wait, and tap "Add to both rituals", "Add to morning" or "Add to evening". One database function adds the step to the end of each ticked routine, so both are saved or neither is.
 - On Today, ticking a step inserts a completion for that step and day. The tick shows at once and is saved in the background; a tick already saved from another device is ignored instead of failing. Once every step of a routine due today is saved as ticked, Today also saves a row for that finished routine and day.
 
@@ -358,7 +359,7 @@ Database CHECK constraints back up the product rules on the server: name 2–80 
 9. Open the Today tab and pick Evening, then Morning: the whole app changes colour with the switch. On a Monday, Wednesday or Friday evening the serum from step 8 brings two tips above the steps, "Skip exfoliating acids tonight" and "Wear SPF tomorrow morning"; "Hide tips" folds them and "Show" opens them again. Its product page lists the same tips under Ritual tips. Tap a step to tick it off: the arc, its dot, the count and the minutes left update. Close and reopen Dewy, and the tick is still there.
 10. Add a product with "Wishlist" selected. It appears on the Wishlist side.
 11. Tap a card to open its details, and tap the heart to mark it as a favourite.
-12. Open More options to edit the product, move a wishlist product to your shelf, or delete a product. Deleting a product also removes its routine steps and their ticks.
+12. Open More options to edit the product, move a wishlist product to your shelf, add an owned product to your wishlist, or delete a product. Deleting a product also removes its routine steps and their ticks.
 13. On the Me tab, tap Log out.
 
 ### Error & Edge Case Handling
