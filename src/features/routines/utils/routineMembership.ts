@@ -6,7 +6,7 @@ export type RoutineMembership = {
   stepNumber: number;
 };
 
-const ritualOrder: readonly Period[] = ['morning', 'evening'];
+export const ritualOrder: readonly Period[] = ['morning', 'evening'];
 
 // Steps arrive in ritual order, so a step's number is its place among its period's steps.
 export function routineMemberships(

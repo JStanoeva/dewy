@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Slider from '@react-native-community/slider';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useRef, useState } from 'react';
-import { Controller, useForm, type FieldErrors } from 'react-hook-form';
+import { Controller, useForm, useWatch, type FieldErrors } from 'react-hook-form';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -21,9 +21,10 @@ import type { Product } from '@/features/products/types';
 import { splitLastWord } from '@/features/products/utils/productLabels';
 import { ProductPicker } from '@/features/routines/components/ProductPicker';
 import { RemoveStepSheet } from '@/features/routines/components/RemoveStepSheet';
+import { RitualTiles } from '@/features/routines/components/RitualTiles';
 import { WeekdaySelector } from '@/features/routines/components/WeekdaySelector';
 import {
-  useCreateRoutineStep,
+  useAddRoutineSteps,
   useMoveRoutineStep,
   useRemoveRoutineStep,
   useUpdateRoutineStep,
@@ -39,12 +40,14 @@ import {
 import { createStepConflict } from '@/features/routines/services/routineService';
 import type { RoutineStep } from '@/features/routines/types';
 import {
+  countedPeriods,
   durationStops,
   everyDay,
   formatDuration,
   moveStepIds,
   nearestDurationStop,
   pickableProducts,
+  productPeriods,
   waitChoices,
 } from '@/features/routines/utils/stepOptions';
 import type { RootStackParamList } from '@/navigation/types';
@@ -78,8 +81,7 @@ type NewRoutineStepProps = {
 function NewRoutineStep({ period, navigation }: NewRoutineStepProps) {
   const products = useProducts();
   const steps = useRoutineSteps();
-  const pickable =
-    products.data && steps.data ? pickableProducts(products.data, steps.data, period) : [];
+  const pickable = products.data && steps.data ? pickableProducts(products.data, steps.data) : [];
   // Once the form has shown it stays, so adding the last product can't flash an empty state as it closes.
   const [formShown, setFormShown] = useState(false);
   if (!formShown && pickable.length > 0) {
@@ -87,14 +89,7 @@ function NewRoutineStep({ period, navigation }: NewRoutineStepProps) {
   }
 
   if ((formShown || pickable.length > 0) && products.data && steps.data) {
-    return (
-      <RoutineStepForm
-        navigation={navigation}
-        period={period}
-        products={products.data}
-        steps={steps.data}
-      />
-    );
+    return <RoutineStepForm navigation={navigation} period={period} products={products.data} />;
   }
 
   function addProduct() {
@@ -114,7 +109,7 @@ function NewRoutineStep({ period, navigation }: NewRoutineStepProps) {
   if (products.data && steps.data) {
     body = products.data.some((product) => product.status === 'owned') ? (
       <EmptyState
-        title={`Everything on your shelf is already in your ${period} ritual`}
+        title="Everything on your shelf is already in both rituals"
         message="Add another product to your shelf first."
         action={{ label: 'Add a product', onPress: addProduct }}
       />
@@ -153,17 +148,9 @@ type EditRoutineStepProps = {
 // The form reads its starting values once, so it mounts only after the step has loaded.
 function EditRoutineStep({ stepId, navigation }: EditRoutineStepProps) {
   const step = useRoutineStep(stepId);
-  const steps = useRoutineSteps();
 
   if (step.data) {
-    return (
-      <RoutineStepForm
-        navigation={navigation}
-        period={step.data.period}
-        step={step.data}
-        steps={steps.data}
-      />
-    );
+    return <RoutineStepForm navigation={navigation} period={step.data.period} step={step.data} />;
   }
 
   return (
@@ -192,22 +179,24 @@ function EditRoutineStep({ stepId, navigation }: EditRoutineStepProps) {
 
 type RoutineStepFormProps = {
   navigation: Navigation;
+  // The ritual New step starts ticked, or the ritual of the step in Edit.
   period: Period;
   // Set in Edit; New step picks a product instead.
   step?: RoutineStep;
   products?: readonly Product[];
-  // Both periods' steps, for the picker and the step's place; undefined while they load.
-  steps: readonly RoutineStep[] | undefined;
 };
 
-function RoutineStepForm({ navigation, period, step, products, steps }: RoutineStepFormProps) {
+function RoutineStepForm({ navigation, period, step, products }: RoutineStepFormProps) {
   const { palette } = useDewyTheme();
   const insets = useSafeAreaInsets();
   const formRef = useRef<FormScrollViewHandle>(null);
   // A drag means the user chose the time, so picking a product no longer resets it.
   const timeChosen = useRef(false);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const createStep = useCreateRoutineStep();
+  // Both periods' steps, for the picker, the locks and the step's place; undefined while they load.
+  const stepsQuery = useRoutineSteps();
+  const steps = stepsQuery.data;
+  const addSteps = useAddRoutineSteps();
   const updateStep = useUpdateRoutineStep();
   const removeStep = useRemoveRoutineStep();
   const moveStep = useMoveRoutineStep();
@@ -218,6 +207,7 @@ function RoutineStepForm({ navigation, period, step, products, steps }: RoutineS
     getValues,
     setValue,
     setError,
+    clearErrors,
     trigger,
     formState: { errors, isSubmitting, isSubmitted },
   } = useForm<RoutineStepFormValues, unknown, RoutineStepInput>({
@@ -226,6 +216,8 @@ function RoutineStepForm({ navigation, period, step, products, steps }: RoutineS
       ? toRoutineStepFormValues(step)
       : {
           productId: '',
+          periods: [period],
+          lockedPeriods: [],
           weekdays: everyDay,
           durationSeconds: defaultDurationSeconds,
           waitMinutes: null,
@@ -234,7 +226,7 @@ function RoutineStepForm({ navigation, period, step, products, steps }: RoutineS
   });
 
   // Stays busy after a successful save too, so a tap during the closing animation can't save twice.
-  const saving = isSubmitting || createStep.isSuccess || updateStep.isSuccess;
+  const saving = isSubmitting || addSteps.isSuccess || updateStep.isSuccess;
   const removing = removeStep.isPending || removeStep.isSuccess;
   const moveDisabled = moveStep.isPending || removing || saving;
   const ritual = period === 'morning' ? 'Morning' : 'Evening';
@@ -243,10 +235,30 @@ function RoutineStepForm({ navigation, period, step, products, steps }: RoutineS
   const place = step ? ritualSteps.findIndex((item) => item.id === step.id) : -1;
   // Read once, like the form's values, so a saved wait can't change the tiles while the editor closes.
   const [waits] = useState(() => waitChoices(step?.waitMinutes ?? null));
-  // The product and day controls can't take focus, so a failed save repeats their error by the button.
+  const productId = useWatch({ control, name: 'productId' });
+  const ticked = useWatch({ control, name: 'periods' });
+  const lockedAtSave = useWatch({ control, name: 'lockedPeriods' });
+  // Kept from the tap while saving, so the rituals just saved don't lock as the editor closes.
+  const locked = step ? [] : saving ? lockedAtSave : productPeriods(steps ?? [], productId);
+  const counted = countedPeriods(ticked, locked);
+  const ritualError = step
+    ? undefined
+    : (errors.periods?.message ??
+      (productId && counted.length === 0 ? 'Pick where this step goes.' : undefined));
+  // The product, ritual and day controls can't take focus, so a failed save repeats their error by the button.
   const footerError =
     errors.root?.server?.message ??
-    (isSubmitted ? (errors.productId?.message ?? errors.weekdays?.message) : undefined);
+    (isSubmitted
+      ? (errors.productId?.message ?? ritualError ?? errors.weekdays?.message)
+      : undefined);
+  const addTitle =
+    counted.length === 2
+      ? 'Add to both rituals'
+      : counted[0] === 'morning'
+        ? 'Add to morning'
+        : counted[0] === 'evening'
+          ? 'Add to evening'
+          : 'Add to routine';
 
   // Reads the form's current days, so quick taps that land before a re-render all count.
   function setWeekdays(next: (current: number[]) => number[]) {
@@ -255,8 +267,23 @@ function RoutineStepForm({ navigation, period, step, products, steps }: RoutineS
     trigger('weekdays');
   }
 
+  // Reads the current ticks like the days; after a failed save the ritual message follows each tap.
+  function toggleRitual(toggled: Period) {
+    const current = getValues('periods');
+    setValue(
+      'periods',
+      current.includes(toggled)
+        ? current.filter((item) => item !== toggled)
+        : [...current, toggled],
+      { shouldDirty: true, shouldValidate: isSubmitted },
+    );
+  }
+
   function pickProduct(product: Product, onChange: (productId: string) => void) {
     onChange(product.id);
+    // The new product's rituals decide what counts, and a ritual message was about the old one.
+    setValue('lockedPeriods', productPeriods(steps ?? [], product.id));
+    clearErrors('periods');
     if (!timeChosen.current) {
       setValue('durationSeconds', categoryDetails[product.category].defaultDurationSeconds);
     }
@@ -281,24 +308,36 @@ function RoutineStepForm({ navigation, period, step, products, steps }: RoutineS
     }
 
     try {
-      await createStep.mutateAsync({ period, input: values });
+      await addSteps.mutateAsync(values);
     } catch (error) {
       const conflict = createStepConflict(error);
-      if (!conflict) {
-        setError('root.server', {
-          message: "We couldn't add this step. Check your connection and try again.",
-        });
+      // Another phone added it first, so the reloaded steps say which ritual has it now.
+      const nowIn =
+        conflict === 'duplicate'
+          ? productPeriods((await stepsQuery.refetch()).data ?? [], values.productId)
+          : [];
+      // A list that failed to reload can't name the ritual, so that case gets the connection message.
+      if (nowIn.length === 1 && values.periods.includes(nowIn[0])) {
+        setValue('lockedPeriods', nowIn);
+        setError('periods', { message: `It's already in your ${nowIn[0]} ritual now.` });
         return;
       }
-      // The lists reload, so the row drops out and the next tap asks for another product.
-      setValue('productId', '');
-      setError('productId', {
-        message:
-          conflict === 'duplicate'
-            ? `This product is already in your ${period} ritual.`
-            : 'This product is no longer on your shelf.',
+      if (nowIn.length === 2 || conflict === 'productGone') {
+        // The row drops out of the reloaded list, so the next tap asks for another product.
+        setValue('productId', '');
+        setValue('lockedPeriods', []);
+        setError('productId', {
+          message:
+            conflict === 'productGone'
+              ? 'This product is no longer on your shelf.'
+              : 'This product is already in both rituals.',
+        });
+        formRef.current?.scrollToTop();
+        return;
+      }
+      setError('root.server', {
+        message: "We couldn't add this step. Check your connection and try again.",
       });
-      formRef.current?.scrollToTop();
       return;
     }
     if (navigation.isFocused()) {
@@ -319,6 +358,10 @@ function RoutineStepForm({ navigation, period, step, products, steps }: RoutineS
     }
     if (moveStep.isError) {
       moveStep.reset();
+    }
+    // The locks follow the latest steps, so a ritual that got the product meanwhile doesn't count.
+    if (!step) {
+      setValue('lockedPeriods', productPeriods(steps ?? [], getValues('productId')));
     }
     handleSubmit(onSubmit, onInvalid)();
   }
@@ -392,7 +435,7 @@ function RoutineStepForm({ navigation, period, step, products, steps }: RoutineS
             style={[styles.inset, styles.title, { color: palette.text }]}
           >
             Add to your{' '}
-            <Text style={[styles.titleItalic, { color: palette.emphasis }]}>{period}</Text> ritual
+            <Text style={[styles.titleItalic, { color: palette.emphasis }]}>routine</Text>
           </Text>
         )}
 
@@ -433,7 +476,7 @@ function RoutineStepForm({ navigation, period, step, products, steps }: RoutineS
                 name="productId"
                 render={({ field }) => (
                   <ProductPicker
-                    products={pickableProducts(products ?? [], steps ?? [], period, field.value)}
+                    products={pickableProducts(products ?? [], steps ?? [], field.value)}
                     value={field.value}
                     onChange={(product) => pickProduct(product, field.onChange)}
                     disabled={saving}
@@ -444,13 +487,25 @@ function RoutineStepForm({ navigation, period, step, products, steps }: RoutineS
           </View>
         )}
 
+        {step ? null : (
+          <View style={styles.inset}>
+            <RitualTiles
+              ticked={ticked}
+              locked={locked}
+              onToggle={toggleRitual}
+              error={ritualError}
+              disabled={saving}
+            />
+          </View>
+        )}
+
         <View style={styles.inset}>
           <Controller
             control={control}
             name="weekdays"
             render={({ field, fieldState }) => (
               <WeekdaySelector
-                period={period}
+                period={counted.length === 1 && counted[0] === 'evening' ? 'evening' : 'morning'}
                 value={field.value}
                 onToggleDay={(day) =>
                   setWeekdays((current) =>
@@ -592,7 +647,7 @@ function RoutineStepForm({ navigation, period, step, products, steps }: RoutineS
         ) : null}
         <AppButton
           pinned
-          title={step ? 'Save changes' : 'Add to ritual'}
+          title={step ? 'Save changes' : addTitle}
           loading={saving}
           disabled={removing}
           onPress={submit}

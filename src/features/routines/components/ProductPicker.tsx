@@ -4,32 +4,38 @@ import { categoryDetails } from '@/features/products/constants';
 import type { Product } from '@/features/products/types';
 import { StepTile } from '@/features/routines/components/StepTile';
 import { TickCircle } from '@/features/routines/components/TickCircle';
+import type { PickableProduct } from '@/features/routines/utils/stepOptions';
 import { useDewyTheme } from '@/theme/ThemeProvider';
-import { fonts, fontSizes, radii, spacing } from '@/theme/tokens';
+import { fonts, fontSizes, letterSpacings, radii, spacing } from '@/theme/tokens';
 
 type ProductPickerProps = {
-  products: readonly Product[];
+  products: readonly PickableProduct[];
   value: string;
   onChange: (product: Product) => void;
   disabled?: boolean;
 };
 
-// One row per product, like the Routines rows, with a tick circle.
+// One row per product, like the Routines rows, with a tick circle and the ritual it is already in.
 export function ProductPicker({ products, value, onChange, disabled }: ProductPickerProps) {
   const { palette } = useDewyTheme();
 
   return (
     <View accessibilityRole="radiogroup" style={styles.list}>
-      {products.map((product) => {
+      {products.map(({ product, periods }) => {
         const checked = product.id === value;
         const meta = [categoryDetails[product.category].stepKind, product.brand]
           .filter(Boolean)
           .join(' · ');
+        const inOne = periods.length === 1 ? periods[0] : null;
         return (
           <Pressable
             key={product.id}
             accessibilityRole="radio"
-            accessibilityLabel={`${product.name}, ${meta}`}
+            accessibilityLabel={
+              inOne
+                ? `${product.name}, ${meta}, already in your ${inOne} ritual`
+                : `${product.name}, ${meta}`
+            }
             accessibilityState={{ checked, disabled }}
             disabled={disabled}
             onPress={() => onChange(product)}
@@ -54,6 +60,16 @@ export function ProductPicker({ products, value, onChange, disabled }: ProductPi
                 {meta}
               </Text>
             </View>
+            {inOne ? (
+              <Text
+                style={[
+                  styles.tag,
+                  { backgroundColor: palette.chipSoft, color: palette.textMuted },
+                ]}
+              >
+                {inOne === 'morning' ? 'In AM' : 'In PM'}
+              </Text>
+            ) : null}
             <TickCircle checked={checked} />
           </Pressable>
         );
@@ -87,5 +103,14 @@ const styles = StyleSheet.create({
   meta: {
     fontFamily: fonts.body,
     fontSize: fontSizes.meta,
+  },
+  tag: {
+    overflow: 'hidden',
+    paddingVertical: spacing.xxs,
+    paddingHorizontal: spacing.xs,
+    borderRadius: radii.pill,
+    fontFamily: fonts.bodyBold,
+    fontSize: fontSizes.label,
+    letterSpacing: letterSpacings.tag,
   },
 });

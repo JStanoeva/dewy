@@ -252,6 +252,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_routine_steps: {
+        Args: {
+          p_duration_seconds: number
+          p_periods: string[]
+          p_product_id: string
+          p_wait_minutes?: number
+          p_weekdays: number[]
+        }
+        Returns: undefined
+      }
       product_uses: {
         Args: never
         Returns: {

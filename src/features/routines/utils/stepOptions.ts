@@ -1,6 +1,7 @@
 import { categories } from '@/features/products/constants';
 import type { Product } from '@/features/products/types';
 import type { RoutineStep } from '@/features/routines/types';
+import { ritualOrder, routineMemberships } from '@/features/routines/utils/routineMembership';
 import type { Period } from '@/theme/period';
 
 // 5-second steps up to a minute, then whole minutes up to 10, so every stop reads exactly.
@@ -39,26 +40,39 @@ export function waitChoices(stored: number | null): number[] {
   return choices;
 }
 
-// Owned products not yet in this ritual, in routine order; the selected one stays while it saves.
+export type PickableProduct = {
+  product: Product;
+  // The rituals it is already in, which New step locks for it.
+  periods: Period[];
+};
+
+// Owned products not yet in both rituals, in routine order; the selected one stays while it saves.
 export function pickableProducts(
   products: readonly Product[],
   steps: readonly Pick<RoutineStep, 'period' | 'productId'>[],
-  period: Period,
   selectedId?: string,
-): Product[] {
-  const inRitual = new Set(
-    steps.filter((step) => step.period === period).map((step) => step.productId),
-  );
+): PickableProduct[] {
   return products
-    .filter(
-      (product) =>
-        product.status === 'owned' && (!inRitual.has(product.id) || product.id === selectedId),
-    )
+    .filter((product) => product.status === 'owned')
+    .map((product) => ({ product, periods: productPeriods(steps, product.id) }))
+    .filter(({ product, periods }) => periods.length < 2 || product.id === selectedId)
     .sort(
       (a, b) =>
-        categories.indexOf(a.category) - categories.indexOf(b.category) ||
-        a.name.localeCompare(b.name),
+        categories.indexOf(a.product.category) - categories.indexOf(b.product.category) ||
+        a.product.name.localeCompare(b.product.name),
     );
+}
+
+export function productPeriods(
+  steps: readonly Pick<RoutineStep, 'period' | 'productId'>[],
+  productId: string,
+): Period[] {
+  return routineMemberships(steps, productId).map((membership) => membership.period);
+}
+
+// The ticked rituals that can take the product, morning first; a ritual it is already in doesn't count.
+export function countedPeriods(ticked: readonly Period[], locked: readonly Period[]): Period[] {
+  return ritualOrder.filter((period) => ticked.includes(period) && !locked.includes(period));
 }
 
 // The ritual's ids with one step swapped with its neighbour; unchanged at either end.

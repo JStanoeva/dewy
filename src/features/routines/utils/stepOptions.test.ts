@@ -1,11 +1,13 @@
 import { categoryDetails } from '@/features/products/constants';
 import type { Product } from '@/features/products/types';
 import {
+  countedPeriods,
   durationStops,
   formatDuration,
   moveStepIds,
   nearestDurationStop,
   pickableProducts,
+  productPeriods,
   waitChoices,
 } from '@/features/routines/utils/stepOptions';
 
@@ -120,40 +122,57 @@ describe('pickableProducts', () => {
   });
   const products = [mask, serumB, wish, cleanser, serumA];
 
+  function ids(items: { product: Product }[]) {
+    return items.map((item) => item.product.id);
+  }
+
   it('lists owned products in routine order, then by name', () => {
-    expect(pickableProducts(products, [], 'morning').map((p) => p.id)).toEqual([
-      'c',
-      'sa',
-      'sb',
-      'm',
-    ]);
+    expect(ids(pickableProducts(products, []))).toEqual(['c', 'sa', 'sb', 'm']);
   });
 
-  it('leaves out products already in this ritual only', () => {
+  it('keeps a product in one ritual, with that ritual, and leaves out one in both', () => {
     const steps = [
+      { period: 'evening' as const, productId: 'c' },
       { period: 'morning' as const, productId: 'c' },
       { period: 'evening' as const, productId: 'm' },
     ];
-    expect(pickableProducts(products, steps, 'morning').map((p) => p.id)).toEqual([
-      'sa',
-      'sb',
-      'm',
-    ]);
-    expect(pickableProducts(products, steps, 'evening').map((p) => p.id)).toEqual([
-      'c',
-      'sa',
-      'sb',
+    expect(
+      pickableProducts(products, steps).map((item) => [item.product.id, item.periods]),
+    ).toEqual([
+      ['sa', []],
+      ['sb', []],
+      ['m', ['evening']],
     ]);
   });
 
-  it('keeps the selected product after it joins the ritual', () => {
-    const steps = [{ period: 'morning' as const, productId: 'sa' }];
-    expect(pickableProducts(products, steps, 'morning', 'sa').map((p) => p.id)).toEqual([
-      'c',
-      'sa',
-      'sb',
-      'm',
-    ]);
+  it('keeps the selected product after it joins both rituals', () => {
+    const steps = [
+      { period: 'morning' as const, productId: 'sa' },
+      { period: 'evening' as const, productId: 'sa' },
+    ];
+    expect(ids(pickableProducts(products, steps, 'sa'))).toEqual(['c', 'sa', 'sb', 'm']);
+  });
+});
+
+describe('productPeriods', () => {
+  it('lists the rituals a product is in, morning first', () => {
+    const steps = [
+      { period: 'evening' as const, productId: 'a' },
+      { period: 'morning' as const, productId: 'a' },
+      { period: 'morning' as const, productId: 'b' },
+    ];
+    expect(productPeriods(steps, 'a')).toEqual(['morning', 'evening']);
+    expect(productPeriods(steps, 'b')).toEqual(['morning']);
+    expect(productPeriods(steps, 'c')).toEqual([]);
+  });
+});
+
+describe('countedPeriods', () => {
+  it('keeps the ticked rituals the product is not in, morning first', () => {
+    expect(countedPeriods(['evening', 'morning'], [])).toEqual(['morning', 'evening']);
+    expect(countedPeriods(['morning', 'evening'], ['morning'])).toEqual(['evening']);
+    expect(countedPeriods(['morning'], ['morning'])).toEqual([]);
+    expect(countedPeriods([], [])).toEqual([]);
   });
 });
 

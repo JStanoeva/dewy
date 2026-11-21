@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import type { RoutineStepInput } from '@/features/routines/schemas/routineStepSchema';
 import {
-  createRoutineStep,
+  addRoutineSteps,
   deleteRoutineStep,
   reorderRoutineSteps,
   updateRoutineStep,
@@ -10,15 +10,13 @@ import {
 import type { RoutineStep } from '@/features/routines/types';
 import type { Period } from '@/theme/period';
 
-type CreateVariables = { period: Period; input: RoutineStepInput };
-
-export function useCreateRoutineStep() {
+export function useAddRoutineSteps() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ period, input }: CreateVariables) => createRoutineStep(period, input),
+    mutationFn: addRoutineSteps,
     // Returning the refetch keeps Save busy until Routines, the Shelf tags and the Details chips are fresh.
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['routineSteps'], exact: true }),
-    // A product already in that period, or deleted elsewhere, leaves the picker once the lists reload.
+    // A product added to a ritual or deleted elsewhere gets its lock or leaves the picker once the lists reload.
     onError: () => {
       queryClient.invalidateQueries({ queryKey: ['routineSteps'], exact: true });
       queryClient.invalidateQueries({ queryKey: ['products'], exact: true });

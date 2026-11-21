@@ -7,6 +7,8 @@ import type { RoutineStep } from '@/features/routines/types';
 
 const valid: RoutineStepFormValues = {
   productId: 'product-1',
+  periods: ['morning'],
+  lockedPeriods: [],
   weekdays: [1, 2, 3, 4, 5, 6, 7],
   durationSeconds: 60,
   waitMinutes: null,
@@ -25,13 +27,43 @@ function errorsFor(values: Partial<RoutineStepFormValues>) {
 }
 
 describe('routineStepFormSchema', () => {
-  it('maps a valid step to the insert shape, with no note fields', () => {
+  it('maps a valid step to the save shape, with no note fields', () => {
     expect(routineStepFormSchema.parse({ ...valid, waitMinutes: 10 })).toEqual({
       productId: 'product-1',
+      periods: ['morning'],
       weekdays: [1, 2, 3, 4, 5, 6, 7],
       durationSeconds: 60,
       waitMinutes: 10,
     });
+  });
+
+  it('sends both rituals in ritual order', () => {
+    expect(
+      routineStepFormSchema.parse({ ...valid, periods: ['evening', 'morning'] }).periods,
+    ).toEqual(['morning', 'evening']);
+  });
+
+  it('asks where the step goes when nothing is ticked', () => {
+    expect(errorsFor({ periods: [] })).toEqual({ periods: 'Pick where this step goes.' });
+  });
+
+  it('drops a ritual the product is already in, and asks when none is left', () => {
+    const both = routineStepFormSchema.parse({
+      ...valid,
+      periods: ['morning', 'evening'],
+      lockedPeriods: ['morning'],
+    });
+    expect(both.periods).toEqual(['evening']);
+    expect(errorsFor({ periods: ['morning'], lockedPeriods: ['morning'] })).toEqual({
+      periods: 'Pick where this step goes.',
+    });
+  });
+
+  it('ignores a locked ritual that is not ticked', () => {
+    expect(
+      routineStepFormSchema.parse({ ...valid, periods: ['morning'], lockedPeriods: ['evening'] })
+        .periods,
+    ).toEqual(['morning']);
   });
 
   it('asks for a product when none is picked', () => {
@@ -72,8 +104,9 @@ describe('routineStepFormSchema', () => {
   });
 
   it('reports every error together', () => {
-    expect(errorsFor({ productId: undefined, weekdays: [] })).toEqual({
+    expect(errorsFor({ productId: '', periods: [], weekdays: [] })).toEqual({
       productId: 'Pick a product',
+      periods: 'Pick where this step goes.',
       weekdays: 'Pick at least one day',
     });
   });
@@ -102,6 +135,8 @@ describe('toRoutineStepFormValues', () => {
   it('prefills the stored values, even ones the controls cannot show', () => {
     expect(toRoutineStepFormValues(step)).toEqual({
       productId: 'product-1',
+      periods: ['evening'],
+      lockedPeriods: [],
       weekdays: [1, 3, 5],
       durationSeconds: 900,
       waitMinutes: 3,
@@ -111,6 +146,7 @@ describe('toRoutineStepFormValues', () => {
   it('saves an untouched step unchanged', () => {
     expect(routineStepFormSchema.parse(toRoutineStepFormValues(step))).toEqual({
       productId: 'product-1',
+      periods: ['evening'],
       weekdays: [1, 3, 5],
       durationSeconds: 900,
       waitMinutes: 3,

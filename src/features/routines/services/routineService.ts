@@ -77,21 +77,22 @@ export async function getRoutineStep(id: string): Promise<RoutineStep | null> {
   return data ? toRoutineStep(stepRowSchema.parse(data)) : null;
 }
 
-// The database puts the new step at the end of its period.
-export async function createRoutineStep(period: Period, input: RoutineStepInput): Promise<void> {
-  const { error } = await supabase.from('routine_steps').insert({
-    product_id: input.productId,
-    period,
-    weekdays: input.weekdays,
-    duration_seconds: input.durationSeconds,
-    wait_minutes: input.waitMinutes,
+// One call adds the step to each ritual, at its end; if one ritual can't take it, neither gets it.
+export async function addRoutineSteps(input: RoutineStepInput): Promise<void> {
+  const { error } = await supabase.rpc('add_routine_steps', {
+    p_product_id: input.productId,
+    p_periods: input.periods,
+    p_weekdays: input.weekdays,
+    p_duration_seconds: input.durationSeconds,
+    // Left out for no wait, so the function's null default applies.
+    p_wait_minutes: input.waitMinutes ?? undefined,
   });
   if (error) {
     throw error;
   }
 }
 
-// Why an insert was refused: the product is already in that period, or it has been deleted.
+// Why an add was refused: the product is already in a ticked ritual, or it has been deleted.
 export function createStepConflict(error: unknown): 'duplicate' | 'productGone' | null {
   const code = typeof error === 'object' && error !== null && 'code' in error ? error.code : null;
   if (code === '23505') {

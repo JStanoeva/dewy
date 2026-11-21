@@ -52,6 +52,7 @@ export const letterSpacings = {
   kicker: 1.4,
   label: 0.9,
   section: 0.78,
+  tag: 0.44,
 } as const;
 
 export const radii = {

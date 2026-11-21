@@ -62,6 +62,7 @@ On Windows, if PowerShell refuses to run `npm` or `npx` because running scripts 
    8. `008_product_packaging.sql`
    9. `009_product_amount_actives.sql`
    10. `010_product_uses.sql`
+   11. `011_add_routine_steps.sql`
 
    Run each file once, before anyone signs up. `003_product_photos_storage.sql` creates the private `product-photos` bucket itself, so don't create it by hand.
 
@@ -279,7 +280,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 
 - The user taps "+" (or "Add a product" on an empty screen), fills in the New product form and taps "Save to shelf" or "Save to wishlist".
 - A chosen photo is uploaded to Storage first, then the product row is inserted. The shelf is refetched and the form closes.
-- On Routines, "Add a step from your shelf" opens New step: the user picks an owned product that isn't in that routine yet, its days, time and wait, and taps "Add to ritual". The step is inserted at the end of the routine.
+- On Routines, "Add a step from your shelf" opens "Add to your routine". The user picks an owned product that isn't in both routines yet (one already in a routine is tagged "In AM" or "In PM"). They tick Morning, Evening or both, set its days, time and wait, and tap "Add to both rituals", "Add to morning" or "Add to evening". One database function adds the step to the end of each ticked routine, so both are saved or neither is.
 - On Today, ticking a step inserts a completion for that step and day. The tick shows at once and is saved in the background; a tick already saved from another device is ignored instead of failing. Once every step of a routine due today is saved as ticked, Today also saves a row for that finished routine and day.
 
 #### Update / Delete (Mutation)
@@ -300,7 +301,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 - **Auth form** (Sign up / Log in): name (sign-up only), email and password.
 - **Product form** (New product / Edit product): status (I own it / Wishlist, new products only), photo, product name, brand, type, packaging (five tiles: dropper, pump, jar, tube and spray; a new product takes its type's usual bottle until one is tapped), opened on, use within, size in ml and how full it is (owned products only; a card estimates the uses it holds as you type), key actives (any of Retinoid, Vitamin C, AHA / BHA and Benzoyl peroxide; Dewy makes the ritual tips from them) and notes.
 - **Adjust** (Product details): "How full is it now?" with the four fullness tiles.
-- **Step form** (New step / Edit step): product (new steps only), days (seven day buttons), time (a slider from 10 seconds to 10 minutes), wait before the next step.
+- **Step form** (New step / Edit step): product and ritual (two Morning and Evening checkbox tiles; new steps only), days (seven day buttons), time (a slider from 10 seconds to 10 minutes), wait before the next step.
 
 #### Validation Rules
 
@@ -320,6 +321,7 @@ All three forms use React Hook Form with Zod schemas.
 - **Key actives:** any of the four, each at most once.
 - **Notes:** up to 500 characters.
 - **Step product:** one of your owned products must be picked.
+- **Step ritual:** at least one ticked ritual must be able to take the product ("Pick where this step goes."). A ritual that already has the picked product shows "Already in" and doesn't count (a rule across two fields).
 - **Days:** at least one day must be ticked.
 
 Database CHECK constraints back up the product rules on the server: name 2–80 characters, brand up to 60, one of the eight types, one of the five packagings (filled from the type when an older app version doesn't send one), an opened date from 2000 on (with one day of slack for time zones), "Use within" required once an opened date is set, key actives from the four offered (each once), a size of 1 to 1000 ml, a fullness of full, ¾, ½ or ¼, a count start date from 2000 on, and notes up to 500. The profile name is capped at 40 characters. A routine step needs at least one day (Monday to Sunday), a time of 10 seconds to 30 minutes, a wait of 1 to 60 minutes or none, and one of the same user's products, at most once per routine. A tick belongs to one of the same user's steps, at most once per day. Supabase Auth checks the email and password.
@@ -350,8 +352,8 @@ Database CHECK constraints back up the product rules on the server: name 2–80 
 4. Tap "Take photo" or "Choose photo". If label reading is set up, empty fields are filled in from the label.
 5. Check the name and brand, pick a type, keep today as the opened date, pick a "Use within" period, type the size in ml and watch the estimate card, tick its key actives, add notes, then tap "Save to shelf".
 6. Open the Shelf tab. The new card shows the photo and how long the product has left. Try the category chips and pull to refresh.
-7. Open the Routines tab, pick Morning and tap "Add a step". Pick the product, keep every day ticked and tap "Add to ritual". Back on the Shelf, the card now carries an "AM" tag. Tap it: its details show "Morning · step 1", and that chip opens your morning ritual on the Routines tab.
-8. Tap the centre "+" and save a second owned product, a serum with Retinoid ticked under Key actives. On the Routines tab, switch to Evening, tap "Add a step from your shelf", pick that serum, leave only Monday, Wednesday and Friday ticked, slide the time, and tap "Add to ritual". Tap the new step to change its days or move it up.
+7. Open the Routines tab, pick Morning and tap "Add a step". Pick the product, tick Evening as well, keep every day ticked and tap "Add to both rituals". Back on the Shelf, the card now carries an "AM · PM" tag. Tap it: its details show "Morning · step 1" and "Evening · step 1", and each chip opens that ritual on the Routines tab.
+8. Tap the centre "+" and save a second owned product, a serum with Retinoid ticked under Key actives. On the Routines tab, switch to Evening, tap "Add a step from your shelf", pick that serum (Evening is already ticked), leave only Monday, Wednesday and Friday ticked, slide the time, and tap "Add to evening". Tap the new step to change its days or move it up.
 9. Open the Today tab and pick Evening, then Morning: the whole app changes colour with the switch. On a Monday, Wednesday or Friday evening the serum from step 8 brings two tips above the steps, "Skip exfoliating acids tonight" and "Wear SPF tomorrow morning"; "Hide tips" folds them and "Show" opens them again. Its product page lists the same tips under Ritual tips. Tap a step to tick it off: the arc, its dot, the count and the minutes left update. Close and reopen Dewy, and the tick is still there.
 10. Add a product with "Wishlist" selected. It appears on the Wishlist side.
 11. Tap a card to open its details, and tap the heart to mark it as a favourite.
@@ -362,9 +364,9 @@ Database CHECK constraints back up the product rules on the server: name 2–80 
 
 - **Authentication errors** are shown on the right field or above the button in plain language: wrong email or password, an email that already has an account, an invalid email, a weak password, too many attempts, no connection, and a general fallback.
 - **Network or data errors:** screens that load data (Shelf, Product details, Edit product, Routines, New step, Edit step, Today and Me) show "Something went wrong" with a "Try again" button. Data that is already loaded stays visible.
-- **Failed saves:** the product form shows an error above the Save button. A failed favourite or delete shows an error and undoes the change on screen. A failed move shows an error in the More options sheet. The step form shows its own errors: a failed save above its button, a failed move under the Move buttons, and a failed remove in its confirmation sheet. A product added to that routine on another device is caught, and the form asks for another one. A failed tick on Today flips back and shows "Couldn't save this step"; a step removed on another device says it is no longer in your routine.
+- **Failed saves:** the product form shows an error above the Save button. A failed favourite or delete shows an error and undoes the change on screen. A failed move shows an error in the More options sheet. The step form shows its own errors: a failed save above its button, a failed move under the Move buttons, and a failed remove in its confirmation sheet. If another device added the product to a ticked routine first, nothing is saved: that routine shows "Already in" with a message, and one more tap adds the rest. A failed tick on Today flips back and shows "Couldn't save this step"; a step removed on another device says it is no longer in your routine.
 - **Duplicate taps:** buttons are disabled while a request is running, so a form or action can't be sent twice. On Today, a step ignores taps while its tick is saving.
-- **Empty states:** an empty Shelf or category shows "Nothing here yet" with an "Add a product" button. Today asks for a product first, offers "Add a step" when the routine has no steps, and says "Nothing this morning" (or evening) when none of its steps fall on today. Routines asks for a product first, or, when there are products but no steps in that routine, offers "Add a step". New step says when every owned product is already in that routine.
+- **Empty states:** an empty Shelf or category shows "Nothing here yet" with an "Add a product" button. Today asks for a product first, offers "Add a step" when the routine has no steps, and says "Nothing this morning" (or evening) when none of its steps fall on today. Routines asks for a product first, or, when there are products but no steps in that routine, offers "Add a step". New step says when every owned product is already in both routines.
 - **Missing data:** a product that was deleted elsewhere shows "This product is no longer on your shelf" with a Back button, and a removed step shows "This step is no longer in your routine" with a Close button.
 - **Photos:** if a photo can't load, the Shelf card and Product details show a bottle illustration instead, and the product form shows an empty photo frame.
 - **Configuration:** missing or invalid environment values show a setup screen instead of a crash.
