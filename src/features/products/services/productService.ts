@@ -16,7 +16,7 @@ import {
 import type { Product } from '@/features/products/types';
 import { findWishlistTwin, wishlistCopyOf } from '@/features/products/utils/wishlistCopy';
 import { supabase } from '@/lib/supabase';
-import type { LocalDate } from '@/utils/localDate';
+import { isValidLocalDate, type LocalDate } from '@/utils/localDate';
 
 const productColumns =
   'id, status, name, brand, category, packaging, photo_path, opened_on, pao_months, actives, size_ml, start_fraction, tracked_from, notes, is_favorite, created_at, updated_at';
@@ -30,12 +30,13 @@ const productRowSchema = z.object({
   category: z.enum(categories),
   packaging: z.enum(packagings),
   photo_path: z.string().nullable(),
-  opened_on: z.string().nullable(),
+  // Checked here so a malformed date becomes the screen's error state, not a crash while drawing.
+  opened_on: z.string().refine(isValidLocalDate).nullable(),
   pao_months: z.number().nullable(),
   actives: z.array(z.enum(actives)),
   size_ml: z.number().nullable(),
   start_fraction: z.literal(fullnessValues),
-  tracked_from: z.string(),
+  tracked_from: z.string().refine(isValidLocalDate),
   notes: z.string().nullable(),
   is_favorite: z.boolean(),
   created_at: z.string(),
