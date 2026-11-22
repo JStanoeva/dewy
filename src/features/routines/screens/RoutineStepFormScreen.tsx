@@ -18,7 +18,7 @@ import { Screen } from '@/components/Screen';
 import { categoryDetails } from '@/features/products/constants';
 import { useProducts } from '@/features/products/hooks/useProducts';
 import type { Product } from '@/features/products/types';
-import { splitLastWord } from '@/features/products/utils/productLabels';
+import { nameHyphenation, splitLastWord } from '@/features/products/utils/productLabels';
 import { ProductPicker } from '@/features/routines/components/ProductPicker';
 import { RemoveStepSheet } from '@/features/routines/components/RemoveStepSheet';
 import { RitualTiles } from '@/features/routines/components/RitualTiles';
@@ -53,7 +53,15 @@ import {
 import type { RootStackParamList } from '@/navigation/types';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import type { Period } from '@/theme/period';
-import { fonts, fontSizes, letterSpacings, minTouchTarget, radii, spacing } from '@/theme/tokens';
+import {
+  fixedWidthMaxFontScale,
+  fonts,
+  fontSizes,
+  letterSpacings,
+  minTouchTarget,
+  radii,
+  spacing,
+} from '@/theme/tokens';
 
 type RoutineStepFormScreenProps = NativeStackScreenProps<RootStackParamList, 'RoutineStepForm'>;
 type Navigation = RoutineStepFormScreenProps['navigation'];
@@ -432,6 +440,7 @@ function RoutineStepForm({ navigation, period, step, products }: RoutineStepForm
             </Text>
             <Text
               accessibilityRole="header"
+              android_hyphenationFrequency={nameHyphenation(step.product.name)}
               style={[styles.title, styles.editTitle, { color: palette.text }]}
             >
               {title.head}
@@ -622,6 +631,7 @@ function RoutineStepForm({ navigation, period, step, products }: RoutineStepForm
                       <Text
                         numberOfLines={1}
                         adjustsFontSizeToFit
+                        maxFontSizeMultiplier={fixedWidthMaxFontScale}
                         style={[
                           styles.waitLabel,
                           { color: selected ? palette.onAccent : palette.text },
@@ -782,7 +792,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.xs,
     minHeight: minTouchTarget,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.xs,
     borderRadius: radii.tile,
   },
   moveLabel: {
@@ -819,7 +829,6 @@ const styles = StyleSheet.create({
     height: minTouchTarget,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.xxs,
     borderRadius: radii.tile,
   },
   waitLabel: {

@@ -82,3 +82,6 @@ export const spacing = {
 } as const;
 
 export const minTouchTarget = 44;
+
+// Text in fixed-width tiles and fields stops growing at this font scale, the largest at which all of it fits a 360dp screen.
+export const fixedWidthMaxFontScale = 1.1;

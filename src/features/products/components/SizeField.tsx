@@ -12,7 +12,14 @@ import {
 
 import type { TextFieldHandle } from '@/components/TextField';
 import { useDewyTheme } from '@/theme/ThemeProvider';
-import { fonts, fontSizes, minTouchTarget, radii, spacing } from '@/theme/tokens';
+import {
+  fixedWidthMaxFontScale,
+  fonts,
+  fontSizes,
+  minTouchTarget,
+  radii,
+  spacing,
+} from '@/theme/tokens';
 
 type SizeFieldProps = {
   value: string;
@@ -78,9 +85,15 @@ export function SizeField({
             onBlur();
           }}
           onSubmitEditing={onSubmitEditing}
+          maxFontSizeMultiplier={fixedWidthMaxFontScale}
           style={[styles.input, { color: palette.text }]}
         />
-        <Text style={[styles.suffix, { color: palette.textMuted }]}>ml</Text>
+        <Text
+          maxFontSizeMultiplier={fixedWidthMaxFontScale}
+          style={[styles.suffix, { color: palette.textMuted }]}
+        >
+          ml
+        </Text>
       </Pressable>
     </View>
   );

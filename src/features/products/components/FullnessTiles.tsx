@@ -2,7 +2,14 @@ import { Pressable, StyleSheet, Text, View, type Insets } from 'react-native';
 
 import { fullnessLabels, fullnessValues, type Fullness } from '@/features/products/constants';
 import { useDewyTheme } from '@/theme/ThemeProvider';
-import { fonts, fontSizes, minTouchTarget, radii, spacing } from '@/theme/tokens';
+import {
+  fixedWidthMaxFontScale,
+  fonts,
+  fontSizes,
+  minTouchTarget,
+  radii,
+  spacing,
+} from '@/theme/tokens';
 
 type FullnessTilesProps = {
   // Null while no tile is picked (Edit with a saved size, and Adjust).
@@ -43,7 +50,10 @@ export function FullnessTiles({
               disabled && styles.disabled,
             ]}
           >
-            <Text style={[styles.label, { color: selected ? palette.onAccent : palette.text }]}>
+            <Text
+              maxFontSizeMultiplier={fixedWidthMaxFontScale}
+              style={[styles.label, { color: selected ? palette.onAccent : palette.text }]}
+            >
               {fullnessLabels[fullness].label}
             </Text>
           </Pressable>

@@ -4,7 +4,7 @@ import { BottleIllustration, type BottleShape } from '@/components/BottleIllustr
 import { packagingLabels, packagings } from '@/features/products/constants';
 import { packagingTileBottles } from '@/theme/bottleColors';
 import { useDewyTheme } from '@/theme/ThemeProvider';
-import { fonts, fontSizes, radii, spacing } from '@/theme/tokens';
+import { fixedWidthMaxFontScale, fonts, fontSizes, radii, spacing } from '@/theme/tokens';
 
 type PackagingPickerProps = {
   // The lit tile: the one tapped, or the Type's bottle; null while neither is known.
@@ -46,6 +46,7 @@ export function PackagingPicker({ value, onChange }: PackagingPickerProps) {
             <Text
               numberOfLines={1}
               adjustsFontSizeToFit
+              maxFontSizeMultiplier={fixedWidthMaxFontScale}
               style={[styles.label, { color: selected ? palette.onAccent : palette.text }]}
             >
               {packagingLabels[packaging]}

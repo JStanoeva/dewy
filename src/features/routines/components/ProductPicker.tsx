@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { categoryDetails } from '@/features/products/constants';
 import type { Product } from '@/features/products/types';
+import { nameHyphenation } from '@/features/products/utils/productLabels';
 import { StepTile } from '@/features/routines/components/StepTile';
 import { TickCircle } from '@/features/routines/components/TickCircle';
 import type { PickableProduct } from '@/features/routines/utils/stepOptions';
@@ -53,7 +54,11 @@ export function ProductPicker({ products, value, onChange, disabled }: ProductPi
               shape={product.packaging}
             />
             <View style={styles.text}>
-              <Text numberOfLines={2} style={[styles.name, { color: palette.text }]}>
+              <Text
+                numberOfLines={2}
+                android_hyphenationFrequency={nameHyphenation(product.name)}
+                style={[styles.name, { color: palette.text }]}
+              >
                 {product.name}
               </Text>
               <Text numberOfLines={1} style={[styles.meta, { color: palette.textMuted }]}>

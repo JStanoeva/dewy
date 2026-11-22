@@ -1,7 +1,8 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 
 import { categoryDetails } from '@/features/products/constants';
+import { nameHyphenation } from '@/features/products/utils/productLabels';
 import { StepTile } from '@/features/routines/components/StepTile';
 import type { RoutineStep } from '@/features/routines/types';
 import { describeWeekdays, formatWeekdays, isDaily } from '@/features/routines/utils/weekSchedule';
@@ -19,9 +20,12 @@ type RoutineStepRowProps = {
 const tileLeft = spacing.md;
 const tileSize = 40;
 const waitLineWidth = 2;
+// Above font scale 1.0, a name column narrower than this times the scale can't fit "7 · MOISTURIZE", so the days pill moves under the name.
+const nameMinWidth = 95;
 
 export function RoutineStepRow({ step, number, showWait, onPress }: RoutineStepRowProps) {
   const { palette } = useDewyTheme();
+  const { fontScale } = useWindowDimensions();
   const kind = categoryDetails[step.product.category].stepKind;
   const daily = isDaily(step.weekdays);
   const waitMinutes = showWait ? step.waitMinutes : null;
@@ -46,20 +50,26 @@ export function RoutineStepRow({ step, number, showWait, onPress }: RoutineStepR
         style={[styles.card, { backgroundColor: palette.surface, boxShadow: palette.cardShadow }]}
       >
         <StepTile productId={step.productId} photoPath={step.product.photoPath} />
-        <View style={styles.text}>
-          <Text style={[styles.kind, { color: palette.stepLabel }]}>
-            {number} · {kind}
-          </Text>
-          <Text numberOfLines={2} style={[styles.name, { color: palette.text }]}>
-            {step.product.name}
-          </Text>
-        </View>
-        <View
-          style={[styles.daysChip, { backgroundColor: daily ? palette.chipSoft : palette.peach }]}
-        >
-          <Text style={[styles.daysLabel, { color: daily ? palette.text : palette.onAccent }]}>
-            {formatWeekdays(step.weekdays)}
-          </Text>
+        <View style={styles.details}>
+          <View style={[styles.text, fontScale > 1 && { minWidth: nameMinWidth * fontScale }]}>
+            <Text style={[styles.kind, { color: palette.stepLabel }]}>
+              {number} · {kind}
+            </Text>
+            <Text
+              numberOfLines={2}
+              android_hyphenationFrequency={nameHyphenation(step.product.name)}
+              style={[styles.name, { color: palette.text }]}
+            >
+              {step.product.name}
+            </Text>
+          </View>
+          <View
+            style={[styles.daysChip, { backgroundColor: daily ? palette.chipSoft : palette.peach }]}
+          >
+            <Text style={[styles.daysLabel, { color: daily ? palette.text : palette.onAccent }]}>
+              {formatWeekdays(step.weekdays)}
+            </Text>
+          </View>
         </View>
       </View>
       {waitMinutes ? (
@@ -110,6 +120,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: tileLeft,
     borderRadius: radii.detailCard,
+  },
+  details: {
+    flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    columnGap: spacing.sm,
+    rowGap: spacing.snug,
   },
   text: {
     flex: 1,

@@ -16,6 +16,11 @@ export function splitLastWord(name: string): { head: string; last: string } {
   return { head: trimmed.slice(0, lastStart), last: trimmed.slice(lastStart) };
 }
 
+// Android also hyphenates words that would fit, so only a name with a run too long for a line (13+ characters) gets it.
+export function nameHyphenation(name: string): 'normal' | 'none' {
+  return name.split(/\s+/).some((word) => word.length >= 13) ? 'normal' : 'none';
+}
+
 export function noteLines(notes: string | null): string[] {
   return (notes ?? '')
     .split('\n')

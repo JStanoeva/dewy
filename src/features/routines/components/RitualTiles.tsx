@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { FieldError } from '@/components/FieldError';
@@ -17,9 +17,13 @@ type RitualTilesProps = {
   disabled?: boolean;
 };
 
+// Two tiles this wide (at font scale 1.0) fit on a 360dp screen; with less room they stack.
+const tileMinWidth = 150;
+
 // The AddStep artboard's Ritual row: Morning and Evening checkbox tiles; a ritual that has the product is locked.
 export function RitualTiles({ ticked, locked, onToggle, error, disabled }: RitualTilesProps) {
   const { palette } = useDewyTheme();
+  const { fontScale } = useWindowDimensions();
 
   return (
     <View>
@@ -51,13 +55,14 @@ export function RitualTiles({ ticked, locked, onToggle, error, disabled }: Ritua
               style={[
                 styles.tile,
                 {
+                  minWidth: tileMinWidth * fontScale,
                   backgroundColor: background,
                   borderColor: isLocked ? palette.chipSoft : checked ? fill : palette.mauve,
                 },
               ]}
             >
               <Icon color={foreground} size={20} />
-              {/* A half-width tile leaves about 58dp for the name, so large font sizes shrink to fit. */}
+              {/* A half-width tile on a 360dp screen leaves about 58dp, so "Morning" shrinks a hair to fit. */}
               <View style={styles.names}>
                 <Text
                   numberOfLines={1}
@@ -120,6 +125,7 @@ const styles = StyleSheet.create({
   },
   tiles: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.xs,
     marginTop: spacing.xs,
   },

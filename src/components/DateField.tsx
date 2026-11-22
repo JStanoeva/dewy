@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 
 import { useDewyTheme } from '@/theme/ThemeProvider';
-import { fonts, fontSizes, radii, spacing } from '@/theme/tokens';
+import { fixedWidthMaxFontScale, fonts, fontSizes, radii, spacing } from '@/theme/tokens';
 import { formatLocalDate, parseLocalDate, toLocalDate, type LocalDate } from '@/utils/localDate';
 
 type DateFieldProps = {
@@ -67,6 +67,7 @@ export function DateField({
       >
         <Text
           numberOfLines={1}
+          maxFontSizeMultiplier={fixedWidthMaxFontScale}
           style={[styles.value, { color: value ? palette.text : palette.placeholder }]}
         >
           {value ? formatLocalDate(value) : placeholder}

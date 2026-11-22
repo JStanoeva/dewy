@@ -49,7 +49,15 @@ import { restartsCount } from '@/features/products/utils/usesLeft';
 import type { RootStackParamList } from '@/navigation/types';
 import { getRitualDate } from '@/theme/period';
 import { useDewyTheme } from '@/theme/ThemeProvider';
-import { fonts, fontSizes, letterSpacings, minTouchTarget, radii, spacing } from '@/theme/tokens';
+import {
+  fixedWidthMaxFontScale,
+  fonts,
+  fontSizes,
+  letterSpacings,
+  minTouchTarget,
+  radii,
+  spacing,
+} from '@/theme/tokens';
 import { parseLocalDate, todayLocalDate } from '@/utils/localDate';
 
 type ProductFormScreenProps = NativeStackScreenProps<RootStackParamList, 'ProductForm'>;
@@ -451,6 +459,7 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
                       value={field.value}
                       onChange={field.onChange}
                       shadow={false}
+                      revealSelected
                     />
                   </View>
                   {fieldState.error ? (
@@ -526,6 +535,7 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
                               ]}
                             >
                               <Text
+                                maxFontSizeMultiplier={fixedWidthMaxFontScale}
                                 style={[
                                   styles.paoLabel,
                                   { color: selected ? palette.onAccent : palette.text },

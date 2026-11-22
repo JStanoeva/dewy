@@ -28,7 +28,12 @@ import {
 } from '@/features/products/hooks/useProductMutations';
 import { useProduct } from '@/features/products/hooks/useProducts';
 import type { Product } from '@/features/products/types';
-import { noteLines, productInitials, splitLastWord } from '@/features/products/utils/productLabels';
+import {
+  nameHyphenation,
+  noteLines,
+  productInitials,
+  splitLastWord,
+} from '@/features/products/utils/productLabels';
 import { usesPerWeek } from '@/features/products/utils/usesLeft';
 import { useRoutineSteps } from '@/features/routines/hooks/useRoutineSteps';
 import { routineMemberships } from '@/features/routines/utils/routineMembership';
@@ -318,7 +323,11 @@ function ProductDetailsContent({ product, today, navigation }: ProductDetailsCon
               <Text style={[styles.kicker, { color: palette.textMuted }]}>
                 {product.brand ? `${category.label} · ${product.brand}` : category.label}
               </Text>
-              <Text accessibilityRole="header" style={[styles.title, { color: palette.text }]}>
+              <Text
+                accessibilityRole="header"
+                android_hyphenationFrequency={nameHyphenation(product.name)}
+                style={[styles.title, { color: palette.text }]}
+              >
                 {title.head}
                 <Text style={[styles.titleItalic, { color: palette.emphasis }]}>{title.last}</Text>
               </Text>

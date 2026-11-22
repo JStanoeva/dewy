@@ -134,19 +134,28 @@ export function ProductPhotoField({
 
       {labelStatus ? (
         <View style={styles.labelStatus}>
-          {labelStatus === 'reading' ? (
-            <ActivityIndicator
-              size="small"
-              color={palette.textMuted}
-              importantForAccessibility="no"
-            />
-          ) : null}
+          {/* An invisible copy of the longest message sets the height, so a read ending at a large font size doesn't move the fields below. */}
           <Text
-            accessibilityLiveRegion="polite"
-            style={[styles.label, styles.labelStatusText, { color: palette.textMuted }]}
+            importantForAccessibility="no-hide-descendants"
+            style={[styles.label, styles.sizer]}
           >
-            {labelMessages[labelStatus]}
+            {labelMessages.unread}
           </Text>
+          <View style={[StyleSheet.absoluteFill, styles.labelStatusLine]}>
+            {labelStatus === 'reading' ? (
+              <ActivityIndicator
+                size="small"
+                color={palette.textMuted}
+                importantForAccessibility="no"
+              />
+            ) : null}
+            <Text
+              accessibilityLiveRegion="polite"
+              style={[styles.label, styles.labelStatusText, { color: palette.textMuted }]}
+            >
+              {labelMessages[labelStatus]}
+            </Text>
+          </View>
         </View>
       ) : null}
     </View>
@@ -229,10 +238,16 @@ const styles = StyleSheet.create({
   },
   // As tall as Android's small spinner, so the line keeps its height when the spinner goes.
   labelStatus: {
+    justifyContent: 'center',
+    minHeight: 20,
+  },
+  sizer: {
+    opacity: 0,
+  },
+  labelStatusLine: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    minHeight: 20,
   },
   labelStatusText: {
     flexShrink: 1,

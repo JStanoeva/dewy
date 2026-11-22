@@ -6,6 +6,7 @@ import { BottleIllustration } from '@/components/BottleIllustration';
 import { ProductPhoto } from '@/features/products/components/ProductPhoto';
 import { ShelfLifeBar } from '@/features/products/components/ShelfLifeCard';
 import type { Product } from '@/features/products/types';
+import { nameHyphenation } from '@/features/products/utils/productLabels';
 import { getShelfLife, savedLabel } from '@/features/products/utils/shelfLife';
 import { getAmountProgress, isRunningLow } from '@/features/products/utils/usesLeft';
 import { describeRoutines, routineTag } from '@/features/routines/utils/routineMembership';
@@ -115,7 +116,11 @@ export function ProductCard({
         <Text numberOfLines={1} style={[styles.brand, { color: palette.textMuted }]}>
           {product.brand}
         </Text>
-        <Text numberOfLines={2} style={[styles.name, { color: palette.text }]}>
+        <Text
+          numberOfLines={2}
+          android_hyphenationFrequency={nameHyphenation(product.name)}
+          style={[styles.name, { color: palette.text }]}
+        >
           {product.name}
         </Text>
         {bar ? (

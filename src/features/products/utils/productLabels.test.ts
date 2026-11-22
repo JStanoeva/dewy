@@ -1,4 +1,9 @@
-import { noteLines, productInitials, splitLastWord } from '@/features/products/utils/productLabels';
+import {
+  nameHyphenation,
+  noteLines,
+  productInitials,
+  splitLastWord,
+} from '@/features/products/utils/productLabels';
 
 describe('productInitials', () => {
   it('takes the first letter of the first two words', () => {
@@ -33,6 +38,20 @@ describe('splitLastWord', () => {
 
   it('puts a one-word name entirely in the last word', () => {
     expect(splitLastWord('Retinal')).toEqual({ head: '', last: 'Retinal' });
+  });
+});
+
+describe('nameHyphenation', () => {
+  it('leaves ordinary names alone, even with a 12-letter word', () => {
+    expect(nameHyphenation('Rose Soothing Spray Toner')).toBe('none');
+    expect(nameHyphenation('Barrier Moisturizing Cream')).toBe('none');
+    expect(nameHyphenation('Clarifying Do-Over Peel')).toBe('none');
+  });
+
+  it('hyphenates a name with a run of 13 or more characters', () => {
+    expect(nameHyphenation('AgentGSupercalifragilisticexpialidociousSerum')).toBe('normal');
+    expect(nameHyphenation('AgentG-Barrier-Repair-Night-Cream')).toBe('normal');
+    expect(nameHyphenation('Pore-Minimizing Toner')).toBe('normal');
   });
 });
 

@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { categoryDetails } from '@/features/products/constants';
+import { nameHyphenation } from '@/features/products/utils/productLabels';
 import { StepTile } from '@/features/routines/components/StepTile';
 import { formatDuration } from '@/features/routines/utils/stepOptions';
 import { useToggleCompletion } from '@/features/today/hooks/useTodayRoutine';
@@ -62,6 +63,7 @@ export function TodayStepRow({ item, localDate, onOpenProduct }: TodayStepRowPro
         <Text
           key={done ? 'done' : 'pending'}
           numberOfLines={2}
+          android_hyphenationFrequency={nameHyphenation(step.product.name)}
           style={[
             styles.name,
             { color: palette.text },
