@@ -17,6 +17,12 @@ const config: ExpoConfig = {
       monochromeImage: './assets/android-icon-monochrome.png',
     },
     predictiveBackGestureEnabled: false,
+    // Added by the template and expo-secure-store, but Dewy never draws overlays or asks for biometrics.
+    blockedPermissions: [
+      'android.permission.SYSTEM_ALERT_WINDOW',
+      'android.permission.USE_BIOMETRIC',
+      'android.permission.USE_FINGERPRINT',
+    ],
   },
   plugins: [
     ['expo-splash-screen', { backgroundColor: '#FFF5EF' }],
