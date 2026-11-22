@@ -17,7 +17,7 @@ Dewy keeps a shelf of the skincare products you own and the ones on your wishlis
 - Track shelf life: the opened date and the "use within" period show how long each opened product has left.
 - Take or choose a product photo, stored privately for your account.
 - Optionally fill in a new product's name, brand, type, packaging, size and key actives from the label in its photo.
-
+- Give a product its size to see about how many uses it has left as you tick it off, with products running low flagged on the Shelf.
 - Build morning and evening routines from the products you own: pick each step's days, time and wait, then edit, reorder or remove steps on the Routines tab.
 - Tick off today's morning or evening steps on the Today tab. Ticks are saved per day, so they survive a restart and start fresh the next morning.
 - See ritual tips made from your products' key actives, such as "Skip exfoliating acids tonight" next to a retinoid, on Today and on each product's page.
@@ -31,12 +31,14 @@ Dewy keeps a shelf of the skincare products you own and the ones on your wishlis
 - React Hook Form 7 with Zod 4 validation
 - Supabase: Auth, Postgres with row level security, Storage and Edge Functions
 - expo-image-picker and expo-image-manipulator for product photos, expo-image to display them
-- expo-secure-store and AsyncStorage for the encrypted session; AsyncStorage also remembers whether Today's tips are folded
+- aes-js and expo-crypto to encrypt the session, expo-secure-store for its key and AsyncStorage for the ciphertext; AsyncStorage also remembers whether Today's tips are folded
+- react-native-svg for the bottle drawings and the progress arc
+- @react-native-community/datetimepicker and @react-native-community/slider for the opened date and a step's time
 - Jest with jest-expo, ESLint and Prettier
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) 22.13+, 24.3+, or 26+ (the versions Expo SDK 58 supports), with npm
+- [Node.js](https://nodejs.org/) 22 (22.13 or later), 24 (24.3 or later), or 26 and newer (the versions Expo SDK 58 supports), with npm
 - The Expo Go app on an Android phone, updated to a version that supports SDK 58
 - A [Supabase](https://supabase.com/) project of your own
 
@@ -192,11 +194,11 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 #### Authenticated User
 
 - **Main sections:** four bottom tabs (Today, Shelf, Routines, Me) and a raised centre "+" button that opens the New product form.
-  - **Today:** the date, a "Good morning" or "Good evening" greeting with the user's name, a Morning / Evening switch, a progress arc with one dot per step and a sun or moon where the progress ends ("2 of 5 steps done · 4 min to go"), and the checklist of that routine's steps for today's weekday. Above the list, banners show the routine's tips for today, made from the listed products' key actives: a retinoid gets "Skip exfoliating acids tonight", vitamin C in the morning gets "Follow with SPF" when the morning routine has an SPF, and products that don't mix (such as vitamin C and a retinoid) get a gentle reminder to split them. With two or more banners, "Hide tips" folds them into one line ("3 tips for today" with a Show link); they stay folded until Show is tapped, and open again by themselves when a day shows a tip that wasn't there when they were folded. Tapping a step ticks or unticks it; a long press opens its product. The switch also changes the whole app between the light morning and the plum evening colours; the choice holds until the other half of the day (morning is 05:00–16:59). The day turns over at 05:00, so evening steps ticked after midnight count for that evening.
+  - **Today:** the date, a "Good morning" or "Good evening" greeting with the user's name, a Morning / Evening switch, a progress arc with one dot per step and a sun or moon where the progress ends ("2 of 5 steps done · 4 min to go"), and the checklist of that routine's steps for today's weekday. Above the list, banners show the routine's tips for today, made from the listed products' key actives: a retinoid gets "Skip exfoliating acids tonight", vitamin C in the morning gets "Follow with SPF, they protect better together" when the morning routine has an SPF, and products that don't mix (such as vitamin C and a retinoid) get a gentle reminder to split them. Each banner starts with its product's name. With two or more banners, "Hide tips" folds them into one line ("3 tips for today" with a Show link); they stay folded until Show is tapped, and open again by themselves when a day shows a tip that wasn't there when they were folded. Tapping a step ticks or unticks it; a long press opens its product. Once every step is ticked, the arc reads "All done — go glow" (or "All done — sweet dreams" in the evening). Pulling down refreshes the list. The switch also changes the whole app between the light morning and the plum evening colours; the choice holds until the other half of the day (morning is 05:00–16:59). The day turns over at 05:00, so evening steps ticked after midnight count for that evening.
   - **Shelf:** the user's products in a two-column grid, with Owned and Wishlist sides and category chips. Products in a routine carry an AM, PM or AM · PM tag, and products with 5 or fewer uses left say so ("≈ 5 uses left").
-  - **Routines:** "Your rituals" with Morning and Evening. It opens on the routine Today shows, then keeps its own choice; its switch changes only its list, not the colours. Each routine shows a week strip, the number of steps and the time they take, and the ordered steps with their days and waits. Tapping a step opens the step editor, and "Add a step from your shelf" adds one.
-  - **Me:** the user's initial, name, "Glowing with Dewy since" with the month they joined, and Log out.
-- **Details screen:** Product details, opened by tapping a product card on the Shelf. For an owned product with a size it shows how many uses are left ("≈ 42 uses"), a bar of how full the bottle is, and how long that lasts at the product's routine days ("30 ml · about 6 weeks at 1 use a day"). "Feels off? Adjust" restarts the count from how full it is now.
+  - **Routines:** "Your rituals" with Morning and Evening. It opens on the routine Today shows, then keeps its own choice; its switch changes only its list, not the colours. Each routine shows a week strip, the number of steps and the time they take, and the ordered steps with their days and waits. Tapping a step opens the step editor, and "Add a step from your shelf" adds one. Pulling down refreshes the list.
+  - **Me:** the user's initial, name, "Glowing with Dewy since" with the month and year they joined ("Nov 2026"), and Log out.
+- **Details screen:** Product details, opened by tapping a product card on the Shelf, by a long press on a step on Today, or by "View it" after adding a product to the wishlist. For an owned product with a size it shows how many uses are left ("≈ 42 uses"), a bar of how full the bottle is, and how long that lasts at the product's routine days ("30 ml · about 6 weeks at 1 use a day"). "Feels off? Adjust" restarts the count from how full it is now.
 - **Create:** add a product, with an optional photo, add an owned product to the wishlist as a new unopened copy, or add a routine step.
 - **Edit:** edit a product, mark it as a favourite, or move a wishlist product to the shelf. Edit a routine step, or move it up or down.
 - **Delete:** delete a product after a confirmation step (its photo is removed too), or remove a routine step.
@@ -237,6 +239,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 - Product details, the product form and the step editor sit on the root stack, so they cover the tab bar.
 - A routine chip on Product details returns to the tabs with `popTo` and opens the Routines tab on that routine through nested params (`RoutinesTab` → `Routines { period }`).
 - On Today, "Edit" opens the Routines tab on the shown routine through the same nested params (`RoutinesTab` → `Routines { period }`), with a plain `navigate` because Today is already inside the tabs. A long press on a step opens `ProductDetails`, and the empty states open the step editor or the product form.
+- "View it" after adding a product to the wishlist opens the new copy with `navigation.push('ProductDetails', …)`, so Back returns to the original product.
 - The More options menu on Product details is a modal sheet, not a separate route.
 
 ### List → Details Flow
@@ -244,8 +247,8 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 #### List / Overview Screen
 
 - The Shelf lists the user's products, newest first, in a two-column grid.
-- Each card shows the photo or, without one, a drawing of the product's packaging (dropper, pump, jar, tube or spray), the brand, the name and a status line. For owned products that line is the shelf life (for example "5 months left", or "Unopened"). An owned product with 5 or fewer uses left shows "≈ 5 uses left" in the warning colour instead, with a bar of how full it is, unless it has expired ("Expired" always wins). For wishlist products it is the date the product was saved.
-- Under the title, a summary counts the owned products and how many of them are expiring or running low, leaving out any part that is 0 ("7 products · 1 expiring · 1 running low").
+- Each card shows the photo or, without one, a drawing of the product's packaging (dropper, pump, jar, tube or spray), the brand, the name and a status line. For owned products that line is the shelf life (for example "5 months left", or "Unopened"), and an opened product also shows a bar of the shelf life left. With 30 days or fewer left, the bar and the line turn the warning colour ("Use within 3 weeks", "Expires today"). An owned product with 5 or fewer uses left shows "≈ 5 uses left" in the warning colour instead, with a bar of how full it is, unless it has expired ("Expired" always wins). For wishlist products it is the date the product was saved.
+- Under the title, a summary counts the owned products and how many of them are expiring or running low, leaving out any part that is 0 ("7 products · 1 expiring · 1 running low"). On the Wishlist side it reads "3 products you have your eye on", and the Owned / Wishlist switch shows each side's count.
 - A tag on the picture shows which routines an owned product is in ("AM", "PM" or "AM · PM"). Wishlist products show "Wish".
 - The user switches between Owned and Wishlist, filters by category (Cleanser, Exfoliant, Toner, Mist, Serum, Moisturizer, SPF, Mask) and pulls down to refresh.
 
@@ -307,7 +310,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 
 #### Validation Rules
 
-All three forms use React Hook Form with Zod schemas.
+The auth, product and step forms use React Hook Form with Zod schemas. Adjust needs no validation: it saves the tile that was tapped.
 
 - **Email:** required and must be a valid email address.
 - **Sign-up password:** required, at least 8 characters and at most 72 bytes (multiple rules).
@@ -366,13 +369,15 @@ Database CHECK constraints back up the product rules on the server: name 2–80 
 
 - **Authentication errors** are shown on the right field or above the button in plain language: wrong email or password, an email that already has an account, an invalid email, a weak password, too many attempts, no connection, and a general fallback.
 - **Network or data errors:** screens that load data (Shelf, Product details, Edit product, Routines, New step, Edit step, Today and Me) show "Something went wrong" with a "Try again" button. Data that is already loaded stays visible.
-- **Slow or stalled connections:** every request to the backend gives up if the server hasn't answered within 15 seconds (a photo upload within 60), so a spinner never runs forever. A screen retries its data once before it shows the error, and a save shows its error instead.
+- **Slow or stalled connections:** every request to the backend gives up if the server hasn't answered within 15 seconds (a photo upload within 60, a label read within 20), so a spinner never runs forever. A screen retries its data once before it shows the error, and a save shows its error instead.
 - **Saves that may have landed:** if a new product was saved but the answer never arrived, saving again finds that product instead of adding a second copy.
-- **Failed saves:** the product form shows an error above the Save button. A failed favourite or delete shows an error and undoes the change on screen. A failed move shows an error in the More options sheet. The step form shows its own errors: a failed save above its button, a failed move under the Move buttons, and a failed remove in its confirmation sheet. If another device added the product to a ticked routine first, nothing is saved: that routine shows "Already in" with a message, and one more tap adds the rest. A failed tick on Today flips back and shows "Couldn't save this step"; a step removed on another device says it is no longer in your routine.
+- **Failed saves:** the product form shows an error above the Save button. A failed favourite shows "Couldn't save your favourite" and the heart flips back. A failed move, add to wishlist or delete shows its error in the More options sheet, and a failed delete puts the product back on the shelf. A photo that can't be used shows "Couldn't use that photo". The step form shows its own errors: a failed save above its button, a failed move under the Move buttons, and a failed remove in its confirmation sheet. If another device added the product to a ticked routine first, nothing is saved: that routine shows "Already in" with a message, and one more tap adds the rest. A failed tick on Today flips back and shows "Couldn't save this step" (asking to check the phone's date and time when the server refuses that day); a step removed on another device says it is no longer in your routine.
 - **Duplicate taps:** buttons are disabled while a request is running, so a form or action can't be sent twice, even with two quick taps. The product form's fields are locked while it saves. On Today, a step ignores taps while its tick is saving.
 - **Empty states:** an empty Shelf or category shows "Nothing here yet" with an "Add a product" button. Today asks for a product first, offers "Add a step" when the routine has no steps, and says "Nothing this morning" (or evening) when none of its steps fall on today. Routines asks for a product first, or, when there are products but no steps in that routine, offers "Add a step". New step says when every owned product is already in both routines.
-- **Missing data:** a product that was deleted elsewhere shows "This product is no longer on your shelf" with a Back button, and a removed step shows "This step is no longer in your routine" with a Close button.
+- **Missing data:** a product that was deleted elsewhere shows "This product is no longer on your shelf" with a Back button (Close in Edit product), and a removed step shows "This step is no longer in your routine" with a Close button.
 - **Photos:** if a photo can't load, the Shelf card and Product details show a bottle illustration instead, and the product form shows an empty photo frame.
+- **Malformed data:** products, routine steps and ticks from the server are checked with Zod before use, so a malformed row (such as an impossible date) shows the screen's error state instead of crashing it.
+- **Unexpected screen errors:** if a screen fails while drawing, Dewy shows "Something went wrong" and "Dewy couldn't show this screen." with a "Try again" button instead of closing. Try again starts again from Today and keeps the data already loaded.
 - **Configuration:** missing or invalid environment values show a setup screen instead of a crash.
 
 ## License
