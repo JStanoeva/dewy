@@ -15,9 +15,13 @@ export function ErrorState({ message, onRetry, retrying = false }: ErrorStatePro
   return (
     <View accessibilityRole="alert" style={styles.container}>
       <Text style={[styles.title, { color: palette.text }]}>Something went wrong</Text>
-      <Text style={[styles.message, { color: palette.textMuted }]}>{message}</Text>
+      <Text accessibilityLiveRegion="polite" style={[styles.message, { color: palette.textMuted }]}>
+        {message}
+      </Text>
+      {/* Without a label, Android names the button "busy" while it retries and keeps that name after. */}
       <Pressable
         accessibilityRole="button"
+        accessibilityLabel={retrying ? 'Trying again' : 'Try again'}
         accessibilityState={{ disabled: retrying, busy: retrying }}
         disabled={retrying}
         onPress={onRetry}

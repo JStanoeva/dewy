@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { Product } from '@/features/products/types';
+import { useModalSettled } from '@/hooks/useModalSettled';
 import { BottleIcon } from '@/navigation/TabIcons';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import { fonts, fontSizes, letterSpacings, radii, spacing } from '@/theme/tokens';
@@ -57,6 +58,7 @@ export function ProductActionsSheet({
 }: ProductActionsSheetProps) {
   const { palette } = useDewyTheme();
   const insets = useSafeAreaInsets();
+  const { settled, onRootLayout } = useModalSettled();
   const [confirming, setConfirming] = useState(false);
   const confirmTitleRef = useRef<ComponentRef<typeof Text>>(null);
   const busy = moving || adding || deleting;
@@ -108,7 +110,7 @@ export function ProductActionsSheet({
       navigationBarTranslucent
       onRequestClose={onClose}
     >
-      <View style={styles.root}>
+      <View style={styles.root} onLayout={onRootLayout}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Close"
@@ -116,9 +118,12 @@ export function ProductActionsSheet({
           style={[StyleSheet.absoluteFill, { backgroundColor: palette.scrim }]}
         />
         <View
+          pointerEvents={settled ? 'auto' : 'none'}
+          importantForAccessibility={settled ? 'auto' : 'no-hide-descendants'}
           style={[
             styles.sheet,
             { backgroundColor: palette.surface, paddingBottom: spacing.screen + insets.bottom },
+            !settled && styles.unsettled,
           ]}
         >
           {confirming ? (
@@ -277,6 +282,9 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     justifyContent: 'flex-end',
+  },
+  unsettled: {
+    opacity: 0,
   },
   sheet: {
     paddingTop: spacing.screen,

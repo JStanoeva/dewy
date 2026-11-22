@@ -2,6 +2,7 @@ import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 import { EmptyState } from '@/components/EmptyState';
@@ -33,6 +34,7 @@ const periodOptions = [
 
 export function RoutinesScreen({ navigation, route }: RoutinesScreenProps) {
   const { palette, activePeriod } = useDewyTheme();
+  const insets = useSafeAreaInsets();
   const steps = useRoutineSteps();
   const products = useProducts();
   const today = useLocalToday();
@@ -105,7 +107,7 @@ export function RoutinesScreen({ navigation, route }: RoutinesScreenProps) {
   );
 
   return (
-    <Screen edges={['left', 'right']}>
+    <Screen edges={['left', 'right']} statusBarBackdrop>
       <FlatList
         data={loaded ? periodSteps : []}
         keyExtractor={(step) => step.id}
@@ -184,6 +186,7 @@ export function RoutinesScreen({ navigation, route }: RoutinesScreenProps) {
             onRefresh={handleRefresh}
             colors={[palette.primary]}
             progressBackgroundColor={palette.surface}
+            progressViewOffset={insets.top}
             tintColor={palette.primary}
           />
         }

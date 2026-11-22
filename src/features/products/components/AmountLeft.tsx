@@ -45,7 +45,9 @@ export function AmountLeft({ product, perWeek, canAdjust }: AmountLeftProps) {
   // A second tap in the same frame still sees isPending as false, so the ref blocks it.
   const saving = useRef(false);
 
-  if (product.sizeMl === null || (!productUses.data && !productUses.isError)) {
+  // A refetch after a failure clears isError, so the failure row stays while it tries again.
+  const failed = productUses.isError || (productUses.isFetching && productUses.errorUpdatedAt > 0);
+  if (product.sizeMl === null || (!productUses.data && !failed)) {
     return null;
   }
 
@@ -61,6 +63,7 @@ export function AmountLeft({ product, perWeek, canAdjust }: AmountLeftProps) {
           </Text>
           <Pressable
             accessibilityRole="button"
+            accessibilityState={{ disabled: productUses.isFetching }}
             disabled={productUses.isFetching}
             hitSlop={linkSlop}
             onPress={() => productUses.refetch()}

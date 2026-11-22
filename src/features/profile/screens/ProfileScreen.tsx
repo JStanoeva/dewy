@@ -15,6 +15,8 @@ export function ProfileScreen() {
   const { palette, paletteName } = useDewyTheme();
   const profile = useProfile();
   const [isSigningOut, setIsSigningOut] = useState(false);
+  // The header circle runs up under the status bar, so its backdrop waits until the page scrolls.
+  const [scrolled, setScrolled] = useState(false);
 
   async function handleLogOut() {
     if (isSigningOut) {
@@ -30,8 +32,13 @@ export function ProfileScreen() {
   }
 
   return (
-    <Screen edges={['left', 'right']}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <Screen edges={['left', 'right']} statusBarBackdrop={scrolled}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        onScroll={(event) => setScrolled(event.nativeEvent.contentOffset.y > 0)}
+        scrollEventThrottle={16}
+      >
         <View
           style={[
             styles.circle,
@@ -53,6 +60,7 @@ export function ProfileScreen() {
 
         <Pressable
           accessibilityRole="button"
+          accessibilityLabel="Log out"
           accessibilityState={{ disabled: isSigningOut, busy: isSigningOut }}
           disabled={isSigningOut}
           onPress={handleLogOut}

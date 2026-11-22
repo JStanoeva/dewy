@@ -453,9 +453,9 @@ function HeroButton({ label, selected, onPress, children }: HeroButtonProps) {
   const { palette } = useDewyTheme();
   return (
     <Pressable
-      accessibilityRole="button"
+      accessibilityRole={selected === undefined ? 'button' : 'togglebutton'}
       accessibilityLabel={label}
-      accessibilityState={selected === undefined ? undefined : { selected }}
+      accessibilityState={selected === undefined ? undefined : { checked: selected }}
       onPress={onPress}
       style={({ pressed }) => [
         styles.roundButton,

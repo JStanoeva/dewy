@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useModalSettled } from '@/hooks/useModalSettled';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import type { Period } from '@/theme/period';
 import { fonts, fontSizes, letterSpacings, radii, spacing } from '@/theme/tokens';
@@ -34,13 +35,14 @@ export function RemoveStepSheet({
 }: RemoveStepSheetProps) {
   const { palette } = useDewyTheme();
   const insets = useSafeAreaInsets();
+  const { settled, onRootLayout } = useModalSettled();
   const titleRef = useRef<ComponentRef<typeof Text>>(null);
 
   useEffect(() => {
-    if (titleRef.current) {
+    if (settled && titleRef.current) {
       AccessibilityInfo.sendAccessibilityEvent(titleRef.current, 'focus');
     }
-  }, []);
+  }, [settled]);
 
   return (
     <Modal
@@ -51,7 +53,7 @@ export function RemoveStepSheet({
       navigationBarTranslucent
       onRequestClose={onClose}
     >
-      <View style={styles.root}>
+      <View style={styles.root} onLayout={onRootLayout}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Close"
@@ -59,9 +61,12 @@ export function RemoveStepSheet({
           style={[StyleSheet.absoluteFill, { backgroundColor: palette.scrim }]}
         />
         <View
+          pointerEvents={settled ? 'auto' : 'none'}
+          importantForAccessibility={settled ? 'auto' : 'no-hide-descendants'}
           style={[
             styles.sheet,
             { backgroundColor: palette.surface, paddingBottom: spacing.screen + insets.bottom },
+            !settled && styles.unsettled,
           ]}
         >
           <Text
@@ -123,6 +128,9 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     justifyContent: 'flex-end',
+  },
+  unsettled: {
+    opacity: 0,
   },
   sheet: {
     paddingTop: spacing.screen,

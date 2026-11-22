@@ -12,6 +12,7 @@ import {
   View,
   type ViewInstance,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
@@ -66,12 +67,15 @@ function progressLine(routine: TodayRoutine, period: Period) {
 
 export function TodayScreen({ navigation }: TodayScreenProps) {
   const { palette, paletteName, activePeriod: period, setActivePeriod } = useDewyTheme();
+  const insets = useSafeAreaInsets();
   const date = useRitualDate();
   const profile = useProfile();
   const products = useProducts();
   const { steps, completions, routine } = useTodayRoutine(period, date);
   useRitualStamps(date);
   const [refreshing, setRefreshing] = useState(false);
+  // The header circle runs up under the status bar, so its backdrop waits until the list scrolls.
+  const [scrolled, setScrolled] = useState(false);
   // The tips each ritual had when folded (null when shown); undefined until read.
   const [hiddenTips, setHiddenTips] = useState<Record<Period, string[] | null>>();
   const [focusRequest, setFocusRequest] = useState(0);
@@ -317,7 +321,7 @@ export function TodayScreen({ navigation }: TodayScreenProps) {
   }
 
   return (
-    <Screen edges={['left', 'right']}>
+    <Screen edges={['left', 'right']} statusBarBackdrop={scrolled}>
       <FlatList
         data={state === 'list' && routine ? routine.steps : []}
         keyExtractor={(item) => item.step.id}
@@ -337,12 +341,15 @@ export function TodayScreen({ navigation }: TodayScreenProps) {
         ItemSeparatorComponent={StepGap}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        onScroll={(event) => setScrolled(event.nativeEvent.contentOffset.y > 0)}
+        scrollEventThrottle={16}
         refreshControl={
           <RefreshControl
             refreshing={refreshing && routine !== undefined}
             onRefresh={handleRefresh}
             colors={[palette.primary]}
             progressBackgroundColor={palette.surface}
+            progressViewOffset={insets.top}
             tintColor={palette.primary}
           />
         }

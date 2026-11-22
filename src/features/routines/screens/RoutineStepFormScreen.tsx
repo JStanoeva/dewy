@@ -543,24 +543,42 @@ function RoutineStepForm({ navigation, period, step, products }: RoutineStepForm
                     {formatDuration(field.value)}
                   </Text>
                 </View>
-                {/* The slider ignores a value of 0, so its stops are numbered from 1. */}
-                <Slider
-                  style={styles.slider}
-                  minimumValue={1}
-                  maximumValue={durationStops.length}
-                  step={1}
-                  value={nearestDurationStop(field.value) + 1}
-                  onValueChange={(stop) => {
-                    timeChosen.current = true;
-                    field.onChange(durationStops[Math.round(stop) - 1]);
-                  }}
-                  minimumTrackTintColor={palette.rose}
-                  maximumTrackTintColor={palette.textMuted}
-                  thumbTintColor={palette.primary}
-                  disabled={saving}
+                {/* TalkBack gets one stop per swipe and hears "45 sec", where the slider itself says a percent. */}
+                <View
+                  accessible
+                  accessibilityRole="adjustable"
                   accessibilityLabel="Time"
                   accessibilityValue={{ text: formatDuration(field.value) }}
-                />
+                  accessibilityState={{ disabled: saving }}
+                  accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+                  onAccessibilityAction={(event) => {
+                    const step = event.nativeEvent.actionName === 'increment' ? 1 : -1;
+                    const next = nearestDurationStop(field.value) + step;
+                    if (saving || next < 0 || next >= durationStops.length) {
+                      return;
+                    }
+                    timeChosen.current = true;
+                    field.onChange(durationStops[next]);
+                  }}
+                >
+                  {/* The slider ignores a value of 0, so its stops are numbered from 1. */}
+                  <Slider
+                    importantForAccessibility="no-hide-descendants"
+                    style={styles.slider}
+                    minimumValue={1}
+                    maximumValue={durationStops.length}
+                    step={1}
+                    value={nearestDurationStop(field.value) + 1}
+                    onValueChange={(stop) => {
+                      timeChosen.current = true;
+                      field.onChange(durationStops[Math.round(stop) - 1]);
+                    }}
+                    minimumTrackTintColor={palette.rose}
+                    maximumTrackTintColor={palette.textMuted}
+                    thumbTintColor={palette.primary}
+                    disabled={saving}
+                  />
+                </View>
                 <View style={styles.sliderEnds}>
                   <Text style={[styles.sliderEnd, { color: palette.textMuted }]}>
                     {formatDuration(durationStops[0])}

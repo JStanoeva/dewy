@@ -354,7 +354,12 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
         topOffset={formHeaderBottom}
         contentContainerStyle={styles.content}
       >
-        <View pointerEvents={saving ? 'none' : 'auto'} style={styles.fields}>
+        {/* TalkBack can still activate what pointerEvents blocks, so the fields leave its view while saving. */}
+        <View
+          pointerEvents={saving ? 'none' : 'auto'}
+          importantForAccessibility={saving ? 'no-hide-descendants' : 'auto'}
+          style={styles.fields}
+        >
           <Text
             accessibilityRole="header"
             style={[styles.inset, styles.title, { color: palette.text }]}

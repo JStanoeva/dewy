@@ -8,6 +8,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
@@ -37,6 +38,7 @@ function countLabel(count: number) {
 
 export function ShelfScreen() {
   const { palette } = useDewyTheme();
+  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const navigation = useNavigation();
   const products = useProducts();
@@ -135,7 +137,7 @@ export function ShelfScreen() {
   );
 
   return (
-    <Screen edges={['left', 'right']}>
+    <Screen edges={['left', 'right']} statusBarBackdrop>
       <FlatList
         data={visible}
         keyExtractor={(product) => product.id}
@@ -188,6 +190,7 @@ export function ShelfScreen() {
             onRefresh={handleRefresh}
             colors={[palette.primary]}
             progressBackgroundColor={palette.surface}
+            progressViewOffset={insets.top}
             tintColor={palette.primary}
           />
         }
