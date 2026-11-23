@@ -22,3 +22,21 @@ export function getRitualDate(now: Date = new Date()): LocalDate {
 export function getClockSlot(now: Date = new Date()): string {
   return `${getRitualDate(now)}:${getClockPeriod(now)}`;
 }
+
+// The clock's period (colours and greeting) and the ritual Today shows, with the slot they were set in.
+export type ClockState = { clock: Period; ritual: Period; slot: string };
+
+// A picked ritual holds until the clock moves into the next half-day; then both follow the clock again.
+export function followClock(current: ClockState | null, now: Date = new Date()): ClockState {
+  const slot = getClockSlot(now);
+  if (current?.slot === slot) {
+    return current;
+  }
+  const period = getClockPeriod(now);
+  return { clock: period, ritual: period, slot };
+}
+
+// Picking a ritual never changes the colours: they come from the clock at that moment.
+export function pickRitual(ritual: Period, now: Date = new Date()): ClockState {
+  return { clock: getClockPeriod(now), ritual, slot: getClockSlot(now) };
+}

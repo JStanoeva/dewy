@@ -17,7 +17,7 @@ import { useRoutineSteps } from '@/features/routines/hooks/useRoutineSteps';
 import { routineMeta } from '@/features/routines/utils/weekSchedule';
 import { useLocalToday } from '@/hooks/useLocalToday';
 import type { RootStackParamList, RoutinesStackParamList } from '@/navigation/types';
-import { useDewyTheme } from '@/theme/ThemeProvider';
+import { useDewyTheme, useRitualPeriod } from '@/theme/ThemeProvider';
 import type { Period } from '@/theme/period';
 import { fonts, fontSizes, letterSpacings, radii, spacing } from '@/theme/tokens';
 import { isoWeekday } from '@/utils/localDate';
@@ -33,13 +33,14 @@ const periodOptions = [
 ] as const;
 
 export function RoutinesScreen({ navigation, route }: RoutinesScreenProps) {
-  const { palette, activePeriod } = useDewyTheme();
+  const { palette } = useDewyTheme();
+  const { ritualPeriod } = useRitualPeriod();
   const insets = useSafeAreaInsets();
   const steps = useRoutineSteps();
   const products = useProducts();
   const today = useLocalToday();
   // Starts on the ritual Today shows, then keeps its own; switching here never changes the palette.
-  const [chosenPeriod, setChosenPeriod] = useState<Period>(activePeriod);
+  const [chosenPeriod, setChosenPeriod] = useState<Period>(ritualPeriod);
   // A Details chip's period wins until the control is switched, so the same chip works again.
   const period = route.params?.period ?? chosenPeriod;
   const [refreshing, setRefreshing] = useState(false);

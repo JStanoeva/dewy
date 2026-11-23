@@ -32,7 +32,7 @@ import { foldChanges, isFolded, ritualTipIds } from '@/features/today/utils/tipF
 import { useRitualDate } from '@/hooks/useLocalToday';
 import { MoonIcon, SunIcon } from '@/navigation/TabIcons';
 import type { MainTabParamList, RootStackParamList } from '@/navigation/types';
-import { useDewyTheme } from '@/theme/ThemeProvider';
+import { useDewyTheme, useRitualPeriod } from '@/theme/ThemeProvider';
 import type { Period } from '@/theme/period';
 import { fonts, fontSizes, letterSpacings, minTouchTarget, radii, spacing } from '@/theme/tokens';
 import { formatWeekdayDayMonth, isoWeekday } from '@/utils/localDate';
@@ -66,7 +66,8 @@ function progressLine(routine: TodayRoutine, period: Period) {
 }
 
 export function TodayScreen({ navigation }: TodayScreenProps) {
-  const { palette, paletteName, activePeriod: period, setActivePeriod } = useDewyTheme();
+  const { palette, paletteName } = useDewyTheme();
+  const { ritualPeriod: period, setRitualPeriod } = useRitualPeriod();
   const insets = useSafeAreaInsets();
   const date = useRitualDate();
   const profile = useProfile();
@@ -189,7 +190,7 @@ export function TodayScreen({ navigation }: TodayScreenProps) {
         {formatWeekdayDayMonth(date)}
       </Text>
       <Text accessibilityRole="header" style={[styles.title, { color: palette.text }]}>
-        {period === 'morning' ? 'Good morning' : 'Good evening'}
+        {isMorning ? 'Good morning' : 'Good evening'}
         {name ? (
           <>
             {', '}
@@ -200,7 +201,7 @@ export function TodayScreen({ navigation }: TodayScreenProps) {
 
       {routine ? (
         <View style={styles.segmented}>
-          <SegmentedControl options={periodOptions} value={period} onChange={setActivePeriod} />
+          <SegmentedControl options={periodOptions} value={period} onChange={setRitualPeriod} />
         </View>
       ) : null}
 

@@ -1,4 +1,62 @@
-import { getClockSlot, getRitualDate } from './period';
+import { followClock, getClockSlot, getRitualDate, pickRitual } from './period';
+
+describe('followClock', () => {
+  it('starts the colours and the ritual from the clock', () => {
+    expect(followClock(null, new Date(2026, 10, 23, 16, 59))).toEqual({
+      clock: 'morning',
+      ritual: 'morning',
+      slot: '2026-11-23:morning',
+    });
+    expect(followClock(null, new Date(2026, 10, 23, 17, 0))).toEqual({
+      clock: 'evening',
+      ritual: 'evening',
+      slot: '2026-11-23:evening',
+    });
+  });
+
+  it('keeps a picked ritual within the same half-day', () => {
+    const picked = pickRitual('evening', new Date(2026, 10, 23, 10, 0));
+    expect(followClock(picked, new Date(2026, 10, 23, 16, 30))).toBe(picked);
+  });
+
+  it('moves both to the clock once the half-day changes', () => {
+    const picked = pickRitual('evening', new Date(2026, 10, 23, 10, 0));
+    expect(followClock(picked, new Date(2026, 10, 23, 17, 0))).toEqual({
+      clock: 'evening',
+      ritual: 'evening',
+      slot: '2026-11-23:evening',
+    });
+    const night = pickRitual('morning', new Date(2026, 10, 23, 23, 0));
+    expect(followClock(night, new Date(2026, 10, 24, 5, 0))).toEqual({
+      clock: 'morning',
+      ritual: 'morning',
+      slot: '2026-11-24:morning',
+    });
+  });
+});
+
+describe('pickRitual', () => {
+  it('changes the ritual but never the colours', () => {
+    expect(pickRitual('evening', new Date(2026, 10, 23, 10, 0))).toEqual({
+      clock: 'morning',
+      ritual: 'evening',
+      slot: '2026-11-23:morning',
+    });
+    expect(pickRitual('morning', new Date(2026, 10, 23, 21, 0))).toEqual({
+      clock: 'evening',
+      ritual: 'morning',
+      slot: '2026-11-23:evening',
+    });
+  });
+
+  it('keeps a late-night pick in the evening before', () => {
+    expect(pickRitual('morning', new Date(2026, 10, 24, 1, 0))).toEqual({
+      clock: 'evening',
+      ritual: 'morning',
+      slot: '2026-11-23:evening',
+    });
+  });
+});
 
 describe('getClockSlot', () => {
   it('is the same within one half of a ritual day', () => {

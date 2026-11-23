@@ -36,7 +36,9 @@ const morning = {
   arcDot: '#FFFFFF',
   sunRing: '#FFFFFF',
   sunHalo: 'rgba(255, 180, 162, 0.3)',
-  moonHalo: 'rgba(255, 205, 178, 0.12)',
+  // Evening's peach moon fades into cream, so a Morning screen draws it in plum.
+  moon: '#6d6875',
+  moonHalo: 'rgba(109, 104, 117, 0.12)',
   cardShadow: '0 6px 18px rgba(109, 104, 117, 0.08)',
   ctaShadow: '0 12px 28px rgba(109, 104, 117, 0.3)',
   focusRing: '0 0 0 3px rgba(229, 152, 155, 0.55)',
@@ -100,6 +102,7 @@ const evening: Palette = {
   arcDot: '#36313D',
   sunRing: '#FFFFFF',
   sunHalo: 'rgba(255, 180, 162, 0.3)',
+  moon: '#ffcdb2',
   moonHalo: 'rgba(255, 205, 178, 0.12)',
   cardShadow: 'none',
   ctaShadow: 'none',

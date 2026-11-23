@@ -10,63 +10,58 @@ import {
 import { AppState } from 'react-native';
 
 import { palettes, type Palette, type PaletteName } from './palettes';
-import { getClockPeriod, getClockSlot, type Period } from './period';
+import { followClock, pickRitual, type Period } from './period';
 
+// The colours follow the clock, never Today's switch.
 type ThemeValue = {
   palette: Palette;
   paletteName: PaletteName;
-  // The ritual Today shows; the palette follows it.
-  activePeriod: Period;
-  setActivePeriod: (period: Period) => void;
+};
+
+type RitualValue = {
+  ritualPeriod: Period;
+  setRitualPeriod: (period: Period) => void;
 };
 
 const ThemeContext = createContext<ThemeValue | null>(null);
+// The ritual Today shows, kept apart so a switch doesn't redraw every screen.
+const RitualContext = createContext<RitualValue | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [active, setActive] = useState(() => {
-    const now = new Date();
-    return { period: getClockPeriod(now), slot: getClockSlot(now) };
-  });
+  const [state, setState] = useState(() => followClock(null));
 
   useEffect(() => {
-    const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') {
-        const now = new Date();
-        const slot = getClockSlot(now);
-        setActive((current) =>
-          current.slot === slot ? current : { period: getClockPeriod(now), slot },
-        );
+    const subscription = AppState.addEventListener('change', (appState) => {
+      if (appState === 'active') {
+        setState((current) => followClock(current));
       }
     });
     return () => subscription.remove();
   }, []);
 
-  const setActivePeriod = useCallback((next: Period) => {
-    setActive({ period: next, slot: getClockSlot() });
+  const setRitualPeriod = useCallback((next: Period) => {
+    setState(pickRitual(next));
   }, []);
 
-  const value = useMemo(
-    () => ({
-      palette: palettes[active.period],
-      paletteName: active.period,
-      activePeriod: active.period,
-      setActivePeriod,
-    }),
-    [active.period, setActivePeriod],
+  const theme = useMemo(
+    () => ({ palette: palettes[state.clock], paletteName: state.clock }),
+    [state.clock],
+  );
+  const ritual = useMemo(
+    () => ({ ritualPeriod: state.ritual, setRitualPeriod }),
+    [state.ritual, setRitualPeriod],
   );
 
-  return <ThemeContext value={value}>{children}</ThemeContext>;
+  return (
+    <ThemeContext value={theme}>
+      <RitualContext value={ritual}>{children}</RitualContext>
+    </ThemeContext>
+  );
 }
 
-// Auth and Onboarding have no ritual switch, so their setter does nothing.
-const morningTheme: ThemeValue = {
-  palette: palettes.morning,
-  paletteName: 'morning',
-  activePeriod: 'morning',
-  setActivePeriod: () => {},
-};
+const morningTheme: ThemeValue = { palette: palettes.morning, paletteName: 'morning' };
 
-// Auth and Onboarding are designed only in Morning colours, whatever the active period.
+// Auth and Onboarding are designed only in Morning colours, whatever the time.
 export function MorningTheme({ children }: { children: ReactNode }) {
   return <ThemeContext value={morningTheme}>{children}</ThemeContext>;
 }
@@ -75,6 +70,14 @@ export function useDewyTheme() {
   const value = useContext(ThemeContext);
   if (!value) {
     throw new Error('useDewyTheme must be used inside ThemeProvider');
+  }
+  return value;
+}
+
+export function useRitualPeriod() {
+  const value = useContext(RitualContext);
+  if (!value) {
+    throw new Error('useRitualPeriod must be used inside ThemeProvider');
   }
   return value;
 }

@@ -73,7 +73,7 @@ export function RitualProgressArc({ period, steps }: RitualProgressArcProps) {
             <>
               <Circle r={23} fill={palette.moonHalo} />
               <Circle r={15} fill={palette.background} />
-              <Path d={CRESCENT} fill={palette.peach} />
+              <Path d={CRESCENT} fill={palette.moon} />
             </>
           )}
         </G>
