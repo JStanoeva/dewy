@@ -1,4 +1,6 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import type { ReactNode } from 'react';
+import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import Animated, { type AnimatedStyle } from 'react-native-reanimated';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 
 import { categoryDetails } from '@/features/products/constants';
@@ -15,11 +17,21 @@ type RoutineStepRowProps = {
   // The wait line only shows between two steps, never after the last one.
   showWait: boolean;
   onPress: () => void;
+  // Routines' drag handle, and the wait line's fade while the step is dragged.
+  handle?: ReactNode;
+  waitStyle?: AnimatedStyle<ViewStyle>;
 };
 
 const waitLineWidth = 2;
 
-export function RoutineStepRow({ step, number, showWait, onPress }: RoutineStepRowProps) {
+export function RoutineStepRow({
+  step,
+  number,
+  showWait,
+  onPress,
+  handle,
+  waitStyle,
+}: RoutineStepRowProps) {
   const { palette } = useDewyTheme();
   const daily = isDaily(step.weekdays);
   const waitMinutes = showWait ? step.waitMinutes : null;
@@ -45,8 +57,8 @@ export function RoutineStepRow({ step, number, showWait, onPress }: RoutineStepR
       <StepCard
         step={step}
         number={number}
-        accessoryMayWrap
-        accessory={
+        handle={handle}
+        timeAccessory={
           <View
             style={[styles.daysChip, { backgroundColor: daily ? palette.chipSoft : palette.peach }]}
           >
@@ -57,7 +69,13 @@ export function RoutineStepRow({ step, number, showWait, onPress }: RoutineStepR
         }
       />
       {waitMinutes ? (
-        <View style={styles.wait}>
+        <Animated.View
+          style={[
+            styles.wait,
+            { paddingLeft: stepTileCenter(handle !== undefined) - waitLineWidth / 2 },
+            waitStyle,
+          ]}
+        >
           <Svg width={waitLineWidth} height={22}>
             <Line
               x1={waitLineWidth / 2}
@@ -86,7 +104,7 @@ export function RoutineStepRow({ step, number, showWait, onPress }: RoutineStepR
               Wait {waitMinutes} min before the next step
             </Text>
           </View>
-        </View>
+        </Animated.View>
       ) : null}
     </Pressable>
   );
@@ -110,7 +128,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    paddingLeft: stepTileCenter - waitLineWidth / 2,
   },
   waitLabel: {
     flex: 1,

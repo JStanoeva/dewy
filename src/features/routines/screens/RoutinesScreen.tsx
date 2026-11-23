@@ -1,7 +1,8 @@
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedRef } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
@@ -11,8 +12,9 @@ import { LoadingState } from '@/components/LoadingState';
 import { Screen } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { useProducts } from '@/features/products/hooks/useProducts';
-import { RoutineStepRow } from '@/features/routines/components/RoutineStepRow';
+import { DraggableStepList } from '@/features/routines/components/DraggableStepList';
 import { WeekStrip } from '@/features/routines/components/WeekStrip';
+import { useMoveRoutineStep } from '@/features/routines/hooks/useRoutineMutations';
 import { useRoutineSteps } from '@/features/routines/hooks/useRoutineSteps';
 import { routineMeta } from '@/features/routines/utils/weekSchedule';
 import { useLocalToday } from '@/hooks/useLocalToday';
@@ -44,6 +46,8 @@ export function RoutinesScreen({ navigation, route }: RoutinesScreenProps) {
   // A Details chip's period wins until the control is switched, so the same chip works again.
   const period = route.params?.period ?? chosenPeriod;
   const [refreshing, setRefreshing] = useState(false);
+  const scrollRef = useAnimatedRef<Animated.ScrollView>();
+  const moveStep = useMoveRoutineStep();
 
   const loaded = steps.data !== undefined && products.data !== undefined;
   const periodSteps = steps.data?.filter((step) => step.period === period) ?? [];
@@ -67,6 +71,16 @@ export function RoutinesScreen({ navigation, route }: RoutinesScreenProps) {
     navigation.navigate('RoutineStepForm', { period });
   }
 
+  function reorder(stepIds: string[]) {
+    moveStep.mutate(
+      { period, stepIds },
+      {
+        onError: () =>
+          Alert.alert("Couldn't save the new order", 'Check your connection and try again.'),
+      },
+    );
+  }
+
   function retry() {
     if (steps.isLoadingError) {
       steps.refetch();
@@ -82,7 +96,9 @@ export function RoutinesScreen({ navigation, route }: RoutinesScreenProps) {
         Your <Text style={[styles.titleItalic, { color: palette.emphasis }]}>rituals</Text>
       </Text>
       {loaded && hasSteps ? (
-        <Text style={[styles.subtitle, { color: palette.textMuted }]}>Tap a step to edit</Text>
+        <Text style={[styles.subtitle, { color: palette.textMuted }]}>
+          Drag to reorder · tap a step to edit
+        </Text>
       ) : null}
       {loaded ? (
         <View style={styles.segmented}>
@@ -109,76 +125,8 @@ export function RoutinesScreen({ navigation, route }: RoutinesScreenProps) {
 
   return (
     <Screen edges={['left', 'right']} statusBarBackdrop>
-      <FlatList
-        data={loaded ? periodSteps : []}
-        keyExtractor={(step) => step.id}
-        renderItem={({ item, index }) => (
-          <RoutineStepRow
-            step={item}
-            number={index + 1}
-            showWait={index < periodSteps.length - 1}
-            onPress={() =>
-              navigation.navigate('RoutineStepForm', { period: item.period, stepId: item.id })
-            }
-          />
-        )}
-        ListHeaderComponent={header}
-        ListFooterComponent={
-          loaded && periodSteps.length > 0 ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={addStep}
-              style={({ pressed }) => [
-                styles.addStep,
-                { borderColor: palette.mauve, opacity: pressed ? 0.7 : 1 },
-              ]}
-            >
-              <Svg
-                width={18}
-                height={18}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke={palette.textMuted}
-                strokeWidth={2.2}
-                strokeLinecap="round"
-              >
-                <Path d="M12 5v14M5 12h14" />
-              </Svg>
-              <Text style={[styles.addStepLabel, { color: palette.textMuted }]}>
-                Add a step from your shelf
-              </Text>
-            </Pressable>
-          ) : undefined
-        }
-        ListEmptyComponent={
-          loaded ? (
-            hasOwnedProducts ? (
-              <EmptyState
-                title="Add your first step"
-                message={`Pick a product from your shelf to start your ${period} ritual.`}
-                action={{ label: 'Add a step', onPress: addStep }}
-              />
-            ) : (
-              <EmptyState
-                title="Add a product first"
-                message="Routine steps use products you own, so start with your shelf."
-                action={{
-                  label: 'Add a product',
-                  onPress: () => navigation.navigate('ProductForm', { status: 'owned' }),
-                }}
-              />
-            )
-          ) : steps.isLoadingError || products.isLoadingError ? (
-            <ErrorState
-              message="We couldn't load your rituals. Check your connection and try again."
-              onRetry={retry}
-              retrying={steps.isFetching || products.isFetching}
-            />
-          ) : (
-            <LoadingState />
-          )
-        }
-        ItemSeparatorComponent={StepGap}
+      <Animated.ScrollView
+        ref={scrollRef}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -191,13 +139,72 @@ export function RoutinesScreen({ navigation, route }: RoutinesScreenProps) {
             tintColor={palette.primary}
           />
         }
-      />
+      >
+        {header}
+        {loaded && periodSteps.length > 0 ? (
+          <DraggableStepList
+            key={period}
+            steps={periodSteps}
+            scrollRef={scrollRef}
+            onPressStep={(step) =>
+              navigation.navigate('RoutineStepForm', { period: step.period, stepId: step.id })
+            }
+            onReorder={reorder}
+            footer={
+              <Pressable
+                accessibilityRole="button"
+                onPress={addStep}
+                style={({ pressed }) => [
+                  styles.addStep,
+                  { borderColor: palette.mauve, opacity: pressed ? 0.7 : 1 },
+                ]}
+              >
+                <Svg
+                  width={18}
+                  height={18}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke={palette.textMuted}
+                  strokeWidth={2.2}
+                  strokeLinecap="round"
+                >
+                  <Path d="M12 5v14M5 12h14" />
+                </Svg>
+                <Text style={[styles.addStepLabel, { color: palette.textMuted }]}>
+                  Add a step from your shelf
+                </Text>
+              </Pressable>
+            }
+          />
+        ) : loaded ? (
+          hasOwnedProducts ? (
+            <EmptyState
+              title="Add your first step"
+              message={`Pick a product from your shelf to start your ${period} ritual.`}
+              action={{ label: 'Add a step', onPress: addStep }}
+            />
+          ) : (
+            <EmptyState
+              title="Add a product first"
+              message="Routine steps use products you own, so start with your shelf."
+              action={{
+                label: 'Add a product',
+                onPress: () => navigation.navigate('ProductForm', { status: 'owned' }),
+              }}
+            />
+          )
+        ) : steps.isLoadingError || products.isLoadingError ? (
+          <ErrorState
+            message="We couldn't load your rituals. Check your connection and try again."
+            onRetry={retry}
+            retrying={steps.isFetching || products.isFetching}
+          />
+        ) : (
+          <LoadingState />
+        )}
+      </Animated.ScrollView>
     </Screen>
   );
-}
-
-function StepGap() {
-  return <View style={styles.stepGap} />;
 }
 
 const styles = StyleSheet.create({
@@ -249,9 +256,6 @@ const styles = StyleSheet.create({
   meta: {
     fontFamily: fonts.body,
     fontSize: fontSizes.meta,
-  },
-  stepGap: {
-    height: spacing.xs,
   },
   addStep: {
     flexDirection: 'row',

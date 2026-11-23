@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react';
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { categoryDetails } from '@/features/products/constants';
-import { nameHyphenation } from '@/features/products/utils/productLabels';
 import { StepTile } from '@/features/routines/components/StepTile';
 import type { RoutineStep } from '@/features/routines/types';
 import { formatDuration } from '@/features/routines/utils/stepOptions';
@@ -14,72 +13,78 @@ type StepCardProps = {
   number: number;
   // Today strikes through the name of a ticked step.
   done?: boolean;
-  // Today's tick circle or Routines' days pill.
-  accessory: ReactNode;
-  // A wide days pill moves under the time instead of squeezing the label onto two lines.
-  accessoryMayWrap?: boolean;
+  // Today's tick circle, beside the text.
+  accessory?: ReactNode;
+  // Routines' days pill, at the end of the time row.
+  timeAccessory?: ReactNode;
+  // Routines' drag handle, drawn right before the tile and dragHandleWidth wide.
+  handle?: ReactNode;
 };
 
 const tileSize = 44;
-// Routines draws its wait line down from the middle of the tile.
-export const stepTileCenter = spacing.sm + tileSize / 2;
-// About the width of "STEP 7 · MOISTURIZE" at font scale 1.0; never more than half the screen, so huge fonts can't overflow.
-const kickerWidth = 140;
+export const dragHandleWidth = 36;
 
-// The step card Today and Routines share, so the two can't drift apart.
+// Routines draws its wait line down from the middle of the tile.
+export function stepTileCenter(withHandle: boolean) {
+  return (withHandle ? spacing.hairline + dragHandleWidth : spacing.sm) + tileSize / 2;
+}
+
+// The step card Today and Routines share; one-line texts keep every card the same height.
 export function StepCard({
   step,
   number,
   done = false,
   accessory,
-  accessoryMayWrap = false,
+  timeAccessory,
+  handle,
 }: StepCardProps) {
   const { palette } = useDewyTheme();
-  const { fontScale, width } = useWindowDimensions();
   const kind = categoryDetails[step.product.category].stepKind;
 
   return (
     <View
-      style={[styles.card, { backgroundColor: palette.surface, boxShadow: palette.cardShadow }]}
+      style={[
+        styles.card,
+        handle ? styles.cardWithHandle : null,
+        { backgroundColor: palette.surface, boxShadow: palette.cardShadow },
+      ]}
     >
-      <StepTile
-        productId={step.productId}
-        photoPath={step.product.photoPath}
-        size={tileSize}
-        shape={step.product.packaging}
-      />
-      <View style={styles.details}>
-        <View
+      <View style={styles.lead}>
+        {handle}
+        <StepTile
+          productId={step.productId}
+          photoPath={step.product.photoPath}
+          size={tileSize}
+          shape={step.product.packaging}
+        />
+      </View>
+      <View style={styles.text}>
+        <Text numberOfLines={1} style={[styles.kind, { color: palette.stepLabel }]}>
+          Step {number} · {kind}
+        </Text>
+        {/* Android draws the line-through only when the text mounts with it, so a tick remounts the name. */}
+        <Text
+          key={done ? 'done' : 'pending'}
+          numberOfLines={1}
           style={[
-            styles.text,
-            accessoryMayWrap && { minWidth: Math.min(kickerWidth * fontScale, width / 2) },
+            styles.name,
+            { color: palette.text },
+            done && {
+              textDecorationLine: 'line-through',
+              textDecorationColor: palette.uncheckedRing,
+            },
           ]}
         >
-          <Text style={[styles.kind, { color: palette.stepLabel }]}>
-            Step {number} · {kind}
-          </Text>
-          {/* Android draws the line-through only when the text mounts with it, so a tick remounts the name. */}
-          <Text
-            key={done ? 'done' : 'pending'}
-            numberOfLines={2}
-            android_hyphenationFrequency={nameHyphenation(step.product.name)}
-            style={[
-              styles.name,
-              { color: palette.text },
-              done && {
-                textDecorationLine: 'line-through',
-                textDecorationColor: palette.uncheckedRing,
-              },
-            ]}
-          >
-            {step.product.name}
-          </Text>
+          {step.product.name}
+        </Text>
+        <View style={styles.timeRow}>
           <Text style={[styles.meta, { color: palette.textMuted }]}>
             {formatDuration(step.durationSeconds)}
           </Text>
+          {timeAccessory}
         </View>
-        {accessory}
       </View>
+      {accessory}
     </View>
   );
 }
@@ -95,13 +100,12 @@ const styles = StyleSheet.create({
     paddingRight: spacing.lg,
     borderRadius: radii.detailCard,
   },
-  details: {
-    flex: 1,
+  cardWithHandle: {
+    paddingLeft: spacing.hairline,
+  },
+  lead: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     alignItems: 'center',
-    columnGap: spacing.lg,
-    rowGap: spacing.snug,
   },
   text: {
     flex: 1,
@@ -116,6 +120,12 @@ const styles = StyleSheet.create({
   name: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSizes.body,
+  },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
   },
   meta: {
     fontFamily: fonts.body,
