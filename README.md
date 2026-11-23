@@ -187,7 +187,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 
 #### Guest (Not Authenticated)
 
-- A guest sees only the Auth screen. It has a Sign up / Log in switch.
+- A guest sees only the Auth screen. It has a Sign up / Log in switch. Like every screen, its colours follow the time of day: peach in the morning, plum in the evening.
 - Sign up asks for a name, email and password. Log in asks for email and password.
 - There is no guest browsing. Every other screen requires a signed-in user.
 - The backend enforces this too. Guests have no access to the database tables or the photo storage, and the label-reading function rejects requests without a signed-in user.

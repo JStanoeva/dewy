@@ -9,7 +9,7 @@ import { ProductFormScreen } from '@/features/products/screens/ProductFormScreen
 import { RoutineStepFormScreen } from '@/features/routines/screens/RoutineStepFormScreen';
 import { MainTabs } from '@/navigation/MainTabs';
 import type { RootStackParamList } from '@/navigation/types';
-import { MorningTheme, useDewyTheme } from '@/theme/ThemeProvider';
+import { useDewyTheme } from '@/theme/ThemeProvider';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -46,13 +46,11 @@ export function RootNavigator() {
             />
           </Stack.Group>
         ) : (
-          <Stack.Group screenLayout={MorningTheme}>
-            <Stack.Screen
-              name="Auth"
-              component={AuthScreen}
-              options={{ animationTypeForReplace: 'pop' }}
-            />
-          </Stack.Group>
+          <Stack.Screen
+            name="Auth"
+            component={AuthScreen}
+            options={{ animationTypeForReplace: 'pop' }}
+          />
         )}
       </Stack.Navigator>
     </NavigationContainer>

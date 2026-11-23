@@ -84,22 +84,22 @@ export function AuthScreen() {
     <Screen edges={['left', 'right']}>
       <FormScrollView
         ref={formRef}
-        contentContainerStyle={[styles.scrollContent, { backgroundColor: palette.peach }]}
+        contentContainerStyle={[styles.scrollContent, { backgroundColor: palette.authHero }]}
       >
         <View style={styles.hero}>
           <View style={[styles.orbitLine, { borderColor: palette.orbitLine }]} />
           <View style={[styles.orbitDashed, { borderColor: palette.orbitDashed }]} />
-          <View style={[styles.orbitCore, { backgroundColor: palette.salmon }]} />
-          <View style={[styles.orbitDot, { backgroundColor: palette.plum }]} />
+          <View style={[styles.orbitCore, { backgroundColor: palette.orbitCore }]} />
+          <View style={[styles.orbitDot, { backgroundColor: palette.moon }]} />
           <View
             style={[
               styles.orbitRing,
-              { borderColor: palette.plum, backgroundColor: palette.peach },
+              { borderColor: palette.moon, backgroundColor: palette.authHero },
             ]}
           />
           <View style={styles.header}>
             <Text style={[styles.wordmark, { color: palette.text }]}>Dewy</Text>
-            <Text style={[styles.tagline, { color: palette.textSoft }]}>
+            <Text style={[styles.tagline, { color: palette.authTagline }]}>
               Your skincare ritual, beautifully kept.
             </Text>
           </View>
