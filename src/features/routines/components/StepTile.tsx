@@ -7,26 +7,18 @@ import { bottleColorsFor } from '@/theme/bottleColors';
 type StepTileProps = {
   productId: string;
   photoPath: string | null;
-  // 40 in routine rows and the step picker, 44 in Today's rows (Main and Evening artboards).
+  // 44 on the step cards (Today and Routines), 40 in the step picker.
   size?: 40 | 44;
-  // Today and the step picker draw the product's packaging; Routines rows keep the two-part bottle.
-  shape?: BottleShape;
+  shape: BottleShape;
 };
 
-// The product's photo, or a small bottle when there is none.
+// The product's photo, or its packaging when there is none.
 export function StepTile({ productId, photoPath, size = 40, shape }: StepTileProps) {
   const colors = bottleColorsFor(productId);
-  const sized = size === 44 ? large : small;
+  const tileStyle = size === 44 ? styles.large : styles.small;
   const bottle = (
-    <View style={[sized.tile, { backgroundColor: colors.tile }]}>
-      {shape ? (
-        <BottleIllustration shape={shape} colors={colors} size="tile" />
-      ) : (
-        <>
-          <View style={[sized.cap, { backgroundColor: colors.cap }]} />
-          <View style={[sized.body, { backgroundColor: colors.body }]} />
-        </>
-      )}
+    <View style={[tileStyle, { backgroundColor: colors.tile }]}>
+      <BottleIllustration shape={shape} colors={colors} size="tile" />
     </View>
   );
 
@@ -36,51 +28,26 @@ export function StepTile({ productId, photoPath, size = 40, shape }: StepTilePro
   return (
     <ProductPhoto
       path={photoPath}
-      style={sized.tile}
+      style={tileStyle}
       placeholderColor={colors.tile}
       fallback={bottle}
     />
   );
 }
 
-const small = StyleSheet.create({
-  tile: {
+const styles = StyleSheet.create({
+  small: {
     width: 40,
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 13,
   },
-  cap: {
-    width: 7,
-    height: 5,
-    borderTopLeftRadius: 2,
-    borderTopRightRadius: 2,
-  },
-  body: {
-    width: 14,
-    height: 20,
-    borderRadius: 4,
-  },
-});
-
-const large = StyleSheet.create({
-  tile: {
+  large: {
     width: 44,
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 14,
-  },
-  cap: {
-    width: 8,
-    height: 6,
-    borderTopLeftRadius: 2,
-    borderTopRightRadius: 2,
-  },
-  body: {
-    width: 16,
-    height: 22,
-    borderRadius: 5,
   },
 });

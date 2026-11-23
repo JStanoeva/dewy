@@ -1,10 +1,10 @@
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 
 import { categoryDetails } from '@/features/products/constants';
-import { nameHyphenation } from '@/features/products/utils/productLabels';
-import { StepTile } from '@/features/routines/components/StepTile';
+import { StepCard, stepTileCenter } from '@/features/routines/components/StepCard';
 import type { RoutineStep } from '@/features/routines/types';
+import { formatDuration } from '@/features/routines/utils/stepOptions';
 import { describeWeekdays, formatWeekdays, isDaily } from '@/features/routines/utils/weekSchedule';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import { fonts, fontSizes, radii, spacing } from '@/theme/tokens';
@@ -17,21 +17,17 @@ type RoutineStepRowProps = {
   onPress: () => void;
 };
 
-const tileLeft = spacing.md;
-const tileSize = 40;
 const waitLineWidth = 2;
-// Above font scale 1.0, a name column narrower than this times the scale can't fit "7 · MOISTURIZE", so the days pill moves under the name.
-const nameMinWidth = 95;
 
 export function RoutineStepRow({ step, number, showWait, onPress }: RoutineStepRowProps) {
   const { palette } = useDewyTheme();
-  const { fontScale } = useWindowDimensions();
-  const kind = categoryDetails[step.product.category].stepKind;
   const daily = isDaily(step.weekdays);
   const waitMinutes = showWait ? step.waitMinutes : null;
   const accessibilityLabel = [
-    `Step ${number}, ${kind}`,
+    `Step ${number}`,
+    categoryDetails[step.product.category].stepKind,
     step.product.name,
+    formatDuration(step.durationSeconds),
     describeWeekdays(step.weekdays),
     waitMinutes ? `then wait ${waitMinutes} min` : null,
   ]
@@ -46,23 +42,11 @@ export function RoutineStepRow({ step, number, showWait, onPress }: RoutineStepR
       onPress={onPress}
       style={({ pressed }) => [styles.container, { opacity: pressed ? 0.7 : 1 }]}
     >
-      <View
-        style={[styles.card, { backgroundColor: palette.surface, boxShadow: palette.cardShadow }]}
-      >
-        <StepTile productId={step.productId} photoPath={step.product.photoPath} />
-        <View style={styles.details}>
-          <View style={[styles.text, fontScale > 1 && { minWidth: nameMinWidth * fontScale }]}>
-            <Text style={[styles.kind, { color: palette.stepLabel }]}>
-              {number} · {kind}
-            </Text>
-            <Text
-              numberOfLines={2}
-              android_hyphenationFrequency={nameHyphenation(step.product.name)}
-              style={[styles.name, { color: palette.text }]}
-            >
-              {step.product.name}
-            </Text>
-          </View>
+      <StepCard
+        step={step}
+        number={number}
+        accessoryMayWrap
+        accessory={
           <View
             style={[styles.daysChip, { backgroundColor: daily ? palette.chipSoft : palette.peach }]}
           >
@@ -70,8 +54,8 @@ export function RoutineStepRow({ step, number, showWait, onPress }: RoutineStepR
               {formatWeekdays(step.weekdays)}
             </Text>
           </View>
-        </View>
-      </View>
+        }
+      />
       {waitMinutes ? (
         <View style={styles.wait}>
           <Svg width={waitLineWidth} height={22}>
@@ -112,37 +96,6 @@ const styles = StyleSheet.create({
   container: {
     gap: spacing.xs,
   },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    minHeight: 64,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: tileLeft,
-    borderRadius: radii.detailCard,
-  },
-  details: {
-    flex: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    columnGap: spacing.sm,
-    rowGap: spacing.snug,
-  },
-  text: {
-    flex: 1,
-    gap: spacing.hairline,
-  },
-  kind: {
-    fontFamily: fonts.bodyBold,
-    fontSize: fontSizes.label,
-    letterSpacing: 0.88,
-    textTransform: 'uppercase',
-  },
-  name: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: fontSizes.body,
-  },
   daysChip: {
     paddingVertical: 5,
     paddingHorizontal: spacing.sm,
@@ -157,7 +110,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    paddingLeft: tileLeft + tileSize / 2 - waitLineWidth / 2,
+    paddingLeft: stepTileCenter - waitLineWidth / 2,
   },
   waitLabel: {
     flex: 1,
