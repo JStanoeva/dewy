@@ -18,7 +18,7 @@ Dewy keeps a shelf of the skincare products you own and the ones on your wishlis
 - Take or choose a product photo, stored privately for your account.
 - Optionally fill in a new product's name, brand, type, packaging, size and key actives from the label in its photo.
 - Give a product its size to see about how many uses it has left as you tick it off, with products running low flagged on the Shelf.
-- Build morning and evening routines from the products you own: pick each step's days, time and wait, then drag steps into a new order, edit or remove them on the Routines tab.
+- Build morning and evening routines from the products you own: pick each step's days, time and wait, then drag steps into a new order, edit them, or swipe them away with Undo on the Routines tab.
 - Tick off today's morning or evening steps on the Today tab. Ticks are saved per day, so they survive a restart and start fresh the next morning.
 - See ritual tips made from your products' key actives, such as "Skip exfoliating acids tonight" next to a retinoid, on Today and on each product's page.
 
@@ -33,7 +33,7 @@ Dewy keeps a shelf of the skincare products you own and the ones on your wishlis
 - expo-image-picker and expo-image-manipulator for product photos, expo-image to display them
 - aes-js and expo-crypto to encrypt the session, expo-secure-store for its key and AsyncStorage for the ciphertext; AsyncStorage also remembers whether Today's tips are folded
 - react-native-svg for the bottle drawings and the progress arc
-- Reanimated 4 and Gesture Handler 3 for dragging routine steps into a new order
+- Reanimated 4 and Gesture Handler 3 for dragging routine steps into a new order and swiping them away
 - @react-native-community/datetimepicker and @react-native-community/slider for the opened date and a step's time
 - Jest with jest-expo, ESLint and Prettier
 
@@ -202,7 +202,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 - **Details screen:** Product details, opened by tapping a product card on the Shelf, by a long press on a step on Today, or by "View it" after adding a product to the wishlist. For an owned product with a size it shows how many uses are left ("≈ 42 uses"), a bar of how full the bottle is, and how long that lasts at the product's routine days ("30 ml · about 6 weeks at 1 use a day"). "Feels off? Adjust" restarts the count from how full it is now.
 - **Create:** add a product, with an optional photo, add an owned product to the wishlist as a new unopened copy, or add a routine step.
 - **Edit:** edit a product, mark it as a favourite, or move a wishlist product to the shelf. Edit a routine step, or move it up or down.
-- **Delete:** delete a product after a confirmation step (its photo is removed too), or remove a routine step.
+- **Delete:** delete a product after a confirmation step (its photo is removed too), or remove a routine step from Edit step or with a swipe and Undo.
 - Each user sees and changes only their own data. Row level security in Postgres and storage policies enforce this on the server.
 
 ### Authentication & Session Handling
@@ -297,6 +297,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 - **Adjust the amount:** on Product details, "Feels off? Adjust" opens "How full is it now?". Picking Full, ¾, ½ or ¼ saves it and restarts the use count from today; the tiles are disabled while it saves, and an error shows under them if it fails.
 - **Delete product:** after confirmation, the product disappears from the shelf at once and comes back if the delete fails. Its photo is removed from Storage.
 - **Edit step:** tapping a step on Routines opens Edit step to change its days, time and wait. "Move up" and "Move down" reorder the routine through a database function. "Remove step" removes it after a confirmation step; the product stays on the shelf.
+- **Swipe to remove:** swiping a step left on Routines uncovers "Remove". Letting go past halfway takes the step away at once and shows "{name} removed" with Undo for about 5 seconds; letting go sooner slides the card back. The delete is sent only when that bar goes (the time runs out, another step is removed, the routine or tab changes, a step opens, a drag starts or Dewy goes to the background), so Undo just shows the step again. If the delete fails, the step comes back with an alert. Removals and reorders save one at a time, so a drag right after a removal is saved after the delete.
 - **Reorder:** dropping a dragged step on Routines, or "Move up" and "Move down" in Edit step, saves the whole routine's order through one database function. The new order shows at once and the old one comes back if saving fails (Routines also says so in an alert). Orders save one at a time, so a quick second drag can't be overtaken by the first.
 - **Untick:** tapping a ticked step on Today deletes that day's completion, and the routine's finished row for that day if it had one. If saving a tick or an untick fails, only that step flips back and an error explains why.
 - After each change, the product, routine and completion queries are refreshed so every screen shows the latest data. Removing a step keeps its ticks, so its product keeps its use count; deleting a product deletes its steps and ticks. A finished routine's row stays either way.

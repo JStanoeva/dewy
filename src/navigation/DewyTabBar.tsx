@@ -8,7 +8,7 @@ import { fonts, fontSizes, radii, spacing } from '@/theme/tokens';
 // The design leaves 28 under the tabs for the system bar; taller insets replace it rather than add to it.
 const MIN_BOTTOM_SPACE = 28;
 // The add button rises this far above the bar, so the root grows by it to keep the button inside its bounds.
-const FAB_OVERHANG = 20;
+export const FAB_OVERHANG = 20;
 const FAB_SIZE = 60;
 
 export function DewyTabBar({ state, descriptors, navigation, insets }: BottomTabBarProps) {

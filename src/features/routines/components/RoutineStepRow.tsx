@@ -20,6 +20,9 @@ type RoutineStepRowProps = {
   // Routines' drag handle, and the wait line's fade while the step is dragged.
   handle?: ReactNode;
   waitStyle?: AnimatedStyle<ViewStyle>;
+  // Routines' swipe: the card's slide, and the Remove action it uncovers.
+  swipeStyle?: AnimatedStyle<ViewStyle>;
+  underCard?: ReactNode;
 };
 
 const waitLineWidth = 2;
@@ -31,6 +34,8 @@ export function RoutineStepRow({
   onPress,
   handle,
   waitStyle,
+  swipeStyle,
+  underCard,
 }: RoutineStepRowProps) {
   const { palette } = useDewyTheme();
   const daily = isDaily(step.weekdays);
@@ -54,20 +59,30 @@ export function RoutineStepRow({
       onPress={onPress}
       style={({ pressed }) => [styles.container, { opacity: pressed ? 0.7 : 1 }]}
     >
-      <StepCard
-        step={step}
-        number={number}
-        handle={handle}
-        timeAccessory={
-          <View
-            style={[styles.daysChip, { backgroundColor: daily ? palette.chipSoft : palette.peach }]}
-          >
-            <Text style={[styles.daysLabel, { color: daily ? palette.text : palette.onAccent }]}>
-              {formatWeekdays(step.weekdays)}
-            </Text>
-          </View>
-        }
-      />
+      <View>
+        {underCard}
+        <Animated.View style={swipeStyle}>
+          <StepCard
+            step={step}
+            number={number}
+            handle={handle}
+            timeAccessory={
+              <View
+                style={[
+                  styles.daysChip,
+                  { backgroundColor: daily ? palette.chipSoft : palette.peach },
+                ]}
+              >
+                <Text
+                  style={[styles.daysLabel, { color: daily ? palette.text : palette.onAccent }]}
+                >
+                  {formatWeekdays(step.weekdays)}
+                </Text>
+              </View>
+            }
+          />
+        </Animated.View>
+      </View>
       {waitMinutes ? (
         <Animated.View
           style={[

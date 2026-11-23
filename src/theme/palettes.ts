@@ -32,6 +32,8 @@ const morning = {
   onPlum: '#FFF5EF',
   bannerBg: '#ffcdb2',
   bannerText: '#3B3541',
+  // Undo on the ink bar: peach on Morning's dark ink, berry on Evening's cream.
+  inkAccent: '#ffcdb2',
   // The Today arc's pending step dots, and its sun and moon markers.
   arcDot: '#FFFFFF',
   sunRing: '#FFFFFF',
@@ -103,6 +105,7 @@ const evening: Palette = {
   onPlum: '#FFF5EF',
   bannerBg: 'rgba(229,152,155,0.16)',
   bannerText: '#FFE3D6',
+  inkAccent: '#A2545F',
   arcDot: '#36313D',
   sunRing: '#FFFFFF',
   sunHalo: 'rgba(255, 180, 162, 0.3)',

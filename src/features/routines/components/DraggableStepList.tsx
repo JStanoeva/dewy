@@ -1,5 +1,6 @@
+import Feather from '@expo/vector-icons/Feather';
 import { useEffect, type ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import Animated, {
   measure,
@@ -29,7 +30,14 @@ import {
   stackHeight,
 } from '@/features/routines/utils/dragOrder';
 import { useDewyTheme } from '@/theme/ThemeProvider';
-import { minTouchTarget, spacing } from '@/theme/tokens';
+import {
+  fixedWidthMaxFontScale,
+  fonts,
+  fontSizes,
+  minTouchTarget,
+  radii,
+  spacing,
+} from '@/theme/tokens';
 
 type DraggableStepListProps = {
   steps: RoutineStep[];
@@ -39,6 +47,9 @@ type DraggableStepListProps = {
   footer: ReactNode;
   onPressStep: (step: RoutineStep) => void;
   onReorder: (stepIds: string[]) => void;
+  onRemoveStep: (step: RoutineStep) => void;
+  // Called as a drag starts, so the screen can send a delete still waiting for Undo first.
+  onDragStart: () => void;
 };
 
 // What every row reads and calls while one of them is dragged.
@@ -57,14 +68,18 @@ const gap = spacing.xs;
 const edgeZone = 80;
 const edgeSpeed = 8;
 const spring = { duration: 300, dampingRatio: 0.9 };
+// Letting go past this share of the row removes the step; any shorter swipe springs back.
+const removeAt = 0.5;
 
-// Routines' steps, which can be put in a new order by dragging their handles.
+// Routines' steps, which can be put in a new order by dragging their handles, or swiped away.
 export function DraggableStepList({
   steps,
   scrollRef,
   footer,
   onPressStep,
   onReorder,
+  onRemoveStep,
+  onDragStart,
 }: DraggableStepListProps) {
   const insets = useSafeAreaInsets();
   const scrollY = useScrollOffset(scrollRef);
@@ -158,6 +173,7 @@ export function DraggableStepList({
       activeId.set(id);
       liftedId.set(id);
       scheduleOnRN(setAutoscroll, true);
+      scheduleOnRN(onDragStart);
     },
     move: (translationY, fingerY) => {
       'worklet';
@@ -194,6 +210,7 @@ export function DraggableStepList({
             draggable={steps.length > 1}
             drag={drag}
             onPress={() => onPressStep(step)}
+            onRemove={() => onRemoveStep(step)}
             onMeasure={(height) => measureRow(step.id, height)}
           />
         ))}
@@ -210,6 +227,7 @@ type DraggableRowProps = {
   draggable: boolean;
   drag: Drag;
   onPress: () => void;
+  onRemove: () => void;
   onMeasure: (height: number) => void;
 };
 
@@ -220,6 +238,7 @@ function DraggableRow({
   draggable,
   drag,
   onPress,
+  onRemove,
   onMeasure,
 }: DraggableRowProps) {
   const { palette } = useDewyTheme();
@@ -228,6 +247,36 @@ function DraggableRow({
   const y = useSharedValue(0);
   // Hidden until its first place is known, so it never slides in from the top.
   const placed = useSharedValue(false);
+  const width = useSharedValue(0);
+  const swipeX = useSharedValue(0);
+  // Set once the card slides away, so a second touch can't pull it back.
+  const removing = useSharedValue(false);
+
+  const swipe = usePanGesture({
+    // Only a clear sideways move, so the list still scrolls and the handle still drags.
+    activeOffsetX: [-12, 12],
+    failOffsetY: [-10, 10],
+    onUpdate: (event) => {
+      'worklet';
+      // Never right of its place, so a right swipe doesn't move it.
+      if (!removing.get()) {
+        swipeX.set(Math.min(event.translationX, 0));
+      }
+    },
+    onDeactivate: () => {
+      'worklet';
+      if (removing.get()) {
+        return;
+      }
+      if (swipeX.get() < -width.get() * removeAt) {
+        removing.set(true);
+        // Slides the card away; the screen then hides the step and offers Undo.
+        swipeX.set(withTiming(-width.get(), { duration: 180 }, () => scheduleOnRN(onRemove)));
+      } else {
+        swipeX.set(withSpring(0, spring));
+      }
+    },
+  });
 
   useAnimatedReaction(
     () => tops.get()?.[id],
@@ -287,43 +336,81 @@ function DraggableRow({
     };
   });
 
+  const swipeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: swipeX.get() }] }));
+  // Hidden at rest, so its colour never shows round the card's corners.
+  const underStyle = useAnimatedStyle(() => ({ opacity: swipeX.get() < 0 ? 1 : 0 }));
+  // Grows once letting go would remove the step.
+  const trashStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: withSpring(swipeX.get() < -width.get() * removeAt ? 1.3 : 1, spring) }],
+  }));
+
   return (
     <Animated.View
-      onLayout={(event) => onMeasure(event.nativeEvent.layout.height)}
+      onLayout={(event) => {
+        width.set(event.nativeEvent.layout.width);
+        onMeasure(event.nativeEvent.layout.height);
+      }}
       style={[styles.row, rowStyle]}
     >
-      <RoutineStepRow
-        step={step}
-        number={number}
-        showWait={showWait}
-        onPress={onPress}
-        waitStyle={waitStyle}
-        handle={
-          draggable ? (
-            <GestureDetector gesture={pan}>
-              <View
-                accessible={false}
-                importantForAccessibility="no-hide-descendants"
-                // Takes the touch, so the card doesn't dim or open the editor under a drag.
-                onStartShouldSetResponder={() => true}
-                style={styles.handle}
-              >
-                <Svg
-                  width={18}
-                  height={18}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke={palette.mauve}
-                  strokeWidth={3}
-                  strokeLinecap="round"
+      <GestureDetector gesture={swipe}>
+        <RoutineStepRow
+          step={step}
+          number={number}
+          showWait={showWait}
+          onPress={onPress}
+          waitStyle={waitStyle}
+          swipeStyle={swipeStyle}
+          underCard={
+            // TalkBack removes a step from Edit step instead.
+            <Animated.View
+              importantForAccessibility="no-hide-descendants"
+              style={[
+                StyleSheet.absoluteFill,
+                styles.under,
+                { backgroundColor: palette.warningSoft },
+                underStyle,
+              ]}
+            >
+              <View style={styles.removeAction}>
+                <Animated.View style={trashStyle}>
+                  <Feather name="trash-2" size={18} color={palette.berry} />
+                </Animated.View>
+                <Text
+                  maxFontSizeMultiplier={fixedWidthMaxFontScale}
+                  style={[styles.removeLabel, { color: palette.onAccent }]}
                 >
-                  <Path d="M9 6h.01M9 12h.01M9 18h.01M15 6h.01M15 12h.01M15 18h.01" />
-                </Svg>
+                  Remove
+                </Text>
               </View>
-            </GestureDetector>
-          ) : undefined
-        }
-      />
+            </Animated.View>
+          }
+          handle={
+            draggable ? (
+              <GestureDetector gesture={pan}>
+                <View
+                  accessible={false}
+                  importantForAccessibility="no-hide-descendants"
+                  // Takes the touch, so the card doesn't dim or open the editor under a drag.
+                  onStartShouldSetResponder={() => true}
+                  style={styles.handle}
+                >
+                  <Svg
+                    width={18}
+                    height={18}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke={palette.mauve}
+                    strokeWidth={3}
+                    strokeLinecap="round"
+                  >
+                    <Path d="M9 6h.01M9 12h.01M9 18h.01M15 6h.01M15 12h.01M15 18h.01" />
+                  </Svg>
+                </View>
+              </GestureDetector>
+            ) : undefined
+          }
+        />
+      </GestureDetector>
     </Animated.View>
   );
 }
@@ -339,5 +426,21 @@ const styles = StyleSheet.create({
     height: minTouchTarget,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  under: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    borderRadius: radii.detailCard,
+  },
+  removeAction: {
+    width: 104,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.snug,
+  },
+  removeLabel: {
+    fontFamily: fonts.bodyBold,
+    fontSize: fontSizes.meta,
   },
 });

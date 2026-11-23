@@ -46,11 +46,16 @@ export function useUpdateRoutineStep() {
   });
 }
 
+const moveKey = ['moveRoutineStep'];
+// Removals and orders save one at a time, so an order without a swiped step waits for its delete.
+const orderScope = { id: 'routineStepOrder' };
+
 // Never refetches or removes ['routineSteps', id]: either would make the closing editor flash "not found".
 export function useRemoveRoutineStep() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: deleteRoutineStep,
+    scope: orderScope,
     // The prefix also stops a by-id refetch that could bring back null once the step is gone.
     onMutate: () => queryClient.cancelQueries({ queryKey: ['routineSteps'] }),
     // The step's ticks stay, without their step, so the product keeps its counted uses.
@@ -58,7 +63,10 @@ export function useRemoveRoutineStep() {
       queryClient.setQueryData<RoutineStep[]>(['routineSteps'], (old) =>
         old?.filter((step) => step.id !== id),
       );
-      queryClient.invalidateQueries({ queryKey: ['routineSteps'], exact: true });
+      // A queued order refetches once it's saved; refetching before then could flash the old order.
+      if (queryClient.isMutating({ mutationKey: moveKey }) === 0) {
+        queryClient.invalidateQueries({ queryKey: ['routineSteps'], exact: true });
+      }
       queryClient.invalidateQueries({ queryKey: ['completions'] });
     },
   });
@@ -66,15 +74,12 @@ export function useRemoveRoutineStep() {
 
 type MoveVariables = { period: Period; stepIds: string[] };
 
-const moveKey = ['moveRoutineStep'];
-
 export function useMoveRoutineStep() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: moveKey,
     mutationFn: ({ period, stepIds }: MoveVariables) => reorderRoutineSteps(period, stepIds),
-    // Orders save one at a time, so a slow earlier save can't land after a later one.
-    scope: { id: 'moveRoutineStep' },
+    scope: orderScope,
     // Shows the new order at once. The list is filtered by period wherever it shows, so the period's steps can go last.
     onMutate: async ({ stepIds }) => {
       await queryClient.cancelQueries({ queryKey: ['routineSteps'], exact: true });

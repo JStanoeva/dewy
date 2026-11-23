@@ -1,7 +1,16 @@
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useState } from 'react';
-import { Alert, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
+import {
+  AccessibilityInfo,
+  Alert,
+  AppState,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import Animated, { useAnimatedRef } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
@@ -13,9 +22,14 @@ import { Screen } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { useProducts } from '@/features/products/hooks/useProducts';
 import { DraggableStepList } from '@/features/routines/components/DraggableStepList';
+import { UndoBar } from '@/features/routines/components/UndoBar';
 import { WeekStrip } from '@/features/routines/components/WeekStrip';
-import { useMoveRoutineStep } from '@/features/routines/hooks/useRoutineMutations';
+import {
+  useMoveRoutineStep,
+  useRemoveRoutineStep,
+} from '@/features/routines/hooks/useRoutineMutations';
 import { useRoutineSteps } from '@/features/routines/hooks/useRoutineSteps';
+import type { RoutineStep } from '@/features/routines/types';
 import { routineMeta } from '@/features/routines/utils/weekSchedule';
 import { useLocalToday } from '@/hooks/useLocalToday';
 import type { RootStackParamList, RoutinesStackParamList } from '@/navigation/types';
@@ -34,6 +48,8 @@ const periodOptions = [
   { value: 'evening', label: 'Evening' },
 ] as const;
 
+const undoMillis = 5000;
+
 export function RoutinesScreen({ navigation, route }: RoutinesScreenProps) {
   const { palette } = useDewyTheme();
   const { ritualPeriod } = useRitualPeriod();
@@ -48,12 +64,95 @@ export function RoutinesScreen({ navigation, route }: RoutinesScreenProps) {
   const [refreshing, setRefreshing] = useState(false);
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const moveStep = useMoveRoutineStep();
+  const removeStep = useRemoveRoutineStep();
+  // Swiped away: waiting for Undo, or being deleted.
+  const [hiddenIds, setHiddenIds] = useState<string[]>([]);
+  // The step the Undo bar offers back; its delete waits until the bar goes.
+  const [undoStep, setUndoStep] = useState<RoutineStep | null>(null);
+  // The same step, for the timer, a drag and leaving, which can run with an older render's functions.
+  const undoRef = useRef<RoutineStep | null>(null);
 
   const loaded = steps.data !== undefined && products.data !== undefined;
-  const periodSteps = steps.data?.filter((step) => step.period === period) ?? [];
+  const shownSteps = steps.data?.filter((step) => !hiddenIds.includes(step.id));
+  const periodSteps = shownSteps?.filter((step) => step.period === period) ?? [];
   const hasOwnedProducts = products.data?.some((product) => product.status === 'owned') ?? false;
   // Shown for either ritual's steps, so switching the control never moves it.
-  const hasSteps = (steps.data?.length ?? 0) > 0;
+  const hasSteps = (shownSteps?.length ?? 0) > 0;
+
+  function offerUndo(step: RoutineStep | null) {
+    undoRef.current = step;
+    setUndoStep(step);
+  }
+
+  function showAgain(id: string) {
+    setHiddenIds((ids) => ids.filter((hidden) => hidden !== id));
+  }
+
+  // Sends the delete the Undo bar held back; if it fails, the step comes back in its place.
+  function commitRemoval() {
+    const step = undoRef.current;
+    if (!step) {
+      return;
+    }
+    offerUndo(null);
+    removeStep.mutateAsync(step.id).then(
+      () => showAgain(step.id),
+      () => {
+        showAgain(step.id);
+        Alert.alert("Couldn't remove the step", 'Check your connection and try again.');
+      },
+    );
+  }
+
+  function removeSwiped(step: RoutineStep) {
+    commitRemoval();
+    setHiddenIds((ids) => [...ids, step.id]);
+    offerUndo(step);
+    AccessibilityInfo.announceForAccessibility(`${step.product.name} removed`);
+  }
+
+  function undo() {
+    const step = undoRef.current;
+    if (step) {
+      offerUndo(null);
+      showAgain(step.id);
+    }
+  }
+
+  const sendHeldRemoval = useEffectEvent(commitRemoval);
+
+  useEffect(() => {
+    if (!undoStep) {
+      return;
+    }
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    // Android's "Time to take action" setting can make it longer.
+    AccessibilityInfo.getRecommendedTimeoutMillis(undoMillis).then((millis) => {
+      if (!cancelled) {
+        timer = setTimeout(() => sendHeldRemoval(), millis);
+      }
+    });
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [undoStep]);
+
+  // Leaving Routines or Dewy sends it at once, so a closed app can't bring the step back.
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('blur', () => sendHeldRemoval());
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'background') {
+        sendHeldRemoval();
+      }
+    });
+    return () => {
+      unsubscribe();
+      subscription.remove();
+      sendHeldRemoval();
+    };
+  }, [navigation]);
 
   // Local state, so the spinner only shows for a pull and not for background refetches.
   async function handleRefresh() {
@@ -63,6 +162,7 @@ export function RoutinesScreen({ navigation, route }: RoutinesScreenProps) {
   }
 
   function choosePeriod(next: Period) {
+    commitRemoval();
     setChosenPeriod(next);
     navigation.setParams({ period: undefined });
   }
@@ -127,7 +227,7 @@ export function RoutinesScreen({ navigation, route }: RoutinesScreenProps) {
     <Screen edges={['left', 'right']} statusBarBackdrop>
       <Animated.ScrollView
         ref={scrollRef}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, undoStep && styles.contentAboveUndo]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -150,6 +250,8 @@ export function RoutinesScreen({ navigation, route }: RoutinesScreenProps) {
               navigation.navigate('RoutineStepForm', { period: step.period, stepId: step.id })
             }
             onReorder={reorder}
+            onRemoveStep={removeSwiped}
+            onDragStart={commitRemoval}
             footer={
               <Pressable
                 accessibilityRole="button"
@@ -203,6 +305,9 @@ export function RoutinesScreen({ navigation, route }: RoutinesScreenProps) {
           <LoadingState />
         )}
       </Animated.ScrollView>
+      {undoStep ? (
+        <UndoBar key={undoStep.id} productName={undoStep.product.name} onUndo={undo} />
+      ) : null}
     </Screen>
   );
 }
@@ -213,6 +318,10 @@ const styles = StyleSheet.create({
     paddingTop: 56,
     paddingHorizontal: spacing.screen,
     paddingBottom: spacing.screen,
+  },
+  // Room for the Undo bar, so it never covers the last step or the add button.
+  contentAboveUndo: {
+    paddingBottom: 96,
   },
   headerAboveList: {
     marginBottom: spacing.sm,
