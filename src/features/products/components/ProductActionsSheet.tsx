@@ -179,7 +179,7 @@ export function ProductActionsSheet({
               {product.status === 'wishlist' || moving ? (
                 <SheetRow
                   label="Move to shelf"
-                  subline="Moves it to Owned, unopened"
+                  subline="Moves it to Owned"
                   circleColor={palette.lilac}
                   icon={<BottleIcon color={palette.onAccent} size={18} />}
                   busy={moving}
@@ -189,7 +189,7 @@ export function ProductActionsSheet({
               ) : (
                 <SheetRow
                   label="Add to wishlist"
-                  subline="A new, unopened copy for your next bottle"
+                  subline="For your next bottle"
                   circleColor={palette.lilac}
                   icon={<Feather name="shopping-bag" size={18} color={palette.onAccent} />}
                   busy={adding}

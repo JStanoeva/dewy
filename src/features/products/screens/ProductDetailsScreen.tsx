@@ -161,7 +161,7 @@ function ProductDetailsContent({ product, today, navigation }: ProductDetailsCon
       Alert.alert(
         wishlistNotice.added ? 'Added to your wishlist' : 'Already on your wishlist',
         wishlistNotice.added
-          ? `${wishlistNotice.copyName} is on your wishlist, unopened.`
+          ? `${wishlistNotice.copyName} is on your wishlist.`
           : `${wishlistNotice.copyName} is on your wishlist already.`,
         [
           {
