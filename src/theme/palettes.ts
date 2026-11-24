@@ -50,6 +50,8 @@ const morning = {
   orbitCore: '#ffb4a2',
   orbitLine: 'rgba(181, 131, 141, 0.55)',
   orbitDashed: 'rgba(181, 131, 141, 0.4)',
+  // Onboarding step 1's corner circle; Evening softens it so the cream Skip on it stays readable.
+  onboardingShelfCircle: '#ffcdb2',
   onAccent: '#3B3541',
   avatarShadow: '0 8px 20px rgba(109, 104, 117, 0.18)',
   tabBarShadow: '0 -6px 24px rgba(109, 104, 117, 0.1)',
@@ -119,6 +121,7 @@ const evening: Palette = {
   orbitCore: '#b5838d',
   orbitLine: 'rgba(255, 205, 178, 0.55)',
   orbitDashed: 'rgba(255, 205, 178, 0.4)',
+  onboardingShelfCircle: 'rgba(255, 205, 178, 0.14)',
   onAccent: '#3B3541',
   avatarShadow: 'none',
   tabBarShadow: 'none',

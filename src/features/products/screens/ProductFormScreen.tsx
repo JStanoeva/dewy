@@ -97,6 +97,7 @@ export function ProductFormScreen({ navigation, route }: ProductFormScreenProps)
       navigation={navigation}
       status={route.params?.status}
       category={route.params?.category}
+      lockStatus={route.params?.lockStatus}
     />
   );
 }
@@ -143,12 +144,19 @@ type ProductFormProps = {
   product?: Product;
   status?: ProductStatus;
   category?: Category;
+  lockStatus?: boolean;
 };
 
 // Null when the label had nothing new, or label reading is switched off: the line then stays blank.
 type LabelOutcome = 'filled' | 'unread' | null;
 
-function ProductForm({ navigation, product, status: initialStatus, category }: ProductFormProps) {
+function ProductForm({
+  navigation,
+  product,
+  status: initialStatus,
+  category,
+  lockStatus = false,
+}: ProductFormProps) {
   const { palette } = useDewyTheme();
   const insets = useSafeAreaInsets();
   const formRef = useRef<FormScrollViewHandle>(null);
@@ -377,7 +385,7 @@ function ProductForm({ navigation, product, status: initialStatus, category }: P
           </Text>
 
           {/* Editing never changes the status; only Move to shelf does. */}
-          {product ? null : (
+          {product || lockStatus ? null : (
             <View style={styles.inset}>
               <Controller
                 control={control}

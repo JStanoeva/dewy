@@ -192,8 +192,8 @@ export function useDeleteProduct() {
     onError: (_error, _id, context) => {
       queryClient.setQueryData(['products'], context?.previous);
     },
-    // The database deletes the product's routine steps and ticks with it; the day's done stamps stay.
-    onSuccess: () => {
+    // Also after a failure, as two deletes in flight roll back to their own snapshots; steps and ticks go with the product, done stamps stay.
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['products'], exact: true });
       queryClient.invalidateQueries({ queryKey: ['routineSteps'] });
       queryClient.invalidateQueries({ queryKey: ['completions'] });

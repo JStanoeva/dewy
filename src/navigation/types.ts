@@ -6,9 +6,14 @@ import type { Period } from '@/theme/period';
 
 export type RootStackParamList = {
   Auth: undefined;
+  ProfileGate: undefined;
+  ShelfStep: undefined;
   Main: NavigatorScreenParams<MainTabParamList>;
   ProductDetails: { productId: string };
-  ProductForm: { productId?: string; status?: ProductStatus; category?: Category } | undefined;
+  // lockStatus hides the I own it / Wishlist control, as onboarding adds owned products only.
+  ProductForm:
+    | { productId?: string; status?: ProductStatus; category?: Category; lockStatus?: boolean }
+    | undefined;
   RoutineStepForm: { period: Period; stepId?: string };
 };
 
