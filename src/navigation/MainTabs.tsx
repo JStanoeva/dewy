@@ -1,5 +1,7 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
+import { useReminderSync } from '@/features/reminders/hooks/useReminderSync';
+import { useReminderTaps } from '@/features/reminders/hooks/useReminderTaps';
 import { TodayScreen } from '@/features/today/screens/TodayScreen';
 import { DewyTabBar } from '@/navigation/DewyTabBar';
 import { MeStack } from '@/navigation/MeStack';
@@ -13,6 +15,9 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 
 export function MainTabs() {
   const { paletteName } = useDewyTheme();
+  // Mounted only for a signed-in, onboarded account, as the nudges are.
+  useReminderSync();
+  useReminderTaps();
 
   return (
     <Tab.Navigator

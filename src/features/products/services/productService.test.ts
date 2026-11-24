@@ -23,6 +23,7 @@ const row = {
   tracked_from: '2026-11-01',
   notes: null,
   is_favorite: false,
+  low_notified_at: null,
   created_at: '2026-11-01T09:00:00+00:00',
   updated_at: '2026-11-01T09:00:00+00:00',
 };

@@ -8,6 +8,7 @@ import {
 import { useEffect } from 'react';
 import { Alert } from 'react-native';
 
+import { useRunningLowCheck } from '@/features/reminders/hooks/useRunningLowCheck';
 import { useRoutineSteps } from '@/features/routines/hooks/useRoutineSteps';
 import {
   completeStep,
@@ -105,8 +106,9 @@ async function toggleStep(period: Period, { stepId, localDate, wasDone }: Toggle
 }
 
 // One per row. Everything after the tap reads the variables, so a new day mid-save can't move the tick.
-export function useToggleCompletion(stepId: string, period: Period) {
+export function useToggleCompletion(stepId: string, period: Period, productId: string) {
   const queryClient = useQueryClient();
+  const checkRunningLow = useRunningLowCheck();
   const mutationKey = ['toggleCompletion', stepId];
   const mutation = useMutation({
     mutationKey,
@@ -115,6 +117,12 @@ export function useToggleCompletion(stepId: string, period: Period) {
     onMutate: async ({ stepId: id, localDate, wasDone }: ToggleVariables) => {
       await queryClient.cancelQueries({ queryKey: ['completions', localDate], exact: true });
       setDone(queryClient, id, localDate, !wasDone);
+    },
+    // Only a saved check can use up a bottle; the check never throws.
+    onSuccess: (_data, { wasDone }) => {
+      if (!wasDone) {
+        void checkRunningLow(productId);
+      }
     },
     // Only this row flips back, and the dialog shows even if the row has left the screen.
     onError: (error, { stepId: id, localDate, wasDone }) => {

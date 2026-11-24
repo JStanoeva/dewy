@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from 'react';
 
+import { clearReminders } from '@/features/reminders/services/notificationService';
 import { supabase } from '@/lib/supabase';
 
 type AuthValue = {
@@ -42,6 +43,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Product photos are cached on the device too, so the next account starts without them.
         Image.clearMemoryCache();
         Image.clearDiskCache();
+        // The nudges belong to the account that left; the next one schedules its own.
+        clearReminders().catch(() => undefined);
       }
       userIdRef.current = nextUserId;
       setSession(nextSession);

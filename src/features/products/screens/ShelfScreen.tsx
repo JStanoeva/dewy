@@ -24,7 +24,12 @@ import { ProductCard } from '@/features/products/components/ProductCard';
 import { useProducts, useProductUses } from '@/features/products/hooks/useProducts';
 import type { Product, ProductStatus } from '@/features/products/types';
 import { getShelfLife } from '@/features/products/utils/shelfLife';
-import { getUsesLeft, isRunningLow } from '@/features/products/utils/usesLeft';
+import {
+  defaultLowUsesThreshold,
+  getUsesLeft,
+  isRunningLow,
+} from '@/features/products/utils/usesLeft';
+import { useProfile } from '@/features/profile/hooks/useProfile';
 import { useRoutineSteps } from '@/features/routines/hooks/useRoutineSteps';
 import { useLocalToday } from '@/hooks/useLocalToday';
 import { useDewyTheme } from '@/theme/ThemeProvider';
@@ -46,6 +51,7 @@ export function ShelfScreen() {
   const routineSteps = useRoutineSteps();
   // Like the tags, a failed count just shows no running low.
   const productUses = useProductUses();
+  const lowThreshold = useProfile().data?.lowUsesThreshold ?? defaultLowUsesThreshold;
   const [status, setStatus] = useState<ProductStatus>('owned');
   const [category, setCategory] = useState<CategoryFilter>('all');
   const [refreshing, setRefreshing] = useState(false);
@@ -67,7 +73,7 @@ export function ShelfScreen() {
 
   const lowCount = owned.filter((product) => {
     const usesLeft = usesLeftOf(product);
-    return usesLeft !== null && isRunningLow(usesLeft);
+    return usesLeft !== null && isRunningLow(usesLeft, lowThreshold);
   }).length;
   const ownedSummary = [
     countLabel(ownedCount),
@@ -151,6 +157,7 @@ export function ShelfScreen() {
                 .map((step) => step.period) ?? []
             }
             usesLeft={usesLeftOf(item)}
+            lowThreshold={lowThreshold}
             width={cardWidth}
             today={today}
             onPress={() => navigation.navigate('ProductDetails', { productId: item.id })}

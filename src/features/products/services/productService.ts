@@ -19,7 +19,7 @@ import { supabase } from '@/lib/supabase';
 import { isValidLocalDate, type LocalDate } from '@/utils/localDate';
 
 const productColumns =
-  'id, status, name, brand, category, packaging, photo_path, opened_on, pao_months, actives, size_ml, start_fraction, tracked_from, notes, is_favorite, created_at, updated_at';
+  'id, status, name, brand, category, packaging, photo_path, opened_on, pao_months, actives, size_ml, start_fraction, tracked_from, notes, is_favorite, low_notified_at, created_at, updated_at';
 
 // The generated types only say "string" for status and category, so rows are parsed before use.
 const productRowSchema = z.object({
@@ -39,6 +39,7 @@ const productRowSchema = z.object({
   tracked_from: z.string().refine(isValidLocalDate),
   notes: z.string().nullable(),
   is_favorite: z.boolean(),
+  low_notified_at: z.string().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
 });
@@ -60,6 +61,7 @@ function toProduct(row: z.infer<typeof productRowSchema>): Product {
     trackedFrom: row.tracked_from,
     notes: row.notes,
     isFavorite: row.is_favorite,
+    lowNotifiedAt: row.low_notified_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -124,7 +126,7 @@ export async function updateProduct(
         ? { opened_on: input.openedOn, pao_months: input.paoMonths, size_ml: input.sizeMl }
         : {}),
       ...(trackedFrom && input.startFraction !== null
-        ? { start_fraction: input.startFraction, tracked_from: trackedFrom }
+        ? { start_fraction: input.startFraction, tracked_from: trackedFrom, low_notified_at: null }
         : {}),
     })
     .eq('id', id)
@@ -144,7 +146,7 @@ export async function adjustAmount(
 ): Promise<Product> {
   const { data, error } = await supabase
     .from('products')
-    .update({ start_fraction: startFraction, tracked_from: trackedFrom })
+    .update({ start_fraction: startFraction, tracked_from: trackedFrom, low_notified_at: null })
     .eq('id', id)
     .select(productColumns)
     .single();
@@ -152,6 +154,20 @@ export async function adjustAmount(
     throw error;
   }
   return toProduct(productRowSchema.parse(data));
+}
+
+// Marks the bottle as notified, only if nothing did yet, so two ticks or two phones notify once.
+export async function markRunningLowNotified(id: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('products')
+    .update({ low_notified_at: new Date().toISOString() })
+    .eq('id', id)
+    .is('low_notified_at', null)
+    .select('id');
+  if (error) {
+    throw error;
+  }
+  return data.length > 0;
 }
 
 const productUsesSchema = z.array(z.object({ product_id: z.string(), uses: z.number() }));

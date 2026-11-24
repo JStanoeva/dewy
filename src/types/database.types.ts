@@ -23,6 +23,7 @@ export type Database = {
           id: string
           ingredients: string[]
           is_favorite: boolean
+          low_notified_at: string | null
           name: string
           notes: string | null
           opened_on: string | null
@@ -44,6 +45,7 @@ export type Database = {
           id?: string
           ingredients?: string[]
           is_favorite?: boolean
+          low_notified_at?: string | null
           name: string
           notes?: string | null
           opened_on?: string | null
@@ -65,6 +67,7 @@ export type Database = {
           id?: string
           ingredients?: string[]
           is_favorite?: boolean
+          low_notified_at?: string | null
           name?: string
           notes?: string | null
           opened_on?: string | null
@@ -88,7 +91,10 @@ export type Database = {
           evening_reminder_enabled: boolean
           evening_reminder_time: string
           expiry_alerts_enabled: boolean
+          expiry_lead_days: number
           id: string
+          low_alerts_enabled: boolean
+          low_uses_threshold: number
           morning_reminder_enabled: boolean
           morning_reminder_time: string
           onboarding_completed_at: string | null
@@ -105,7 +111,10 @@ export type Database = {
           evening_reminder_enabled?: boolean
           evening_reminder_time?: string
           expiry_alerts_enabled?: boolean
+          expiry_lead_days?: number
           id: string
+          low_alerts_enabled?: boolean
+          low_uses_threshold?: number
           morning_reminder_enabled?: boolean
           morning_reminder_time?: string
           onboarding_completed_at?: string | null
@@ -122,7 +131,10 @@ export type Database = {
           evening_reminder_enabled?: boolean
           evening_reminder_time?: string
           expiry_alerts_enabled?: boolean
+          expiry_lead_days?: number
           id?: string
+          low_alerts_enabled?: boolean
+          low_uses_threshold?: number
           morning_reminder_enabled?: boolean
           morning_reminder_time?: string
           onboarding_completed_at?: string | null

@@ -21,6 +21,8 @@ type ProductCardProps = {
   routinePeriods: readonly Period[];
   // Null without a size, on the wishlist, or while the use counts aren't loaded.
   usesLeft: number | null;
+  // The account's Running low number.
+  lowThreshold: number;
   width: number;
   today: LocalDate;
   onPress: () => void;
@@ -30,6 +32,7 @@ export function ProductCard({
   product,
   routinePeriods,
   usesLeft,
+  lowThreshold,
   width,
   today,
   onPress,
@@ -40,7 +43,8 @@ export function ProductCard({
   const shelfLife = isWish ? null : getShelfLife(product.openedOn, product.paoMonths, today);
   const isExpired = shelfLife !== null && shelfLife.daysLeft < 0;
   // Expired outranks running low, which outranks the other shelf-life statuses.
-  const lowUsesLeft = !isExpired && usesLeft !== null && isRunningLow(usesLeft) ? usesLeft : null;
+  const lowUsesLeft =
+    !isExpired && usesLeft !== null && isRunningLow(usesLeft, lowThreshold) ? usesLeft : null;
   const lowLabel =
     lowUsesLeft === null ? null : `${lowUsesLeft} ${lowUsesLeft === 1 ? 'use' : 'uses'} left`;
   const status = isWish

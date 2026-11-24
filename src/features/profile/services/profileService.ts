@@ -5,7 +5,9 @@ import { supabase } from '@/lib/supabase';
 export async function getProfile(): Promise<Profile> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, display_name, created_at, onboarding_completed_at')
+    .select(
+      'id, display_name, created_at, onboarding_completed_at, morning_reminder_enabled, morning_reminder_time, evening_reminder_enabled, evening_reminder_time, expiry_alerts_enabled, expiry_lead_days, low_alerts_enabled, low_uses_threshold',
+    )
     .single();
   if (error) {
     throw error;
@@ -15,6 +17,14 @@ export async function getProfile(): Promise<Profile> {
     displayName: data.display_name,
     createdAt: data.created_at,
     onboardingCompletedAt: data.onboarding_completed_at,
+    morningReminderEnabled: data.morning_reminder_enabled,
+    morningReminderTime: data.morning_reminder_time,
+    eveningReminderEnabled: data.evening_reminder_enabled,
+    eveningReminderTime: data.evening_reminder_time,
+    expiryAlertsEnabled: data.expiry_alerts_enabled,
+    expiryLeadDays: data.expiry_lead_days,
+    lowAlertsEnabled: data.low_alerts_enabled,
+    lowUsesThreshold: data.low_uses_threshold,
   };
 }
 

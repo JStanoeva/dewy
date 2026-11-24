@@ -28,6 +28,7 @@ function product(overrides: Partial<Product>): Product {
     trackedFrom: '2026-11-01',
     notes: null,
     isFavorite: false,
+    lowNotifiedAt: null,
     createdAt: '2026-11-01T10:00:00Z',
     updatedAt: '2026-11-01T10:00:00Z',
     ...overrides,

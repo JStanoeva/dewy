@@ -17,10 +17,12 @@ import { useProductUses } from '@/features/products/hooks/useProducts';
 import type { Product } from '@/features/products/types';
 import {
   amountFooter,
+  defaultLowUsesThreshold,
   getAmountProgress,
   getUsesLeft,
   isRunningLow,
 } from '@/features/products/utils/usesLeft';
+import { useProfile } from '@/features/profile/hooks/useProfile';
 import { getRitualDate } from '@/theme/period';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import { fonts, fontSizes, letterSpacings, spacing } from '@/theme/tokens';
@@ -39,6 +41,7 @@ const linkSlop = { top: 13, bottom: 13, left: spacing.xs, right: spacing.xs };
 export function AmountLeft({ product, perWeek, canAdjust }: AmountLeftProps) {
   const { palette } = useDewyTheme();
   const productUses = useProductUses();
+  const lowThreshold = useProfile().data?.lowUsesThreshold ?? defaultLowUsesThreshold;
   const adjust = useAdjustAmount();
   const [adjusting, setAdjusting] = useState(false);
   const linkRef = useRef<ViewInstance>(null);
@@ -124,7 +127,7 @@ export function AmountLeft({ product, perWeek, canAdjust }: AmountLeftProps) {
           <Text
             style={[
               styles.value,
-              { color: isRunningLow(usesLeft) ? palette.warning : palette.text },
+              { color: isRunningLow(usesLeft, lowThreshold) ? palette.warning : palette.text },
             ]}
           >
             ≈ {uses}

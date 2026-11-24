@@ -37,6 +37,7 @@ const config: ExpoConfig = {
         microphonePermission: false,
       },
     ],
+    ['expo-notifications', { icon: './assets/notification-icon.png', color: '#6d6875' }],
   ],
   extra: {
     eas: {

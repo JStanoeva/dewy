@@ -25,6 +25,8 @@ export type Product = {
   trackedFrom: LocalDate;
   notes: string | null;
   isFavorite: boolean;
+  // When Running low was shown for this bottle; null again after each restart of the count.
+  lowNotifiedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };

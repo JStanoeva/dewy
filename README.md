@@ -69,6 +69,7 @@ On Windows, if PowerShell refuses to run `npm` or `npx` because running scripts 
    12. `012_product_client_id.sql`
    13. `013_onboarding_backfill.sql`
    14. `014_finish_onboarding.sql`
+   15. `015_nudges.sql`
 
    Run each file once, before anyone signs up. `003_product_photos_storage.sql` creates the private `product-photos` bucket itself, so don't create it by hand.
 
@@ -199,7 +200,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 - **Onboarding:** a new account first sees "Start your shelf" instead of the tabs. "Add a product" opens the New product form for an owned product, and each saved product joins the list under it, oldest first, with × to remove it at once. Continue opens "Your first rituals", where Dewy has placed each product in the morning, the evening or both: a retinoid or exfoliating acids go to the evening, vitamin C to the morning, and otherwise the type decides (SPF in the morning, a mask in the evening, a cleanser in both). Each row has a sun and a moon toggle to flip that, and a product with both off "Stays on your shelf only". A plum card under the list sums up each ritual as the toggles change ("Morning · 3 steps · about 3 min") with a small bottle per step. Continue there saves both rituals and opens Today; Back keeps the flips. "Skip for now" (while step 1's list is empty) or Skip at the top finishes onboarding without any ritual steps. Products added here stay on the shelf. An account only sees onboarding until it finishes or skips it, on any device.
 - **Main sections:** four bottom tabs (Today, Shelf, Routines, Me) and a raised centre "+" button that opens the New product form.
   - **Today:** the date, a "Good morning" or "Good evening" greeting with the user's name, a Morning / Evening switch, a progress arc with one dot per step and a sun or moon where the progress ends ("2 of 5 steps done · 4 min to go"), and the checklist of that routine's steps for today's weekday. Above the list, banners show the routine's tips for today, made from the listed products' key actives: a retinoid gets "Skip exfoliating acids tonight", vitamin C in the morning gets "Follow with SPF, they protect better together" when the morning routine has an SPF, and products that don't mix (such as vitamin C and a retinoid) get a gentle reminder to split them. Each banner starts with its product's name. With two or more banners, "Hide tips" folds them into one line ("3 tips for today" with a Show link); they stay folded until Show is tapped, and open again by themselves when a day shows a tip that wasn't there when they were folded. Tapping a step ticks or unticks it; a long press opens its product. Once every step is ticked, the arc reads "All done — go glow" (or "All done — sweet dreams" in the evening). Pulling down refreshes the list. The switch picks which ritual Today lists, and the pick holds until the other half of the day. The app's colours and the greeting follow the clock instead: light morning colours from 05:00 to 16:59, plum evening colours from 17:00 to 04:59. The day turns over at 05:00, so evening steps ticked after midnight count for that evening.
-  - **Shelf:** the user's products in a two-column grid, with Owned and Wishlist sides and category chips. Products in a routine carry an AM, PM or AM · PM tag, and products with 5 or fewer uses left say so ("≈ 5 uses left").
+  - **Shelf:** the user's products in a two-column grid, with Owned and Wishlist sides and category chips. Products in a routine carry an AM, PM or AM · PM tag, and products at or under the profile's running-low number (5 uses by default) say so ("≈ 5 uses left").
   - **Routines:** "Your rituals" with Morning and Evening. It opens on the routine Today shows, then keeps its own choice; its switch changes only its list, not the colours. Each routine shows a week strip, the number of steps and the time they take, and the ordered steps with their days and waits. A step looks the same here as on Today: "Step 3 · Treat", the product's name and its time, with its days at the end of the time row. Every card is the same height: a long name ends in "…". Dragging a step by its dotted handle moves it: the other steps slide out of the way, the list scrolls by itself near its top and bottom edges, and the new order is saved when the step is dropped. Tapping a step opens the step editor, and "Add a step from your shelf" adds one. Pulling down refreshes the list.
   - **Me:** the user's initial, name, "Glowing with Dewy since" with the month and year they joined ("Nov 2026"), and Log out.
 - **Details screen:** Product details, opened by tapping a product card on the Shelf, by a long press on a step on Today, or by "View it" after adding a product to the wishlist. For an owned product with a size it shows how many uses are left ("≈ 42 uses"), a bar of how full the bottle is, and how long that lasts at the product's routine days ("30 ml · about 6 weeks at 1 use a day"). "Feels off? Adjust" restarts the count from how full it is now.
@@ -253,7 +254,7 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 #### List / Overview Screen
 
 - The Shelf lists the user's products, newest first, in a two-column grid.
-- Each card shows the photo or, without one, a drawing of the product's packaging (dropper, pump, jar, tube or spray), the brand, the name and a status line. For owned products that line is the shelf life (for example "5 months left", or "Unopened"), and an opened product also shows a bar of the shelf life left. With 30 days or fewer left, the bar and the line turn the warning colour ("Use within 3 weeks", "Expires today"). An owned product with 5 or fewer uses left shows "≈ 5 uses left" in the warning colour instead, with a bar of how full it is, unless it has expired ("Expired" always wins). For wishlist products it is the date the product was saved.
+- Each card shows the photo or, without one, a drawing of the product's packaging (dropper, pump, jar, tube or spray), the brand, the name and a status line. For owned products that line is the shelf life (for example "5 months left", or "Unopened"), and an opened product also shows a bar of the shelf life left. With 30 days or fewer left, the bar and the line turn the warning colour ("Use within 3 weeks", "Expires today"). An owned product at or under the running-low number (5 uses by default) shows "≈ 5 uses left" in the warning colour instead, with a bar of how full it is, unless it has expired ("Expired" always wins). For wishlist products it is the date the product was saved.
 - Under the title, a summary counts the owned products and how many of them are expiring or running low, leaving out any part that is 0 ("7 products · 1 expiring · 1 running low"). On the Wishlist side it reads "3 products you have your eye on", and the Owned / Wishlist switch shows each side's count.
 - A tag on the picture shows which routines an owned product is in ("AM", "PM" or "AM · PM"). Wishlist products show "Wish".
 - The user switches between Owned and Wishlist, filters by category (Cleanser, Exfoliant, Toner, Mist, Serum, Moisturizer, SPF, Mask) and pulls down to refresh.
@@ -302,7 +303,8 @@ The `preview` profile in `eas.json` builds an installable Android APK. `app.conf
 - **Edit product:** saves the changes, then puts the saved product straight into the cached details and list. A replaced or removed photo is deleted from Storage.
 - **Favourite:** the heart updates at once and rolls back if saving fails.
 - **Move to shelf:** turns a wishlist product into an owned, unopened one.
-- **Adjust the amount:** on Product details, "Feels off? Adjust" opens "How full is it now?". Picking Full, ¾, ½ or ¼ saves it and restarts the use count from today; the tiles are disabled while it saves, and an error shows under them if it fails.
+- **Adjust the amount:** on Product details, "Feels off? Adjust" opens "How full is it now?". Picking Full, ¾, ½ or ¼ saves it and restarts the use count from today; the tiles are disabled while it saves, and an error shows under them if it fails. A restart also clears the product's running-low mark (below), so the bottle can be announced again.
+- **Running low mark:** when a tick leaves an owned product at or under the profile's running-low number (5 uses by default), Dewy sets the product's `low_notified_at` with an update that only matches while it is still empty. Only the call that set it shows the notification, so a bottle is announced once, even from two phones. Editing the product with a new "how full" also clears the mark.
 - **Delete product:** after confirmation, the product disappears from the shelf at once and comes back if the delete fails. Its photo is removed from Storage.
 - **Edit step:** tapping a step on Routines opens Edit step to change its days, time and wait. "Move up" and "Move down" reorder the routine through a database function. "Remove step" removes it after a confirmation step; the product stays on the shelf.
 - **Swipe to remove:** swiping a step left on Routines uncovers "Remove". Letting go past halfway takes the step away at once and shows "{name} removed" with Undo for about 5 seconds; letting go sooner slides the card back. The delete is sent only when that bar goes (the time runs out, another step is removed, the routine or tab changes, a step opens, a drag starts or Dewy goes to the background), so Undo just shows the step again. If the delete fails, the step comes back with an alert. Removals and reorders save one at a time, so a drag right after a removal is saved after the delete.
@@ -350,6 +352,7 @@ Database CHECK constraints back up the product rules on the server: name 2–80 
 - Image resizing and JPEG conversion (expo-image-manipulator)
 - Secure key storage (expo-secure-store)
 - The Android date picker dialog (@react-native-community/datetimepicker)
+- Local notifications (expo-notifications)
 
 #### Usage Description
 
@@ -359,6 +362,12 @@ Database CHECK constraints back up the product rules on the server: name 2–80 
 - In New product, a new photo can also be used to fill in the name, brand, type, packaging, size and key actives from its label (see the optional label reading section). Anything already typed, tapped or ticked stays as it is.
 - The "Opened on" field opens the Android date dialog.
 - expo-secure-store holds the key that encrypts the saved session.
+- Dewy schedules local notifications from the nudge settings on the user's profile, which are all off for a new account until they are turned on:
+  - a daily Morning and Evening ritual reminder at their chosen times;
+  - "{name} expires in {lead}" on the day an opened product's shelf life is that far from its end, at the Morning reminder's time when it is on, otherwise at 9:00;
+  - "{name} is running low" right after the tick that brings a product to the running-low number.
+
+  A tap opens that product's details, or Today for a ritual reminder. The schedule follows every change to the products or settings, and logging out cancels it and clears Dewy's notifications.
 
 ### Typical User Flow
 

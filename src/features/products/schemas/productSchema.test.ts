@@ -284,6 +284,7 @@ describe('toProductFormValues', () => {
     trackedFrom: '2026-11-01',
     notes: 'Evenings only\nFollow with SPF',
     isFavorite: true,
+    lowNotifiedAt: null,
     createdAt: '2026-11-07T09:00:00Z',
     updatedAt: '2026-11-07T09:00:00Z',
   };

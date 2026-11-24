@@ -113,9 +113,11 @@ describe('amountFooter', () => {
 });
 
 describe('isRunningLow', () => {
-  it('means 5 uses or fewer', () => {
-    expect(isRunningLow(5)).toBe(true);
-    expect(isRunningLow(0)).toBe(true);
-    expect(isRunningLow(6)).toBe(false);
+  it('means the threshold or fewer', () => {
+    expect(isRunningLow(5, 5)).toBe(true);
+    expect(isRunningLow(0, 5)).toBe(true);
+    expect(isRunningLow(6, 5)).toBe(false);
+    expect(isRunningLow(20, 20)).toBe(true);
+    expect(isRunningLow(4, 3)).toBe(false);
   });
 });

@@ -18,6 +18,7 @@ const foam: Product = {
   trackedFrom: '2026-11-15' as LocalDate,
   notes: 'Second pump only',
   isFavorite: true,
+  lowNotifiedAt: null,
   createdAt: '2026-11-15T10:00:00Z',
   updatedAt: '2026-11-20T10:00:00Z',
 };

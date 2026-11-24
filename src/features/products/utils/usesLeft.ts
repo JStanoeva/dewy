@@ -2,8 +2,8 @@ import { categoryDetails, type Category, type Fullness } from '@/features/produc
 import type { Product } from '@/features/products/types';
 import type { RoutineStep } from '@/features/routines/types';
 
-// Until 6.1 lets people choose it.
-const runningLowUses = 5;
+// Running low's number before the profile has loaded; every account starts with it.
+export const defaultLowUsesThreshold = 5;
 
 // Uses in the bottle when the count starts: size × fullness ÷ the type's typical dose, rounded.
 export function getStartingUses(sizeMl: number, startFraction: Fullness, category: Category) {
@@ -75,6 +75,7 @@ export function amountFooter(sizeMl: number, usesLeft: number, perWeek: number) 
   return `${sizeMl} ml · ${timeLabel(days)} at ${rateLabel(perWeek)}`;
 }
 
-export function isRunningLow(usesLeft: number) {
-  return usesLeft <= runningLowUses;
+// The threshold is the account's Running low setting (3, 5, 10 or 20 uses).
+export function isRunningLow(usesLeft: number, threshold: number) {
+  return usesLeft <= threshold;
 }
