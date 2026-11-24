@@ -42,8 +42,9 @@ const shapes: Record<BottleShape, readonly Part[]> = {
   ],
 };
 
-// Step rows (tile), the form's Packaging tiles (option), Shelf cards (card) and Product details (hero).
+// Onboarding's summary tiles (mini), step rows (tile), Packaging tiles (option), Shelf cards (card), Product details (hero).
 const sizes = {
+  mini: { scale: 0.28, labelRadius: 1 },
   tile: { scale: 0.4, labelRadius: 1 },
   option: { scale: 0.55, labelRadius: 2 },
   card: { scale: 0.9, labelRadius: 3 },

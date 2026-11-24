@@ -1,4 +1,5 @@
 import { DMSans_400Regular } from '@expo-google-fonts/dm-sans/400Regular';
+import { DMSans_400Regular_Italic } from '@expo-google-fonts/dm-sans/400Regular_Italic';
 import { DMSans_500Medium } from '@expo-google-fonts/dm-sans/500Medium';
 import { DMSans_600SemiBold } from '@expo-google-fonts/dm-sans/600SemiBold';
 import { DMSans_700Bold } from '@expo-google-fonts/dm-sans/700Bold';
@@ -11,6 +12,7 @@ export const fonts = {
   displayItalic: 'Fraunces_500Medium_Italic',
   displayItalicRegular: 'Fraunces_400Regular_Italic',
   body: 'DMSans_400Regular',
+  bodyItalic: 'DMSans_400Regular_Italic',
   bodyMedium: 'DMSans_500Medium',
   bodySemiBold: 'DMSans_600SemiBold',
   bodyBold: 'DMSans_700Bold',
@@ -21,6 +23,7 @@ export const fontAssets = {
   [fonts.displayItalic]: Fraunces_500Medium_Italic,
   [fonts.displayItalicRegular]: Fraunces_400Regular_Italic,
   [fonts.body]: DMSans_400Regular,
+  [fonts.bodyItalic]: DMSans_400Regular_Italic,
   [fonts.bodyMedium]: DMSans_500Medium,
   [fonts.bodySemiBold]: DMSans_600SemiBold,
   [fonts.bodyBold]: DMSans_700Bold,

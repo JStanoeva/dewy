@@ -11,13 +11,15 @@ import { Screen } from '@/components/Screen';
 import { useAuth } from '@/features/auth/providers/AuthProvider';
 import { OnboardingHeader } from '@/features/onboarding/components/OnboardingHeader';
 import { OnboardingProductRow } from '@/features/onboarding/components/OnboardingProductRow';
+import { onboardingProducts } from '@/features/onboarding/utils/firstRituals';
+import { categoryDetails } from '@/features/products/constants';
 import { useDeleteProduct } from '@/features/products/hooks/useProductMutations';
 import { useProducts } from '@/features/products/hooks/useProducts';
 import type { Product } from '@/features/products/types';
 import { useCompleteOnboarding } from '@/features/profile/hooks/useCompleteOnboarding';
 import type { RootStackParamList } from '@/navigation/types';
 import { useDewyTheme } from '@/theme/ThemeProvider';
-import { fonts, fontSizes, letterSpacings, radii, spacing } from '@/theme/tokens';
+import { fonts, fontSizes, letterSpacings, minTouchTarget, radii, spacing } from '@/theme/tokens';
 
 type ShelfStepScreenProps = NativeStackScreenProps<RootStackParamList, 'ShelfStep'>;
 
@@ -36,14 +38,22 @@ export function ShelfStepScreen({ navigation }: ShelfStepScreenProps) {
   const finishing = useRef(false);
   const removalLocked = useRef(false);
 
-  // The account's owned products, oldest first, so each new one joins the bottom of the list.
-  const owned = (products.data ?? [])
-    .filter((product) => product.status === 'owned')
-    .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
+  // Oldest first, so each new product joins the bottom of the list.
+  const owned = onboardingProducts(products.data ?? []).sort(
+    (a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt),
+  );
   const hasProducts = owned.length > 0;
   const busy = finishingFrom !== null;
 
-  // Until the rituals step exists, Continue, Skip for now and Skip all finish onboarding.
+  // With products, Continue drafts the rituals on step 2; without, Skip for now finishes.
+  function goOn() {
+    if (hasProducts) {
+      navigation.navigate('RitualsStep');
+    } else {
+      finish('button');
+    }
+  }
+
   async function finish(from: 'skip' | 'button') {
     if (finishing.current || !session) {
       return;
@@ -145,7 +155,29 @@ export function ShelfStepScreen({ navigation }: ShelfStepScreenProps) {
               <OnboardingProductRow
                 key={product.id}
                 product={product}
-                onRemove={() => remove(product)}
+                meta={[product.brand, categoryDetails[product.category].label]
+                  .filter(Boolean)
+                  .join(' · ')}
+                accessory={
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove ${product.name}`}
+                    onPress={() => remove(product)}
+                    style={({ pressed }) => [styles.remove, { opacity: pressed ? 0.6 : 1 }]}
+                  >
+                    <Svg
+                      width={16}
+                      height={16}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke={palette.textMuted}
+                      strokeWidth={2.2}
+                      strokeLinecap="round"
+                    >
+                      <Path d="M6 6l12 12M18 6L6 18" />
+                    </Svg>
+                  </Pressable>
+                }
               />
             ))}
           </View>
@@ -183,14 +215,15 @@ export function ShelfStepScreen({ navigation }: ShelfStepScreenProps) {
             Couldn&apos;t reach Dewy. Check your connection and try again.
           </Text>
         ) : null}
+        {/* It waits for the products before choosing between Continue and Skip for now. */}
         <AppButton
           pinned
           arrow
           quiet={!hasProducts}
           title={hasProducts ? 'Continue' : 'Skip for now'}
-          loading={finishingFrom === 'button'}
-          disabled={finishingFrom === 'skip'}
-          onPress={() => finish('button')}
+          loading={finishingFrom === 'button' || products.isPending}
+          disabled={finishingFrom === 'skip' || !products.data}
+          onPress={goOn}
         />
       </View>
     </Screen>
@@ -268,6 +301,14 @@ const styles = StyleSheet.create({
   list: {
     marginTop: spacing.md,
     gap: spacing.xs,
+  },
+  remove: {
+    width: minTouchTarget,
+    height: minTouchTarget,
+    marginRight: spacing.snug,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.pill,
   },
   empty: {
     marginTop: spacing.xxl,

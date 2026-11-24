@@ -262,6 +262,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      finish_onboarding: { Args: { p_steps: Json }; Returns: string }
       product_uses: {
         Args: never
         Returns: {

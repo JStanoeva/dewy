@@ -1,3 +1,4 @@
+import type { FirstRitualStep } from '@/features/onboarding/utils/firstRituals';
 import type { Profile } from '@/features/profile/types';
 import { supabase } from '@/lib/supabase';
 
@@ -32,4 +33,19 @@ export async function completeOnboarding(userId: string): Promise<string> {
     throw new Error('Onboarding was not saved');
   }
   return data.onboarding_completed_at;
+}
+
+// One transaction: the first rituals' steps in order, then the onboarding timestamp it returns.
+export async function finishOnboarding(steps: readonly FirstRitualStep[]): Promise<string> {
+  const { data, error } = await supabase.rpc('finish_onboarding', {
+    p_steps: steps.map((step) => ({
+      product_id: step.productId,
+      period: step.period,
+      duration_seconds: step.durationSeconds,
+    })),
+  });
+  if (error) {
+    throw error;
+  }
+  return data;
 }

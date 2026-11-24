@@ -1,4 +1,5 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import { fonts, fontSizes, minTouchTarget, radii, spacing } from '@/theme/tokens';
@@ -10,20 +11,59 @@ const stepCount = 3;
 
 type OnboardingHeaderProps = {
   step: 1 | 2 | 3;
+  // Step 1 has none (the user has just signed up), so a spacer keeps the pills centred.
+  onBack?: () => void;
   onSkip: () => void;
   // Skip shows a spinner while its own request runs, and stays inert while any request does.
   skipping: boolean;
   disabled: boolean;
 };
 
-// Step 1 has no back button (the user has just signed up), so a spacer keeps the pills centred.
-export function OnboardingHeader({ step, onSkip, skipping, disabled }: OnboardingHeaderProps) {
+export function OnboardingHeader({
+  step,
+  onBack,
+  onSkip,
+  skipping,
+  disabled,
+}: OnboardingHeaderProps) {
   const { palette } = useDewyTheme();
   const steps = Array.from({ length: stepCount }, (_, index) => index + 1);
 
   return (
     <View style={styles.header}>
-      <View style={styles.side} />
+      {onBack ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+          accessibilityState={{ disabled }}
+          disabled={disabled}
+          onPress={onBack}
+          style={({ pressed }) => [
+            styles.side,
+            styles.back,
+            {
+              backgroundColor: palette.surface,
+              boxShadow: palette.iconButtonShadow,
+              opacity: pressed ? 0.7 : 1,
+            },
+          ]}
+        >
+          <Svg
+            width={20}
+            height={20}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke={palette.text}
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <Path d="M15 18l-6-6 6-6" />
+          </Svg>
+        </Pressable>
+      ) : (
+        <View style={styles.side} />
+      )}
       <View
         accessible
         accessibilityRole="image"
@@ -72,6 +112,11 @@ const styles = StyleSheet.create({
     minHeight: minTouchTarget,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  back: {
+    width: minTouchTarget,
+    height: minTouchTarget,
+    borderRadius: radii.pill,
   },
   pills: {
     flexDirection: 'row',

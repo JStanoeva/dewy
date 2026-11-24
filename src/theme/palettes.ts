@@ -50,8 +50,14 @@ const morning = {
   orbitCore: '#ffb4a2',
   orbitLine: 'rgba(181, 131, 141, 0.55)',
   orbitDashed: 'rgba(181, 131, 141, 0.4)',
-  // Onboarding step 1's corner circle; Evening softens it so the cream Skip on it stays readable.
+  // Onboarding's corner circles; Evening softens them so the cream Skip on them stays readable.
   onboardingShelfCircle: '#ffcdb2',
+  onboardingRitualsCircle: '#ffb4a2',
+  // Step 2's toggles when off; Evening's border would vanish on the card, so it rings in mauve.
+  ritualToggleOffRing: '#E9D3CC',
+  ritualToggleOffIcon: '#8A8390',
+  // The summary card is plum in both palettes, so its bottle tiles stay cream in both.
+  ritualSummaryTile: '#FFF5EF',
   onAccent: '#3B3541',
   avatarShadow: '0 8px 20px rgba(109, 104, 117, 0.18)',
   tabBarShadow: '0 -6px 24px rgba(109, 104, 117, 0.1)',
@@ -122,6 +128,10 @@ const evening: Palette = {
   orbitLine: 'rgba(255, 205, 178, 0.55)',
   orbitDashed: 'rgba(255, 205, 178, 0.4)',
   onboardingShelfCircle: 'rgba(255, 205, 178, 0.14)',
+  onboardingRitualsCircle: 'rgba(255, 180, 162, 0.15)',
+  ritualToggleOffRing: '#b5838d',
+  ritualToggleOffIcon: '#D9CDD3',
+  ritualSummaryTile: '#FFF5EF',
   onAccent: '#3B3541',
   avatarShadow: 'none',
   tabBarShadow: 'none',

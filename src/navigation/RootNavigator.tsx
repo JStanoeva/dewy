@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 
 import { useAuth } from '@/features/auth/providers/AuthProvider';
 import { AuthScreen } from '@/features/auth/screens/AuthScreen';
+import { OnboardingDraftProvider } from '@/features/onboarding/providers/OnboardingDraftProvider';
+import { RitualsStepScreen } from '@/features/onboarding/screens/RitualsStepScreen';
 import { ShelfStepScreen } from '@/features/onboarding/screens/ShelfStepScreen';
 import { ProductDetailsScreen } from '@/features/products/screens/ProductDetailsScreen';
 import { ProductFormScreen } from '@/features/products/screens/ProductFormScreen';
@@ -55,41 +57,44 @@ export function RootNavigator() {
 
   return (
     <NavigationContainer theme={navigationTheme} onReady={handleReady}>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {!session ? (
-          <Stack.Screen
-            name="Auth"
-            component={AuthScreen}
-            options={{ animationTypeForReplace: 'pop' }}
-          />
-        ) : !profile.data ? (
-          <Stack.Screen name="ProfileGate" component={ProfileGateScreen} />
-        ) : profile.data.onboardingCompletedAt === null ? (
-          <Stack.Group navigationKey={session.user.id}>
-            <Stack.Screen name="ShelfStep" component={ShelfStepScreen} />
+      <OnboardingDraftProvider>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          {!session ? (
             <Stack.Screen
-              name="ProductForm"
-              component={ProductFormScreen}
-              options={{ presentation: 'modal' }}
+              name="Auth"
+              component={AuthScreen}
+              options={{ animationTypeForReplace: 'pop' }}
             />
-          </Stack.Group>
-        ) : (
-          <Stack.Group navigationKey={session.user.id}>
-            <Stack.Screen name="Main" component={MainTabs} />
-            <Stack.Screen name="ProductDetails" component={ProductDetailsScreen} />
-            <Stack.Screen
-              name="ProductForm"
-              component={ProductFormScreen}
-              options={{ presentation: 'modal' }}
-            />
-            <Stack.Screen
-              name="RoutineStepForm"
-              component={RoutineStepFormScreen}
-              options={{ presentation: 'modal' }}
-            />
-          </Stack.Group>
-        )}
-      </Stack.Navigator>
+          ) : !profile.data ? (
+            <Stack.Screen name="ProfileGate" component={ProfileGateScreen} />
+          ) : profile.data.onboardingCompletedAt === null ? (
+            <Stack.Group navigationKey={session.user.id}>
+              <Stack.Screen name="ShelfStep" component={ShelfStepScreen} />
+              <Stack.Screen name="RitualsStep" component={RitualsStepScreen} />
+              <Stack.Screen
+                name="ProductForm"
+                component={ProductFormScreen}
+                options={{ presentation: 'modal' }}
+              />
+            </Stack.Group>
+          ) : (
+            <Stack.Group navigationKey={session.user.id}>
+              <Stack.Screen name="Main" component={MainTabs} />
+              <Stack.Screen name="ProductDetails" component={ProductDetailsScreen} />
+              <Stack.Screen
+                name="ProductForm"
+                component={ProductFormScreen}
+                options={{ presentation: 'modal' }}
+              />
+              <Stack.Screen
+                name="RoutineStepForm"
+                component={RoutineStepFormScreen}
+                options={{ presentation: 'modal' }}
+              />
+            </Stack.Group>
+          )}
+        </Stack.Navigator>
+      </OnboardingDraftProvider>
     </NavigationContainer>
   );
 }

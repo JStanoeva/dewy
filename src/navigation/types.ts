@@ -8,6 +8,7 @@ export type RootStackParamList = {
   Auth: undefined;
   ProfileGate: undefined;
   ShelfStep: undefined;
+  RitualsStep: undefined;
   Main: NavigatorScreenParams<MainTabParamList>;
   ProductDetails: { productId: string };
   // lockStatus hides the I own it / Wishlist control, as onboarding adds owned products only.
