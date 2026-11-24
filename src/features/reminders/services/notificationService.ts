@@ -45,6 +45,20 @@ export async function hasNotificationPermission() {
   return granted;
 }
 
+// Android shows its question once; after a refusal the request answers no at once. A failure counts as no.
+export async function requestNotificationPermission() {
+  try {
+    await ensureChannel();
+    if (await hasNotificationPermission()) {
+      return true;
+    }
+    const { granted } = await Notifications.requestPermissionsAsync();
+    return granted;
+  } catch {
+    return false;
+  }
+}
+
 // Each logout counts up, so a swap queued or running for the account that left stops and leaves nothing behind.
 let logouts = 0;
 

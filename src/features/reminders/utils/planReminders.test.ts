@@ -1,6 +1,7 @@
 import {
   planReminders,
   reminderTime,
+  timeLabel,
   type ReminderSettings,
 } from '@/features/reminders/utils/planReminders';
 
@@ -28,6 +29,14 @@ describe('reminderTime', () => {
   it('reads the hour and minute of a database time', () => {
     expect(reminderTime('08:00:00')).toEqual({ hour: 8, minute: 0 });
     expect(reminderTime('21:30:00')).toEqual({ hour: 21, minute: 30 });
+  });
+});
+
+describe('timeLabel', () => {
+  it('shows a database time as drawn, with no leading zero on the hour', () => {
+    expect(timeLabel('07:00:00')).toBe('7:00');
+    expect(timeLabel('08:30:00')).toBe('8:30');
+    expect(timeLabel('21:30:00')).toBe('21:30');
   });
 });
 

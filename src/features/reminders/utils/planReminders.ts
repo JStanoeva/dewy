@@ -1,5 +1,6 @@
 import type { Product } from '@/features/products/types';
 import type { Profile } from '@/features/profile/types';
+import { leadLabels } from '@/features/reminders/constants';
 import type { Period } from '@/theme/period';
 import { addMonths, formatDayMonth, parseLocalDate } from '@/utils/localDate';
 
@@ -38,17 +39,16 @@ const ritualContent: Record<Period, ReminderContent> = {
   },
 };
 
-const leadLabels: Record<number, string> = {
-  3: '3 days',
-  7: '1 week',
-  14: '2 weeks',
-  30: '1 month',
-};
-
 // The database's 'HH:MM:SS' as an hour and a minute.
 export function reminderTime(value: string) {
   const [hour, minute] = value.split(':').map(Number);
   return { hour, minute };
+}
+
+// The database's '08:00:00' as the drawn '8:00'.
+export function timeLabel(value: string) {
+  const { hour, minute } = reminderTime(value);
+  return `${hour}:${String(minute).padStart(2, '0')}`;
 }
 
 // Every nudge the settings and the shelf call for right now; Expiring soon only when it is still ahead.

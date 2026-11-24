@@ -1,6 +1,7 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
+import { SunIcon } from '@/navigation/TabIcons';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import { fonts, fontSizes, radii, spacing } from '@/theme/tokens';
 
@@ -15,6 +16,8 @@ type AppButtonProps = {
   arrow?: boolean;
   // Transparent with muted text and no shadow, for the onboarding step's Skip for now.
   quiet?: boolean;
+  // Ink with background-coloured text and an 18 sun after the title, for step 3's Start my ritual.
+  ink?: boolean;
 };
 
 export function AppButton({
@@ -25,10 +28,16 @@ export function AppButton({
   disabled = false,
   arrow = false,
   quiet = false,
+  ink = false,
 }: AppButtonProps) {
   const { palette } = useDewyTheme();
-  const textColor = quiet ? palette.textMuted : palette.onPrimary;
-  const shadow = pinned ? palette.pinnedCtaShadow : palette.ctaShadow;
+  const textColor = quiet ? palette.textMuted : ink ? palette.background : palette.onPrimary;
+  const background = quiet ? 'transparent' : ink ? palette.ink : palette.primary;
+  const shadow = ink
+    ? palette.inkButtonShadow
+    : pinned
+      ? palette.pinnedCtaShadow
+      : palette.ctaShadow;
 
   return (
     <Pressable
@@ -40,7 +49,7 @@ export function AppButton({
       style={({ pressed }) => [
         styles.button,
         {
-          backgroundColor: quiet ? 'transparent' : palette.primary,
+          backgroundColor: background,
           boxShadow: quiet ? 'none' : shadow,
           opacity: disabled && !loading ? 0.4 : pressed ? (quiet ? 0.6 : 0.9) : 1,
         },
@@ -52,6 +61,7 @@ export function AppButton({
         <>
           <Text style={[styles.title, { color: textColor }]}>{title}</Text>
           {arrow ? <ArrowIcon color={textColor} /> : null}
+          {ink ? <SunIcon color={textColor} size={18} /> : null}
         </>
       )}
     </Pressable>

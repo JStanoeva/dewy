@@ -1,5 +1,5 @@
 import type { FirstRitualStep } from '@/features/onboarding/utils/firstRituals';
-import type { Profile } from '@/features/profile/types';
+import type { NudgeSettings, Profile } from '@/features/profile/types';
 import { supabase } from '@/lib/supabase';
 
 export async function getProfile(): Promise<Profile> {
@@ -45,8 +45,34 @@ export async function completeOnboarding(userId: string): Promise<string> {
   return data.onboarding_completed_at;
 }
 
-// One transaction: the first rituals' steps in order, then the onboarding timestamp it returns.
-export async function finishOnboarding(steps: readonly FirstRitualStep[]): Promise<string> {
+// The nudges first, then one transaction for the rituals and the timestamp; a retry saves both again and adds no step twice.
+export async function finishOnboarding({
+  userId,
+  steps,
+  nudges,
+}: {
+  userId: string;
+  steps: readonly FirstRitualStep[];
+  nudges: NudgeSettings;
+}): Promise<string> {
+  const saved = await supabase
+    .from('profiles')
+    .update({
+      morning_reminder_enabled: nudges.morningReminderEnabled,
+      morning_reminder_time: nudges.morningReminderTime,
+      evening_reminder_enabled: nudges.eveningReminderEnabled,
+      evening_reminder_time: nudges.eveningReminderTime,
+      expiry_alerts_enabled: nudges.expiryAlertsEnabled,
+      expiry_lead_days: nudges.expiryLeadDays,
+      low_alerts_enabled: nudges.lowAlertsEnabled,
+      low_uses_threshold: nudges.lowUsesThreshold,
+    })
+    .eq('id', userId)
+    .select('id')
+    .single();
+  if (saved.error) {
+    throw saved.error;
+  }
   const { data, error } = await supabase.rpc('finish_onboarding', {
     p_steps: steps.map((step) => ({
       product_id: step.productId,

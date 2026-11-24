@@ -1,5 +1,6 @@
 import type { NavigatorScreenParams } from '@react-navigation/native';
 
+import type { FirstRitualStep } from '@/features/onboarding/utils/firstRituals';
 import type { Category } from '@/features/products/constants';
 import type { ProductStatus } from '@/features/products/types';
 import type { Period } from '@/theme/period';
@@ -9,6 +10,8 @@ export type RootStackParamList = {
   ProfileGate: undefined;
   ShelfStep: undefined;
   RitualsStep: undefined;
+  // Step 2's rituals, saved with the nudges on Start my ritual; empty when step 2 was skipped.
+  NudgesStep: { steps: FirstRitualStep[] };
   Main: NavigatorScreenParams<MainTabParamList>;
   ProductDetails: { productId: string };
   // lockStatus hides the I own it / Wishlist control, as onboarding adds owned products only.

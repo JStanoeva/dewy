@@ -15,3 +15,16 @@ export type Profile = {
   // Also what "running low" means on the Shelf and Details, whether or not the nudge is on.
   lowUsesThreshold: number;
 };
+
+// The four nudges' switches and choices, as onboarding step 3 saves them.
+export type NudgeSettings = Pick<
+  Profile,
+  | 'morningReminderEnabled'
+  | 'morningReminderTime'
+  | 'eveningReminderEnabled'
+  | 'eveningReminderTime'
+  | 'expiryAlertsEnabled'
+  | 'expiryLeadDays'
+  | 'lowAlertsEnabled'
+  | 'lowUsesThreshold'
+>;

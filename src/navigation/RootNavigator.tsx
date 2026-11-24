@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/features/auth/providers/AuthProvider';
 import { AuthScreen } from '@/features/auth/screens/AuthScreen';
 import { OnboardingDraftProvider } from '@/features/onboarding/providers/OnboardingDraftProvider';
+import { NudgesStepScreen } from '@/features/onboarding/screens/NudgesStepScreen';
 import { RitualsStepScreen } from '@/features/onboarding/screens/RitualsStepScreen';
 import { ShelfStepScreen } from '@/features/onboarding/screens/ShelfStepScreen';
 import { ProductDetailsScreen } from '@/features/products/screens/ProductDetailsScreen';
@@ -71,6 +72,7 @@ export function RootNavigator() {
             <Stack.Group navigationKey={session.user.id}>
               <Stack.Screen name="ShelfStep" component={ShelfStepScreen} />
               <Stack.Screen name="RitualsStep" component={RitualsStepScreen} />
+              <Stack.Screen name="NudgesStep" component={NudgesStepScreen} />
               <Stack.Screen
                 name="ProductForm"
                 component={ProductFormScreen}

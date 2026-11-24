@@ -13,9 +13,10 @@ type OnboardingHeaderProps = {
   step: 1 | 2 | 3;
   // Step 1 has none (the user has just signed up), so a spacer keeps the pills centred.
   onBack?: () => void;
-  onSkip: () => void;
-  // Skip shows a spinner while its own request runs, and stays inert while any request does.
-  skipping: boolean;
+  // Step 3 has none (choice 7a), so a spacer keeps the pills centred there too.
+  onSkip?: () => void;
+  // Skip shows a spinner while its own request runs, and Back and Skip stay inert while any request does.
+  skipping?: boolean;
   disabled: boolean;
 };
 
@@ -23,7 +24,7 @@ export function OnboardingHeader({
   step,
   onBack,
   onSkip,
-  skipping,
+  skipping = false,
   disabled,
 }: OnboardingHeaderProps) {
   const { palette } = useDewyTheme();
@@ -80,20 +81,24 @@ export function OnboardingHeader({
           />
         ))}
       </View>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Skip"
-        accessibilityState={{ disabled, busy: skipping }}
-        disabled={disabled}
-        onPress={onSkip}
-        style={({ pressed }) => [styles.side, { opacity: pressed ? 0.6 : 1 }]}
-      >
-        {skipping ? (
-          <ActivityIndicator color={palette.ink} />
-        ) : (
-          <Text style={[styles.skip, { color: palette.ink }]}>Skip</Text>
-        )}
-      </Pressable>
+      {onSkip ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Skip"
+          accessibilityState={{ disabled, busy: skipping }}
+          disabled={disabled}
+          onPress={onSkip}
+          style={({ pressed }) => [styles.side, { opacity: pressed ? 0.6 : 1 }]}
+        >
+          {skipping ? (
+            <ActivityIndicator color={palette.ink} />
+          ) : (
+            <Text style={[styles.skip, { color: palette.ink }]}>Skip</Text>
+          )}
+        </Pressable>
+      ) : (
+        <View style={styles.side} />
+      )}
     </View>
   );
 }

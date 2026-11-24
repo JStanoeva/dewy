@@ -34,7 +34,7 @@ export function ShelfStepScreen({ navigation }: ShelfStepScreenProps) {
   const products = useProducts();
   const deleteProduct = useDeleteProduct();
   const completeOnboarding = useCompleteOnboarding();
-  const [finishingFrom, setFinishingFrom] = useState<'skip' | 'button' | null>(null);
+  const [skipping, setSkipping] = useState(false);
   const finishing = useRef(false);
   const removalLocked = useRef(false);
 
@@ -43,27 +43,27 @@ export function ShelfStepScreen({ navigation }: ShelfStepScreenProps) {
     (a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt),
   );
   const hasProducts = owned.length > 0;
-  const busy = finishingFrom !== null;
 
-  // With products, Continue drafts the rituals on step 2; without, Skip for now finishes.
+  // With products, Continue drafts the rituals on step 2; without, Skip for now goes to the nudges.
   function goOn() {
     if (hasProducts) {
       navigation.navigate('RitualsStep');
     } else {
-      finish('button');
+      navigation.navigate('NudgesStep', { steps: [] });
     }
   }
 
-  async function finish(from: 'skip' | 'button') {
+  // The header's Skip finishes at once, with no rituals and every nudge off.
+  async function skip() {
     if (finishing.current || !session) {
       return;
     }
     finishing.current = true;
-    setFinishingFrom(from);
+    setSkipping(true);
     try {
       await completeOnboarding.mutateAsync(session.user.id);
     } catch {
-      setFinishingFrom(null);
+      setSkipping(false);
     } finally {
       finishing.current = false;
     }
@@ -94,12 +94,7 @@ export function ShelfStepScreen({ navigation }: ShelfStepScreenProps) {
         pointerEvents="none"
         style={[styles.circle, { backgroundColor: palette.onboardingShelfCircle }]}
       />
-      <OnboardingHeader
-        step={1}
-        onSkip={() => finish('skip')}
-        skipping={finishingFrom === 'skip'}
-        disabled={busy}
-      />
+      <OnboardingHeader step={1} onSkip={skip} skipping={skipping} disabled={skipping} />
 
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.kicker, { color: palette.textMuted }]}>Step 1 of 3 · Your shelf</Text>
@@ -114,8 +109,8 @@ export function ShelfStepScreen({ navigation }: ShelfStepScreenProps) {
           accessibilityRole="button"
           accessibilityLabel={hasProducts ? 'Add another product' : 'Add a product'}
           accessibilityHint="Snap a photo or pick its packaging"
-          accessibilityState={{ disabled: busy }}
-          disabled={busy}
+          accessibilityState={{ disabled: skipping }}
+          disabled={skipping}
           onPress={addProduct}
           style={({ pressed }) => [
             styles.addCard,
@@ -206,7 +201,7 @@ export function ShelfStepScreen({ navigation }: ShelfStepScreenProps) {
           { paddingBottom: Math.max(insets.bottom + spacing.xs, MIN_BOTTOM_SPACE) },
         ]}
       >
-        {completeOnboarding.isError && !busy ? (
+        {completeOnboarding.isError && !skipping ? (
           <Text
             accessibilityRole="alert"
             accessibilityLiveRegion="polite"
@@ -221,8 +216,8 @@ export function ShelfStepScreen({ navigation }: ShelfStepScreenProps) {
           arrow
           quiet={!hasProducts}
           title={hasProducts ? 'Continue' : 'Skip for now'}
-          loading={finishingFrom === 'button' || products.isPending}
-          disabled={finishingFrom === 'skip' || !products.data}
+          loading={products.isPending}
+          disabled={skipping || !products.data}
           onPress={goOn}
         />
       </View>

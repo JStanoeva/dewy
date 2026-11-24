@@ -22,7 +22,6 @@ import {
 import { categoryDetails } from '@/features/products/constants';
 import { useProducts } from '@/features/products/hooks/useProducts';
 import { useCompleteOnboarding } from '@/features/profile/hooks/useCompleteOnboarding';
-import { useFinishOnboarding } from '@/features/profile/hooks/useFinishOnboarding';
 import type { RootStackParamList } from '@/navigation/types';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import { fonts, fontSizes, letterSpacings, radii, spacing } from '@/theme/tokens';
@@ -38,9 +37,7 @@ export function RitualsStepScreen({ navigation }: RitualsStepScreenProps) {
   const products = useProducts();
   const { placementFor, toggle } = useOnboardingDraft();
   const completeOnboarding = useCompleteOnboarding();
-  const finishOnboarding = useFinishOnboarding();
-  const [finishingFrom, setFinishingFrom] = useState<'skip' | 'button' | null>(null);
-  const [failedFrom, setFailedFrom] = useState<'skip' | 'button' | null>(null);
+  const [skipping, setSkipping] = useState(false);
   const finishing = useRef(false);
 
   const rows = sortForRituals(onboardingProducts(products.data ?? [])).map((product) => ({
@@ -48,25 +45,18 @@ export function RitualsStepScreen({ navigation }: RitualsStepScreenProps) {
     placement: placementFor(product),
   }));
   const rituals = splitRituals(rows);
-  const busy = finishingFrom !== null;
 
-  // Continue saves the rituals and finishes; Skip finishes with no ritual steps.
-  async function finish(from: 'skip' | 'button') {
+  // Skip finishes with no ritual steps and every nudge off; Continue saves nothing yet.
+  async function skip() {
     if (finishing.current || !session) {
       return;
     }
     finishing.current = true;
-    setFinishingFrom(from);
-    setFailedFrom(null);
+    setSkipping(true);
     try {
-      if (from === 'skip') {
-        await completeOnboarding.mutateAsync(session.user.id);
-      } else {
-        await finishOnboarding.mutateAsync(firstRitualSteps(rituals));
-      }
+      await completeOnboarding.mutateAsync(session.user.id);
     } catch {
-      setFinishingFrom(null);
-      setFailedFrom(from);
+      setSkipping(false);
     } finally {
       finishing.current = false;
     }
@@ -81,9 +71,9 @@ export function RitualsStepScreen({ navigation }: RitualsStepScreenProps) {
       <OnboardingHeader
         step={2}
         onBack={() => navigation.goBack()}
-        onSkip={() => finish('skip')}
-        skipping={finishingFrom === 'skip'}
-        disabled={busy}
+        onSkip={skip}
+        skipping={skipping}
+        disabled={skipping}
       />
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -120,14 +110,14 @@ export function RitualsStepScreen({ navigation }: RitualsStepScreenProps) {
                           period="morning"
                           productName={product.name}
                           on={placement.am}
-                          disabled={busy}
+                          disabled={skipping}
                           onToggle={() => toggle(product, 'morning')}
                         />
                         <RitualToggle
                           period="evening"
                           productName={product.name}
                           on={placement.pm}
-                          disabled={busy}
+                          disabled={skipping}
                           onToggle={() => toggle(product, 'evening')}
                         />
                       </View>
@@ -155,24 +145,21 @@ export function RitualsStepScreen({ navigation }: RitualsStepScreenProps) {
           { paddingBottom: Math.max(insets.bottom + spacing.xs, MIN_BOTTOM_SPACE) },
         ]}
       >
-        {failedFrom && !busy ? (
+        {completeOnboarding.isError && !skipping ? (
           <Text
             accessibilityRole="alert"
             accessibilityLiveRegion="polite"
             style={[styles.error, { color: palette.warning }]}
           >
-            {failedFrom === 'button'
-              ? "We couldn't save your rituals. Check your connection and try again."
-              : "Couldn't reach Dewy. Check your connection and try again."}
+            Couldn&apos;t reach Dewy. Check your connection and try again.
           </Text>
         ) : null}
         <AppButton
           pinned
           arrow
           title="Continue"
-          loading={finishingFrom === 'button'}
-          disabled={finishingFrom === 'skip' || !products.data}
-          onPress={() => finish('button')}
+          disabled={skipping || !products.data}
+          onPress={() => navigation.navigate('NudgesStep', { steps: firstRitualSteps(rituals) })}
         />
       </View>
     </Screen>
