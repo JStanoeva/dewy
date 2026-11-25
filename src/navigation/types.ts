@@ -19,6 +19,7 @@ export type RootStackParamList = {
     | { productId?: string; status?: ProductStatus; category?: Category; lockStatus?: boolean }
     | undefined;
   RoutineStepForm: { period: Period; stepId?: string };
+  Settings: undefined;
 };
 
 export type MainTabParamList = {

@@ -5,6 +5,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Circle, Path } from 'react-native-svg';
 
 import { ErrorState } from '@/components/ErrorState';
 import { LoadingState } from '@/components/LoadingState';
@@ -113,7 +114,12 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
           ]}
         />
 
-        {profile.data ? <ProfileHeader profile={profile.data} /> : null}
+        {profile.data ? (
+          <ProfileHeader
+            profile={profile.data}
+            onOpenSettings={() => navigation.navigate('Settings')}
+          />
+        ) : null}
         {profile.data && products.data ? (
           <>
             <StatTiles
@@ -155,7 +161,12 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
   );
 }
 
-function ProfileHeader({ profile }: { profile: Profile }) {
+type ProfileHeaderProps = {
+  profile: Profile;
+  onOpenSettings: () => void;
+};
+
+function ProfileHeader({ profile, onOpenSettings }: ProfileHeaderProps) {
   const { palette } = useDewyTheme();
   const initial = Array.from(profile.displayName.trim())[0]?.toUpperCase() ?? '';
   const since = new Date(profile.createdAt).toLocaleDateString('en-US', {
@@ -186,6 +197,33 @@ function ProfileHeader({ profile }: { profile: Profile }) {
           Glowing with Dewy since {since}
         </Text>
       </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Settings"
+        onPress={onOpenSettings}
+        style={({ pressed }) => [
+          styles.settings,
+          {
+            backgroundColor: palette.surface,
+            boxShadow: palette.iconButtonShadow,
+            opacity: pressed ? 0.7 : 1,
+          },
+        ]}
+      >
+        <Svg
+          width={20}
+          height={20}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={palette.text}
+          strokeWidth={1.8}
+          strokeLinecap="round"
+        >
+          <Path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+          <Circle cx={16} cy={7} r={2} />
+          <Circle cx={10} cy={17} r={2} />
+        </Svg>
+      </Pressable>
     </View>
   );
 }
@@ -237,6 +275,13 @@ const styles = StyleSheet.create({
   since: {
     fontFamily: fonts.body,
     fontSize: fontSizes.meta,
+  },
+  settings: {
+    width: minTouchTarget,
+    height: minTouchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.pill,
   },
   logOut: {
     minHeight: minTouchTarget,

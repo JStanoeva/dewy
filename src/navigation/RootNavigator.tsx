@@ -14,6 +14,7 @@ import { ProductFormScreen } from '@/features/products/screens/ProductFormScreen
 import { useProfile } from '@/features/profile/hooks/useProfile';
 import { ProfileGateScreen } from '@/features/profile/screens/ProfileGateScreen';
 import { RoutineStepFormScreen } from '@/features/routines/screens/RoutineStepFormScreen';
+import { SettingsScreen } from '@/features/settings/screens/SettingsScreen';
 import { MainTabs } from '@/navigation/MainTabs';
 import type { RootStackParamList } from '@/navigation/types';
 import { useDewyTheme } from '@/theme/ThemeProvider';
@@ -83,6 +84,7 @@ export function RootNavigator() {
             <Stack.Group navigationKey={session.user.id}>
               <Stack.Screen name="Main" component={MainTabs} />
               <Stack.Screen name="ProductDetails" component={ProductDetailsScreen} />
+              <Stack.Screen name="Settings" component={SettingsScreen} />
               <Stack.Screen
                 name="ProductForm"
                 component={ProductFormScreen}
