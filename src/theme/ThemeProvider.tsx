@@ -1,3 +1,4 @@
+import * as SystemUI from 'expo-system-ui';
 import {
   createContext,
   useCallback,
@@ -38,6 +39,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     });
     return () => subscription.remove();
   }, []);
+
+  // Android shows the window's own background behind screens while they animate.
+  useEffect(() => {
+    SystemUI.setBackgroundColorAsync(palettes[state.clock].background);
+  }, [state.clock]);
 
   const setRitualPeriod = useCallback((next: Period) => {
     setState(pickRitual(next));
