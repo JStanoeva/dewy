@@ -1,4 +1,5 @@
-import { useNavigation } from '@react-navigation/native';
+import type { CompositeScreenProps } from '@react-navigation/native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import {
   FlatList,
@@ -32,28 +33,37 @@ import {
 import { useProfile } from '@/features/profile/hooks/useProfile';
 import { useRoutineSteps } from '@/features/routines/hooks/useRoutineSteps';
 import { useLocalToday } from '@/hooks/useLocalToday';
+import type { RootStackParamList, ShelfStackParamList } from '@/navigation/types';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import { fonts, fontSizes, letterSpacings, spacing } from '@/theme/tokens';
 
 const gridGap = spacing.lg;
 
+type ShelfScreenProps = CompositeScreenProps<
+  NativeStackScreenProps<ShelfStackParamList, 'Shelf'>,
+  NativeStackScreenProps<RootStackParamList>
+>;
+
 function countLabel(count: number) {
   return `${count} ${count === 1 ? 'product' : 'products'}`;
 }
 
-export function ShelfScreen() {
+export function ShelfScreen({ navigation, route }: ShelfScreenProps) {
   const { palette } = useDewyTheme();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const navigation = useNavigation();
   const products = useProducts();
   // Only feeds the AM / PM tags, so the shelf shows no loading or error state for it.
   const routineSteps = useRoutineSteps();
   // Like the tags, a failed count just shows no running low.
   const productUses = useProductUses();
   const lowThreshold = useProfile().data?.lowUsesThreshold ?? defaultLowUsesThreshold;
-  const [status, setStatus] = useState<ProductStatus>('owned');
-  const [category, setCategory] = useState<CategoryFilter>('all');
+  const [chosenStatus, setChosenStatus] = useState<ProductStatus>('owned');
+  const [chosenCategory, setChosenCategory] = useState<CategoryFilter>('all');
+  // A Profile tile's tab, with All, wins until the switch or a chip is touched, so the same tile works again.
+  const initialTab = route.params?.initialTab;
+  const status = initialTab ?? chosenStatus;
+  const category: CategoryFilter = initialTab ? 'all' : chosenCategory;
   const [refreshing, setRefreshing] = useState(false);
 
   const today = useLocalToday();
@@ -91,8 +101,15 @@ export function ShelfScreen() {
     if (next === status) {
       return;
     }
-    setStatus(next);
-    setCategory('all');
+    setChosenStatus(next);
+    setChosenCategory('all');
+    navigation.setParams({ initialTab: undefined });
+  }
+
+  function handleCategoryChange(next: CategoryFilter) {
+    setChosenStatus(status);
+    setChosenCategory(next);
+    navigation.setParams({ initialTab: undefined });
   }
 
   // Local state, so the spinner only shows for a pull and not for background refetches.
@@ -135,7 +152,8 @@ export function ShelfScreen() {
             key={status}
             options={categoryFilterOptions}
             value={category}
-            onChange={setCategory}
+            onChange={handleCategoryChange}
+            revealSelected
           />
         </View>
       ) : null}

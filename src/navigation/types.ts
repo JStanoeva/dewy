@@ -29,7 +29,7 @@ export type MainTabParamList = {
 };
 
 export type ShelfStackParamList = {
-  Shelf: undefined;
+  Shelf: { initialTab?: ProductStatus } | undefined;
 };
 
 export type RoutinesStackParamList = {

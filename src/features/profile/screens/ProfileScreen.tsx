@@ -1,22 +1,79 @@
 import Feather from '@expo/vector-icons/Feather';
+import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import type { CompositeScreenProps } from '@react-navigation/native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ErrorState } from '@/components/ErrorState';
 import { LoadingState } from '@/components/LoadingState';
 import { Screen } from '@/components/Screen';
 import { signOut } from '@/features/auth/services/authService';
+import { useProducts, useProductUses } from '@/features/products/hooks/useProducts';
+import type { ProductStatus } from '@/features/products/types';
+import { defaultLowUsesThreshold } from '@/features/products/utils/usesLeft';
+import { FavouritesSection } from '@/features/profile/components/FavouritesSection';
+import { StatTiles } from '@/features/profile/components/StatTiles';
 import { useProfile } from '@/features/profile/hooks/useProfile';
 import type { Profile } from '@/features/profile/types';
+import { countNeedAttention } from '@/features/profile/utils/needAttention';
+import { useLocalToday } from '@/hooks/useLocalToday';
+import type { MainTabParamList, MeStackParamList, RootStackParamList } from '@/navigation/types';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import { fonts, fontSizes, minTouchTarget, radii, spacing } from '@/theme/tokens';
 
-export function ProfileScreen() {
+type ProfileScreenProps = CompositeScreenProps<
+  NativeStackScreenProps<MeStackParamList, 'Profile'>,
+  CompositeScreenProps<
+    BottomTabScreenProps<MainTabParamList, 'MeTab'>,
+    NativeStackScreenProps<RootStackParamList>
+  >
+>;
+
+export function ProfileScreen({ navigation }: ProfileScreenProps) {
   const { palette, paletteName } = useDewyTheme();
+  const insets = useSafeAreaInsets();
   const profile = useProfile();
+  const products = useProducts();
+  // Only feeds Need attention's running low, so a failed count never blocks the screen.
+  const productUses = useProductUses();
+  const today = useLocalToday();
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   // The header circle runs up under the status bar, so its backdrop waits until the page scrolls.
   const [scrolled, setScrolled] = useState(false);
+
+  const allProducts = products.data ?? [];
+  const ownedCount = allProducts.filter((product) => product.status === 'owned').length;
+  const attentionCount = countNeedAttention(
+    allProducts,
+    productUses.data,
+    profile.data?.lowUsesThreshold ?? defaultLowUsesThreshold,
+    today,
+  );
+  const favourites = allProducts.filter((product) => product.isFavorite);
+  const loadFailed = (!profile.data && profile.isError) || (!products.data && products.isError);
+
+  function retry() {
+    if (profile.isError) {
+      profile.refetch();
+    }
+    if (products.isError) {
+      products.refetch();
+    }
+  }
+
+  // Local state, so the spinner only shows for a pull and not for background refetches.
+  async function handleRefresh() {
+    setRefreshing(true);
+    await Promise.all([profile.refetch(), products.refetch(), productUses.refetch()]);
+    setRefreshing(false);
+  }
+
+  function openShelf(initialTab: ProductStatus) {
+    navigation.navigate('ShelfTab', { screen: 'Shelf', params: { initialTab } });
+  }
 
   async function handleLogOut() {
     if (isSigningOut) {
@@ -38,6 +95,16 @@ export function ProfileScreen() {
         showsVerticalScrollIndicator={false}
         onScroll={(event) => setScrolled(event.nativeEvent.contentOffset.y > 0)}
         scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing && profile.data !== undefined && products.data !== undefined}
+            onRefresh={handleRefresh}
+            colors={[palette.primary]}
+            progressBackgroundColor={palette.surface}
+            progressViewOffset={insets.top}
+            tintColor={palette.primary}
+          />
+        }
       >
         <View
           style={[
@@ -46,13 +113,27 @@ export function ProfileScreen() {
           ]}
         />
 
-        {profile.data ? (
-          <ProfileHeader profile={profile.data} />
-        ) : profile.isError ? (
+        {profile.data ? <ProfileHeader profile={profile.data} /> : null}
+        {profile.data && products.data ? (
+          <>
+            <StatTiles
+              ownedCount={ownedCount}
+              attentionCount={attentionCount}
+              wishlistCount={allProducts.length - ownedCount}
+              onOpenShelf={openShelf}
+            />
+            {favourites.length > 0 ? (
+              <FavouritesSection
+                products={favourites}
+                onOpen={(productId) => navigation.navigate('ProductDetails', { productId })}
+              />
+            ) : null}
+          </>
+        ) : loadFailed ? (
           <ErrorState
             message="We couldn't load your profile. Check your connection and try again."
-            onRetry={() => profile.refetch()}
-            retrying={profile.isFetching}
+            onRetry={retry}
+            retrying={profile.isFetching || products.isFetching}
           />
         ) : (
           <LoadingState />

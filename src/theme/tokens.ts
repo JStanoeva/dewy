@@ -38,6 +38,7 @@ export const fontSizes = {
   avatarInitial: 30,
   profileName: 28,
   authTitle: 26,
+  statCount: 26,
   section: 22,
   subSection: 20,
   button: 16,
@@ -55,6 +56,7 @@ export const letterSpacings = {
   kicker: 1.4,
   label: 0.9,
   section: 0.78,
+  sectionLabel: 1.2,
   tag: 0.44,
 } as const;
 
