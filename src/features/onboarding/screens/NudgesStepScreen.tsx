@@ -1,6 +1,6 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useRef, useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton } from '@/components/AppButton';
@@ -9,6 +9,7 @@ import { useAuth } from '@/features/auth/providers/AuthProvider';
 import { OnboardingHeader } from '@/features/onboarding/components/OnboardingHeader';
 import { useOnboardingDraft } from '@/features/onboarding/providers/OnboardingDraftProvider';
 import { useFinishOnboarding } from '@/features/profile/hooks/useFinishOnboarding';
+import { NotificationsOffNote } from '@/features/reminders/components/NotificationsOffNote';
 import { NudgeCard } from '@/features/reminders/components/NudgeCard';
 import {
   eveningTimes,
@@ -16,20 +17,17 @@ import {
   leadLabels,
   lowUsesThresholds,
   morningTimes,
+  usesLabel,
 } from '@/features/reminders/constants';
 import { requestNotificationPermission } from '@/features/reminders/services/notificationService';
 import { timeLabel } from '@/features/reminders/utils/planReminders';
 import type { RootStackParamList } from '@/navigation/types';
 import { useDewyTheme } from '@/theme/ThemeProvider';
-import { fonts, fontSizes, letterSpacings, minTouchTarget, radii, spacing } from '@/theme/tokens';
+import { fonts, fontSizes, letterSpacings, radii, spacing } from '@/theme/tokens';
 
 type NudgesStepScreenProps = NativeStackScreenProps<RootStackParamList, 'NudgesStep'>;
 
 const MIN_BOTTOM_SPACE = 28;
-
-function usesLabel(uses: number) {
-  return `${uses} uses`;
-}
 
 export function NudgesStepScreen({ navigation, route }: NudgesStepScreenProps) {
   const { palette } = useDewyTheme();
@@ -147,26 +145,7 @@ export function NudgesStepScreen({ navigation, route }: NudgesStepScreenProps) {
           { paddingBottom: Math.max(insets.bottom + spacing.xs, MIN_BOTTOM_SPACE) },
         ]}
       >
-        {nudgesRefused ? (
-          <View style={styles.note}>
-            <Text
-              accessibilityRole="alert"
-              accessibilityLiveRegion="polite"
-              style={[styles.noteText, { color: palette.textMuted }]}
-            >
-              Notifications are off for Dewy. Allow them in your phone&apos;s settings to get
-              nudges.
-            </Text>
-            <Pressable
-              accessibilityRole="link"
-              accessibilityLabel="Open settings"
-              onPress={() => Linking.openSettings()}
-              style={({ pressed }) => [styles.link, { opacity: pressed ? 0.6 : 1 }]}
-            >
-              <Text style={[styles.linkText, { color: palette.text }]}>Open settings</Text>
-            </Pressable>
-          </View>
-        ) : null}
+        {nudgesRefused ? <NotificationsOffNote /> : null}
         {failed && !starting ? (
           <Text
             accessibilityRole="alert"
@@ -221,23 +200,6 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingTop: spacing.md,
     paddingHorizontal: spacing.screen,
-  },
-  note: {
-    alignItems: 'flex-start',
-  },
-  noteText: {
-    fontFamily: fonts.body,
-    fontSize: fontSizes.meta,
-    lineHeight: fontSizes.meta * 1.45,
-  },
-  link: {
-    minHeight: minTouchTarget,
-    justifyContent: 'center',
-  },
-  linkText: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: fontSizes.meta,
-    textDecorationLine: 'underline',
   },
   error: {
     fontFamily: fonts.bodyMedium,

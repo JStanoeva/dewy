@@ -45,6 +45,12 @@ export async function hasNotificationPermission() {
   return granted;
 }
 
+// canAsk turns false once Android stops showing its question to Dewy.
+export async function readNotificationPermission() {
+  const { granted, canAskAgain } = await Notifications.getPermissionsAsync();
+  return { allowed: granted, canAsk: canAskAgain };
+}
+
 // Android shows its question once; after a refusal the request answers no at once. A failure counts as no.
 export async function requestNotificationPermission() {
   try {

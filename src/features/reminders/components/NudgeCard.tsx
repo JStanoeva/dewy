@@ -1,26 +1,12 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
+import { NudgeOptions } from '@/features/reminders/components/NudgeOptions';
 import { NudgeSwitch } from '@/features/reminders/components/NudgeSwitch';
+import { nudgeLabels, type NudgeKind } from '@/features/reminders/constants';
 import { MoonIcon, SunIcon } from '@/navigation/TabIcons';
 import { useDewyTheme } from '@/theme/ThemeProvider';
-import {
-  fixedWidthMaxFontScale,
-  fonts,
-  fontSizes,
-  minTouchTarget,
-  radii,
-  spacing,
-} from '@/theme/tokens';
-
-type NudgeKind = 'morning' | 'evening' | 'expiry' | 'low';
-
-const nudgeLabels: Record<NudgeKind, { label: string; optionsLabel: string }> = {
-  morning: { label: 'Morning ritual', optionsLabel: 'Morning reminder time' },
-  evening: { label: 'Evening ritual', optionsLabel: 'Evening reminder time' },
-  expiry: { label: 'Expiring soon', optionsLabel: 'How early to warn about expiry' },
-  low: { label: 'Running low', optionsLabel: 'When to warn about running low' },
-};
+import { fonts, fontSizes, radii, spacing } from '@/theme/tokens';
 
 type NudgeCardProps<T extends string | number> = {
   kind: NudgeKind;
@@ -63,38 +49,15 @@ export function NudgeCard<T extends string | number>({
         <NudgeSwitch label={label} on={on} disabled={disabled} onToggle={onToggle} />
       </View>
       {on ? (
-        <View
-          accessibilityRole="radiogroup"
-          accessibilityLabel={optionsLabel}
+        <NudgeOptions
+          label={optionsLabel}
+          options={options}
+          value={value}
+          optionLabel={optionLabel}
+          disabled={disabled}
+          onPick={onPick}
           style={styles.options}
-        >
-          {options.map((option) => {
-            const picked = option === value;
-            return (
-              <Pressable
-                key={option}
-                accessibilityRole="togglebutton"
-                accessibilityState={{ checked: picked, disabled }}
-                disabled={disabled}
-                onPress={() => onPick(option)}
-                style={({ pressed }) => [
-                  styles.option,
-                  {
-                    backgroundColor: picked ? palette.peach : palette.background,
-                    opacity: pressed ? 0.8 : 1,
-                  },
-                ]}
-              >
-                <Text
-                  maxFontSizeMultiplier={fixedWidthMaxFontScale}
-                  style={[styles.optionText, { color: picked ? palette.onAccent : palette.text }]}
-                >
-                  {optionLabel(option)}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        />
       ) : null}
     </View>
   );
@@ -174,21 +137,6 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.meta,
   },
   options: {
-    flexDirection: 'row',
-    gap: spacing.snug,
     marginTop: spacing.sm,
-  },
-  option: {
-    flex: 1,
-    minHeight: minTouchTarget,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xxs,
-    borderRadius: radii.tile,
-  },
-  optionText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: fontSizes.secondary,
-    textAlign: 'center',
   },
 });

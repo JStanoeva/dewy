@@ -8,6 +8,7 @@ import Svg, { Path } from 'react-native-svg';
 import { Screen } from '@/components/Screen';
 import { useAuth } from '@/features/auth/providers/AuthProvider';
 import { useProfile } from '@/features/profile/hooks/useProfile';
+import { NotificationSettings } from '@/features/settings/components/NotificationSettings';
 import type { RootStackParamList } from '@/navigation/types';
 import { useDewyTheme } from '@/theme/ThemeProvider';
 import { fonts, fontSizes, letterSpacings, minTouchTarget, radii, spacing } from '@/theme/tokens';
@@ -89,6 +90,18 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
           </View>
         </View>
 
+        {profile.data ? (
+          <View>
+            <Text
+              accessibilityRole="header"
+              style={[styles.sectionLabel, { color: palette.textMuted }]}
+            >
+              Notifications
+            </Text>
+            <NotificationSettings profile={profile.data} />
+          </View>
+        ) : null}
+
         {version ? (
           <Text style={[styles.version, { color: palette.textMuted }]}>Dewy {version}</Text>
         ) : null}
@@ -110,7 +123,7 @@ function SettingsRow({ label, value, divider = false }: SettingsRowProps) {
     <View
       accessible
       accessibilityLabel={`${label}, ${value}`}
-      style={[styles.row, divider && { borderBottomWidth: 1, borderBottomColor: palette.divider }]}
+      style={[styles.row, divider && [styles.divider, { borderBottomColor: palette.divider }]]}
     >
       <Text style={[styles.rowLabel, { color: palette.text }]}>{label}</Text>
       <Text style={[styles.rowValue, { color: palette.textMuted }]}>{value}</Text>
@@ -162,6 +175,9 @@ const styles = StyleSheet.create({
   card: {
     paddingHorizontal: spacing.xl,
     borderRadius: radii.card,
+  },
+  divider: {
+    borderBottomWidth: 1,
   },
   row: {
     minHeight: 52,

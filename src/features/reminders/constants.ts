@@ -13,6 +13,19 @@ export const leadLabels: Record<number, string> = {
   30: '1 month',
 };
 
+export function usesLabel(uses: number) {
+  return `${uses} uses`;
+}
+
+export type NudgeKind = 'morning' | 'evening' | 'expiry' | 'low';
+
+export const nudgeLabels: Record<NudgeKind, { label: string; optionsLabel: string }> = {
+  morning: { label: 'Morning ritual', optionsLabel: 'Morning reminder time' },
+  evening: { label: 'Evening ritual', optionsLabel: 'Evening reminder time' },
+  expiry: { label: 'Expiring soon', optionsLabel: 'How early to warn about expiry' },
+  low: { label: 'Running low', optionsLabel: 'When to warn about running low' },
+};
+
 // Step 3 starts with every nudge on, at the drawn choices.
 export const defaultNudges: NudgeSettings = {
   morningReminderEnabled: true,
