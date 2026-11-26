@@ -105,12 +105,10 @@ describe('updateNudges', () => {
 });
 
 describe('finishOnboarding', () => {
-  it('saves all eight nudge columns before the rituals', async () => {
-    const calls = answerUpdateWith({ id: 'u1' });
+  it('saves the rituals and all eight nudges in one call', async () => {
     mockRpc.mockResolvedValue({ data: '2026-11-26T08:00:00+00:00', error: null });
-    await finishOnboarding({
-      userId: 'u1',
-      steps: [],
+    const finishedAt = await finishOnboarding({
+      steps: [{ productId: 'p1', period: 'evening', durationSeconds: 45 }],
       nudges: {
         morningReminderEnabled: true,
         morningReminderTime: '07:30:00',
@@ -122,16 +120,39 @@ describe('finishOnboarding', () => {
         lowUsesThreshold: 3,
       },
     });
-    expect(calls.values).toEqual({
-      morning_reminder_enabled: true,
-      morning_reminder_time: '07:30:00',
-      evening_reminder_enabled: false,
-      evening_reminder_time: '22:00:00',
-      expiry_alerts_enabled: true,
-      expiry_lead_days: 7,
-      low_alerts_enabled: true,
-      low_uses_threshold: 3,
+    expect(finishedAt).toBe('2026-11-26T08:00:00+00:00');
+    expect(mockFrom).not.toHaveBeenCalled();
+    expect(mockRpc).toHaveBeenCalledTimes(1);
+    expect(mockRpc).toHaveBeenCalledWith('finish_onboarding', {
+      p_steps: [{ product_id: 'p1', period: 'evening', duration_seconds: 45 }],
+      p_morning_enabled: true,
+      p_morning_time: '07:30:00',
+      p_evening_enabled: false,
+      p_evening_time: '22:00:00',
+      p_expiry_enabled: true,
+      p_expiry_lead_days: 7,
+      p_low_enabled: true,
+      p_low_threshold: 3,
     });
-    expect(mockRpc).toHaveBeenCalledWith('finish_onboarding', { p_steps: [] });
+  });
+
+  it('throws when the save fails', async () => {
+    const error = { message: 'violates check constraint', code: '23514' };
+    mockRpc.mockResolvedValue({ data: null, error });
+    await expect(
+      finishOnboarding({
+        steps: [],
+        nudges: {
+          morningReminderEnabled: false,
+          morningReminderTime: '08:00:00',
+          eveningReminderEnabled: false,
+          eveningReminderTime: '21:30:00',
+          expiryAlertsEnabled: false,
+          expiryLeadDays: 14,
+          lowAlertsEnabled: false,
+          lowUsesThreshold: 5,
+        },
+      }),
+    ).rejects.toBe(error);
   });
 });

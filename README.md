@@ -70,6 +70,7 @@ On Windows, if PowerShell refuses to run `npm` or `npx` because running scripts 
    13. `013_onboarding_backfill.sql`
    14. `014_finish_onboarding.sql`
    15. `015_nudges.sql`
+   16. `016_finish_onboarding_nudges.sql`
 
    Run each file once, before anyone signs up. `003_product_photos_storage.sql` creates the private `product-photos` bucket itself, so don't create it by hand.
 

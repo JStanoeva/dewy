@@ -274,7 +274,20 @@ export type Database = {
         }
         Returns: undefined
       }
-      finish_onboarding: { Args: { p_steps: Json }; Returns: string }
+      finish_onboarding: {
+        Args: {
+          p_evening_enabled: boolean
+          p_evening_time: string
+          p_expiry_enabled: boolean
+          p_expiry_lead_days: number
+          p_low_enabled: boolean
+          p_low_threshold: number
+          p_morning_enabled: boolean
+          p_morning_time: string
+          p_steps: Json
+        }
+        Returns: string
+      }
       product_uses: {
         Args: never
         Returns: {

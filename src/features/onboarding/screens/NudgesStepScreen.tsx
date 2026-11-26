@@ -5,7 +5,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton } from '@/components/AppButton';
 import { Screen } from '@/components/Screen';
-import { useAuth } from '@/features/auth/providers/AuthProvider';
 import { OnboardingHeader } from '@/features/onboarding/components/OnboardingHeader';
 import { useOnboardingDraft } from '@/features/onboarding/providers/OnboardingDraftProvider';
 import { useFinishOnboarding } from '@/features/profile/hooks/useFinishOnboarding';
@@ -32,7 +31,6 @@ const MIN_BOTTOM_SPACE = 28;
 export function NudgesStepScreen({ navigation, route }: NudgesStepScreenProps) {
   const { palette } = useDewyTheme();
   const insets = useSafeAreaInsets();
-  const { session } = useAuth();
   const { nudges, updateNudges, nudgesRefused, refuseNudges } = useOnboardingDraft();
   const finishOnboarding = useFinishOnboarding();
   const [starting, setStarting] = useState(false);
@@ -47,7 +45,7 @@ export function NudgesStepScreen({ navigation, route }: NudgesStepScreenProps) {
 
   // A nudge needs permission first; a refusal turns every switch off, and the next tap saves them off.
   async function start() {
-    if (startingRef.current || !session) {
+    if (startingRef.current) {
       return;
     }
     startingRef.current = true;
@@ -59,11 +57,7 @@ export function NudgesStepScreen({ navigation, route }: NudgesStepScreenProps) {
         setStarting(false);
         return;
       }
-      await finishOnboarding.mutateAsync({
-        userId: session.user.id,
-        steps: route.params.steps,
-        nudges,
-      });
+      await finishOnboarding.mutateAsync({ steps: route.params.steps, nudges });
     } catch {
       setStarting(false);
       setFailed(true);

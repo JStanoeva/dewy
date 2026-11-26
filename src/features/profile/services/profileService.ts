@@ -95,31 +95,28 @@ export async function completeOnboarding(userId: string): Promise<string> {
   return data.onboarding_completed_at;
 }
 
-// The nudges first, then one transaction for the rituals and the timestamp; a retry saves both again and adds no step twice.
+// One transaction saves the rituals, the nudges and the timestamp, so they fail together; a retry adds no step twice.
 export async function finishOnboarding({
-  userId,
   steps,
   nudges,
 }: {
-  userId: string;
   steps: readonly FirstRitualStep[];
   nudges: NudgeSettings;
 }): Promise<string> {
-  const saved = await supabase
-    .from('profiles')
-    .update(toNudgeColumns(nudges))
-    .eq('id', userId)
-    .select('id')
-    .single();
-  if (saved.error) {
-    throw saved.error;
-  }
   const { data, error } = await supabase.rpc('finish_onboarding', {
     p_steps: steps.map((step) => ({
       product_id: step.productId,
       period: step.period,
       duration_seconds: step.durationSeconds,
     })),
+    p_morning_enabled: nudges.morningReminderEnabled,
+    p_morning_time: nudges.morningReminderTime,
+    p_evening_enabled: nudges.eveningReminderEnabled,
+    p_evening_time: nudges.eveningReminderTime,
+    p_expiry_enabled: nudges.expiryAlertsEnabled,
+    p_expiry_lead_days: nudges.expiryLeadDays,
+    p_low_enabled: nudges.lowAlertsEnabled,
+    p_low_threshold: nudges.lowUsesThreshold,
   });
   if (error) {
     throw error;
