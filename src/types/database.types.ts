@@ -99,6 +99,7 @@ export type Database = {
           morning_reminder_time: string
           onboarding_completed_at: string | null
           ritual_style: string | null
+          skin_goals: string[]
           skin_type: string | null
           starter_categories: string[]
           theme: string
@@ -119,6 +120,7 @@ export type Database = {
           morning_reminder_time?: string
           onboarding_completed_at?: string | null
           ritual_style?: string | null
+          skin_goals?: string[]
           skin_type?: string | null
           starter_categories?: string[]
           theme?: string
@@ -139,6 +141,7 @@ export type Database = {
           morning_reminder_time?: string
           onboarding_completed_at?: string | null
           ritual_style?: string | null
+          skin_goals?: string[]
           skin_type?: string | null
           starter_categories?: string[]
           theme?: string

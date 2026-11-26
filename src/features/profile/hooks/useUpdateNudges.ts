@@ -4,8 +4,8 @@ import { updateNudges } from '@/features/profile/services/profileService';
 import type { NudgeSettings, Profile } from '@/features/profile/types';
 
 const nudgesKey = ['updateNudges'];
-// A switch and a tile save one at a time, in the order they were changed.
-const nudgesScope = { id: 'nudges' };
+// A switch and a tile save one at a time, in the order they were changed; skin details join the same queue.
+export const nudgesScope = { id: 'nudges' };
 
 type NudgesVariables = { userId: string; nudges: Partial<NudgeSettings> };
 

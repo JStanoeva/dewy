@@ -20,6 +20,7 @@ export type RootStackParamList = {
     | undefined;
   RoutineStepForm: { period: Period; stepId?: string };
   Settings: undefined;
+  SkinDetails: undefined;
 };
 
 export type MainTabParamList = {

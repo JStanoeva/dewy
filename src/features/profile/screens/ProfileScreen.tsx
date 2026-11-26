@@ -15,6 +15,7 @@ import { useProducts, useProductUses } from '@/features/products/hooks/useProduc
 import type { ProductStatus } from '@/features/products/types';
 import { defaultLowUsesThreshold } from '@/features/products/utils/usesLeft';
 import { FavouritesSection } from '@/features/profile/components/FavouritesSection';
+import { SkinProfileCard } from '@/features/profile/components/SkinProfileCard';
 import { StatTiles } from '@/features/profile/components/StatTiles';
 import { useProfile } from '@/features/profile/hooks/useProfile';
 import type { Profile } from '@/features/profile/types';
@@ -134,6 +135,10 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
                 onOpen={(productId) => navigation.navigate('ProductDetails', { productId })}
               />
             ) : null}
+            <SkinProfileCard
+              profile={profile.data}
+              onOpen={() => navigation.navigate('SkinDetails')}
+            />
           </>
         ) : loadFailed ? (
           <ErrorState

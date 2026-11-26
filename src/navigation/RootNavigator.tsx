@@ -13,6 +13,7 @@ import { ProductDetailsScreen } from '@/features/products/screens/ProductDetails
 import { ProductFormScreen } from '@/features/products/screens/ProductFormScreen';
 import { useProfile } from '@/features/profile/hooks/useProfile';
 import { ProfileGateScreen } from '@/features/profile/screens/ProfileGateScreen';
+import { SkinDetailsScreen } from '@/features/profile/screens/SkinDetailsScreen';
 import { RoutineStepFormScreen } from '@/features/routines/screens/RoutineStepFormScreen';
 import { SettingsScreen } from '@/features/settings/screens/SettingsScreen';
 import { MainTabs } from '@/navigation/MainTabs';
@@ -93,6 +94,11 @@ export function RootNavigator() {
               <Stack.Screen
                 name="RoutineStepForm"
                 component={RoutineStepFormScreen}
+                options={{ presentation: 'modal' }}
+              />
+              <Stack.Screen
+                name="SkinDetails"
+                component={SkinDetailsScreen}
                 options={{ presentation: 'modal' }}
               />
             </Stack.Group>

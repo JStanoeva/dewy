@@ -1,16 +1,21 @@
 import type { FirstRitualStep } from '@/features/onboarding/utils/firstRituals';
+import { skinConcerns, skinGoals, skinTypes } from '@/features/profile/constants';
+import type { SkinDetails } from '@/features/profile/schemas/skinDetailsSchema';
 import type { NudgeSettings, Profile } from '@/features/profile/types';
 import { supabase } from '@/lib/supabase';
 import type { Tables, TablesUpdate } from '@/types/database.types';
 
 const profileColumns =
-  'id, display_name, created_at, onboarding_completed_at, morning_reminder_enabled, morning_reminder_time, evening_reminder_enabled, evening_reminder_time, expiry_alerts_enabled, expiry_lead_days, low_alerts_enabled, low_uses_threshold';
+  'id, display_name, created_at, skin_type, concerns, skin_goals, onboarding_completed_at, morning_reminder_enabled, morning_reminder_time, evening_reminder_enabled, evening_reminder_time, expiry_alerts_enabled, expiry_lead_days, low_alerts_enabled, low_uses_threshold';
 
 type ProfileRow = Pick<
   Tables<'profiles'>,
   | 'id'
   | 'display_name'
   | 'created_at'
+  | 'skin_type'
+  | 'concerns'
+  | 'skin_goals'
   | 'onboarding_completed_at'
   | 'morning_reminder_enabled'
   | 'morning_reminder_time'
@@ -22,11 +27,19 @@ type ProfileRow = Pick<
   | 'low_uses_threshold'
 >;
 
+// The profile feeds the root gate, so a value this app version does not know is left out instead of failing.
+function knownOnly<T extends string>(options: readonly T[], stored: readonly string[]): T[] {
+  return options.filter((option) => stored.includes(option));
+}
+
 function toProfile(row: ProfileRow): Profile {
   return {
     id: row.id,
     displayName: row.display_name,
     createdAt: row.created_at,
+    skinType: skinTypes.find((type) => type === row.skin_type) ?? null,
+    concerns: knownOnly(skinConcerns, row.concerns),
+    skinGoals: knownOnly(skinGoals, row.skin_goals),
     onboardingCompletedAt: row.onboarding_completed_at,
     morningReminderEnabled: row.morning_reminder_enabled,
     morningReminderTime: row.morning_reminder_time,
@@ -69,6 +82,24 @@ export async function updateNudges(
   const { data, error } = await supabase
     .from('profiles')
     .update(toNudgeColumns(nudges))
+    .eq('id', userId)
+    .select(profileColumns)
+    .single();
+  if (error) {
+    throw error;
+  }
+  return toProfile(data);
+}
+
+// Always sends all three, so a cleared form saves as empty instead of leaving the old values.
+export async function updateSkinDetails(userId: string, details: SkinDetails): Promise<Profile> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({
+      skin_type: details.skinType,
+      concerns: details.concerns,
+      skin_goals: details.skinGoals,
+    })
     .eq('id', userId)
     .select(profileColumns)
     .single();

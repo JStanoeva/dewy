@@ -2,6 +2,7 @@ import {
   finishOnboarding,
   getProfile,
   updateNudges,
+  updateSkinDetails,
 } from '@/features/profile/services/profileService';
 
 const mockFrom = jest.fn();
@@ -18,6 +19,9 @@ const row = {
   id: 'u1',
   display_name: 'Boopsicle',
   created_at: '2026-11-01T09:00:00+00:00',
+  skin_type: 'combination',
+  concerns: ['sensitivity', 'dark_spots'],
+  skin_goals: ['glow', 'even_tone'],
   onboarding_completed_at: '2026-11-01T09:05:00+00:00',
   morning_reminder_enabled: true,
   morning_reminder_time: '08:00:00',
@@ -33,6 +37,9 @@ const profile = {
   id: 'u1',
   displayName: 'Boopsicle',
   createdAt: '2026-11-01T09:00:00+00:00',
+  skinType: 'combination',
+  concerns: ['sensitivity', 'dark_spots'],
+  skinGoals: ['glow', 'even_tone'],
   onboardingCompletedAt: '2026-11-01T09:05:00+00:00',
   morningReminderEnabled: true,
   morningReminderTime: '08:00:00',
@@ -74,6 +81,69 @@ describe('getProfile', () => {
       select: () => ({ single: () => Promise.resolve({ data: row, error: null }) }),
     });
     await expect(getProfile()).resolves.toEqual(profile);
+  });
+
+  it('leaves out skin values it does not know and keeps the form order', async () => {
+    mockFrom.mockReturnValue({
+      select: () => ({
+        single: () =>
+          Promise.resolve({
+            data: {
+              ...row,
+              skin_type: 'balanced',
+              concerns: ['dark_spots', 'pores', 'sensitivity'],
+              skin_goals: ['smooth', 'glow'],
+            },
+            error: null,
+          }),
+      }),
+    });
+    const loaded = await getProfile();
+    expect(loaded.skinType).toBeNull();
+    expect(loaded.concerns).toEqual(['sensitivity', 'dark_spots']);
+    expect(loaded.skinGoals).toEqual(['glow', 'smooth']);
+  });
+});
+
+describe('updateSkinDetails', () => {
+  it('sends all three columns and returns the saved profile', async () => {
+    const calls = answerUpdateWith({
+      ...row,
+      skin_type: 'dry',
+      concerns: [],
+      skin_goals: ['calm'],
+    });
+    const saved = await updateSkinDetails('u1', {
+      skinType: 'dry',
+      concerns: [],
+      skinGoals: ['calm'],
+    });
+    expect(calls.values).toEqual({ skin_type: 'dry', concerns: [], skin_goals: ['calm'] });
+    expect(calls.filter).toEqual(['id', 'u1']);
+    expect(saved).toEqual({ ...profile, skinType: 'dry', concerns: [], skinGoals: ['calm'] });
+  });
+
+  it('sends a cleared form as null and empty lists, so the old details go', async () => {
+    const calls = answerUpdateWith({ ...row, skin_type: null, concerns: [], skin_goals: [] });
+    await updateSkinDetails('u1', { skinType: null, concerns: [], skinGoals: [] });
+    // The request body is JSON, so a field left undefined would be dropped and keep its old value.
+    expect(JSON.parse(JSON.stringify(calls.values))).toEqual({
+      skin_type: null,
+      concerns: [],
+      skin_goals: [],
+    });
+  });
+
+  it('throws the error when the save fails', async () => {
+    const error = { message: 'violates check constraint', code: '23514' };
+    mockFrom.mockReturnValue({
+      update: () => ({
+        eq: () => ({ select: () => ({ single: () => Promise.resolve({ data: null, error }) }) }),
+      }),
+    });
+    await expect(
+      updateSkinDetails('u1', { skinType: null, concerns: [], skinGoals: [] }),
+    ).rejects.toBe(error);
   });
 });
 
