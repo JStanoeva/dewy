@@ -65,7 +65,7 @@ function progressLine(routine: TodayRoutine, period: Period) {
   return `steps done · ${routine.minutesLeft} min to go`;
 }
 
-export function TodayScreen({ navigation }: TodayScreenProps) {
+export function TodayScreen({ navigation, route }: TodayScreenProps) {
   const { palette, paletteName } = useDewyTheme();
   const { ritualPeriod: period, setRitualPeriod } = useRitualPeriod();
   const insets = useSafeAreaInsets();
@@ -101,6 +101,16 @@ export function TodayScreen({ navigation }: TodayScreenProps) {
       hiddenTips?.[period] ?? null,
       tips.map((tip) => tip.id),
     );
+
+  const requestedPeriod = route.params?.period;
+
+  // A ritual nudge's tap picks its ritual; clearing the param lets the same one arrive again.
+  useEffect(() => {
+    if (requestedPeriod) {
+      setRitualPeriod(requestedPeriod);
+      navigation.setParams({ period: undefined });
+    }
+  }, [requestedPeriod, setRitualPeriod, navigation]);
 
   // Read once; until then Today shows no banner area, and a failed read counts as shown.
   useEffect(() => {

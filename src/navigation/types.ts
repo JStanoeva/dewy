@@ -24,7 +24,8 @@ export type RootStackParamList = {
 };
 
 export type MainTabParamList = {
-  TodayTab: undefined;
+  // Set by a ritual nudge's tap; Today applies it once and clears it.
+  TodayTab: { period?: Period } | undefined;
   ShelfTab: NavigatorScreenParams<ShelfStackParamList> | undefined;
   RoutinesTab: NavigatorScreenParams<RoutinesStackParamList> | undefined;
   MeTab: NavigatorScreenParams<MeStackParamList> | undefined;

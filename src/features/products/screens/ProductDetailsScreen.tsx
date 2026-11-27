@@ -68,7 +68,15 @@ export function ProductDetailsScreen({ navigation, route }: ProductDetailsScreen
   const today = useLocalToday();
 
   if (product.data) {
-    return <ProductDetailsContent product={product.data} today={today} navigation={navigation} />;
+    // The key starts fresh when a nudge's tap swaps this screen to another product.
+    return (
+      <ProductDetailsContent
+        key={product.data.id}
+        product={product.data}
+        today={today}
+        navigation={navigation}
+      />
+    );
   }
 
   return (
